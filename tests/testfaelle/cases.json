@@ -1,0 +1,1412 @@
+{
+ "format": 1,
+ "about": "Gemeinsame Testfälle für das Postwerkzeug und die App (tpc0e0, Punkt 3). make check liest sie in tests/test_cases.py, die App in ihren eigenen Tests. Aufbau und Regeln: docs/format.md, Abschnitt „Gemeinsame Testfälle“.",
+ "state": [
+  {
+   "name": "Neuer Auftrag ohne Ereignis ist offen",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qa": {
+     "0-entry.md": "# Neuer Auftrag\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "expect": {
+    "k7m2qa": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Übernommen mit Frist in der Zukunft ist in Arbeit",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qb": {
+     "0-entry.md": "# Übernommen\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T10:00Z\n- Status: in_progress\n- Holder: session:bbbb1111\n- Until: 2026-11-14T22:00Z\n"
+    }
+   },
+   "expect": {
+    "k7m2qb": {
+     "ready_reason": null,
+     "holder": "session:bbbb1111",
+     "until": "2026-11-14T22:00Z",
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "in_progress",
+     "ready": false,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Abgelaufene Übernahme ist wieder offen",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qc": {
+     "0-entry.md": "# Liegen geblieben\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M79YQB000000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-13T08:00Z\n- Status: in_progress\n- Holder: session:bbbb1111\n- Until: 2026-11-13T20:00Z\n"
+    }
+   },
+   "expect": {
+    "k7m2qc": {
+     "ready_reason": "Übernahme abgelaufen",
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Erledigt mit Ergebnis",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qd": {
+     "0-entry.md": "# Fertig\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CMHXM00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T09:00Z\n- Status: done\n- Result: Commit abc1234\n"
+    }
+   },
+   "expect": {
+    "k7m2qd": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "done",
+     "ready": false,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Verworfen mit Grund",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qe": {
+     "0-entry.md": "# Doppelt\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CMHXM00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T09:00Z\n- Status: dropped\n- Reason: doppelt\n"
+    }
+   },
+   "expect": {
+    "k7m2qe": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "dropped",
+     "ready": false,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Wartet auf einen offenen Eintrag",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qf": {
+     "0-entry.md": "# Wartet\n\n- Kind: task\n- To: project:demo\n- Condition: done:k7m2qg\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    },
+    "k7m2qg": {
+     "0-entry.md": "# Vorarbeit\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "expect": {
+    "k7m2qf": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [
+      {
+       "text": "done:k7m2qg",
+       "met": false
+      }
+     ],
+     "status": "waiting",
+     "ready": false,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    },
+    "k7m2qg": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Bedingung erfüllt: der Eintrag ist wieder übernehmbar",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qh": {
+     "0-entry.md": "# Wartet nicht mehr\n\n- Kind: task\n- To: project:demo\n- Condition: done:k7m2qj\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    },
+    "k7m2qj": {
+     "0-entry.md": "# Vorarbeit fertig\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CVDMW00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T11:00Z\n- Status: done\n"
+    }
+   },
+   "expect": {
+    "k7m2qh": {
+     "ready_reason": "done:k7m2qj erfüllt",
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [
+      {
+       "text": "done:k7m2qj",
+       "met": true
+      }
+     ],
+     "status": "waiting",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "answered gilt nur für Fragen",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qk": {
+     "0-entry.md": "# Wartet auf Antwort\n\n- Kind: task\n- To: project:demo\n- Condition: answered:k7m2qm\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    },
+    "k7m2qm": {
+     "0-entry.md": "# Keine Frage\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CVDMW00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T11:00Z\n- Status: done\n"
+    }
+   },
+   "expect": {
+    "k7m2qk": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [
+      {
+       "text": "answered:k7m2qm",
+       "met": false
+      }
+     ],
+     "status": "waiting",
+     "ready": false,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Datum erreicht",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qn": {
+     "0-entry.md": "# Ab Datum\n\n- Kind: task\n- To: project:demo\n- Condition: date:2026-11-14\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "expect": {
+    "k7m2qn": {
+     "ready_reason": "date:2026-11-14 erfüllt",
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [
+      {
+       "text": "date:2026-11-14",
+       "met": true
+      }
+     ],
+     "status": "waiting",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Wiedervorlage erreicht, Bedingung offen",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qp": {
+     "0-entry.md": "# Wiedervorlage\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M77FRFM00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-12T09:00Z\n- Status: waiting\n- Condition: date:2026-12-01\n- Review: 2026-11-14\n"
+    }
+   },
+   "expect": {
+    "k7m2qp": {
+     "ready_reason": "Wiedervorlage seit 2026-11-14",
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [
+      {
+       "text": "date:2026-12-01",
+       "met": false
+      }
+     ],
+     "status": "waiting",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Rang aus dem Kopf, im Verlauf geändert",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qr": {
+     "0-entry.md": "# Wichtig\n\n- Kind: task\n- To: project:demo\n- Priority: 3\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CMHXM00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T09:00Z\n- Priority: 1\n- Urgent: yes\n"
+    }
+   },
+   "expect": {
+    "k7m2qr": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 1,
+     "urgent": true,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Wieder geöffnet nach erledigt",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qs": {
+     "0-entry.md": "# Noch einmal\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CMHXM00000000000000001-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T09:00Z\n- Status: done\n",
+     "01M7CQZS800000000000000002-status.md": "- By: session:bbbb1111, rechner-b, 2026-11-14T10:00Z\n- Status: open\n"
+    }
+   },
+   "expect": {
+    "k7m2qs": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Eingang einsortiert",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qa": {
+     "0-entry.md": "# Noch im Eingang\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    },
+    "n4x8wd": {
+     "0-entry.md": "# Einsortiert\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: project:projekt-a\n- Project: projekt-a\n\nGehört zu projekt-a.\n"
+    }
+   },
+   "expect": {
+    "k7m2qa": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [],
+     "project": null,
+     "inbox": true,
+     "for_user": false
+    },
+    "n4x8wd": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:projekt-a"
+     ],
+     "project": "projekt-a",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Zweimal neu adressiert gilt der letzte Nachtrag",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "p6r3ta": {
+     "0-entry.md": "# Zweimal verschoben\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: project:projekt-a\n- Project: projekt-a\n",
+     "01M7CQZS800000000000000002-addendum.md": "- By: user, handy-a, 2026-11-14T11:00Z\n- To: project:demo\n- Project: demo\n\nDoch ein anderes Projekt.\n"
+    }
+   },
+   "expect": {
+    "p6r3ta": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Neue Adresse ohne Projekt behält das Projekt",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "q8s2vb": {
+     "0-entry.md": "# Projekt im Kopf\n\n- Kind: task\n- To: project:demo\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: host:rechner-a\n"
+    },
+    "q8s2vc": {
+     "0-entry.md": "# Projekt nur aus To\n\n- Kind: task\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: user\n"
+    }
+   },
+   "expect": {
+    "q8s2vb": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "host:rechner-a"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    },
+    "q8s2vc": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "user"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": true
+    }
+   }
+  },
+  {
+   "name": "Eingang an dich neu adressiert wartet auf dich",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "r2t5wd": {
+     "0-entry.md": "# An dich\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: user\n"
+    }
+   },
+   "expect": {
+    "r2t5wd": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "user"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": true
+    }
+   }
+  },
+  {
+   "name": "Idee an dich wartet nicht auf dich",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "s3v6xe": {
+     "0-entry.md": "# Idee gleich an dich\n\n- Kind: idea\n- To: user\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    },
+    "s3v6xf": {
+     "0-entry.md": "# Idee aus dem Eingang\n\n- Kind: idea\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: user\n"
+    }
+   },
+   "expect": {
+    "s3v6xe": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "user"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": false
+    },
+    "s3v6xf": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "user"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Eintrag an alle Projekte bleibt, wie er ist",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "t4w7ya": {
+     "0-entry.md": "# An alle\n\n- Kind: task\n- To: all\n- Recipients: projekt-a, demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: project:demo\n- Project: demo\n"
+    }
+   },
+   "expect": {
+    "t4w7ya": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "all"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
+   "name": "Für dich zählt nur, was offen und übernehmbar ist",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "v5x8zg": {
+     "0-entry.md": "# Offene Frage\n\n- Kind: question\n- To: user\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    },
+    "v5x8zh": {
+     "0-entry.md": "# Beantwortete Frage\n\n- Kind: question\n- To: user\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CMHXM00000000000000001-status.md": "- By: user, handy-a, 2026-11-14T09:00Z\n- Status: done\n- Result: Antwort: ja\n"
+    },
+    "v5x8zj": {
+     "0-entry.md": "# Wartet auf die Frage\n\n- Kind: task\n- To: user\n- Condition: done:v5x8zg\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "expect": {
+    "v5x8zg": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "user"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": true
+    },
+    "v5x8zh": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "done",
+     "ready": false,
+     "to": [
+      "user"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": false
+    },
+    "v5x8zj": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [
+      {
+       "text": "done:v5x8zg",
+       "met": false
+      }
+     ],
+     "status": "waiting",
+     "ready": false,
+     "to": [
+      "user"
+     ],
+     "project": null,
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  }
+ ],
+ "verdict": [
+  {
+   "name": "Alle Schritte PASS",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n2: PASS\n3: PASS\nGesamt: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "PASS",
+    "steps": {
+     "1": "PASS",
+     "2": "PASS",
+     "3": "PASS"
+    },
+    "failed": [],
+    "follow_up": false,
+    "follow_up_steps": [],
+    "label": null
+   }
+  },
+  {
+   "name": "Gesamt leer: aus den Schritten gerechnet, SKIP mit Grund",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: pass\n2: PASS\n3: SKIP Hilfe kenne ich\nGesamt:\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "PASS",
+    "steps": {
+     "1": "PASS",
+     "2": "PASS",
+     "3": "SKIP"
+    },
+    "failed": [],
+    "follow_up": false,
+    "follow_up_steps": [],
+    "label": null
+   }
+  },
+  {
+   "name": "Ein FAIL: Folgeauftrag mit Etikett bug",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n2: FAIL Farbe in der Pipe\n3: PASS\nGesamt: FAIL\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "FAIL",
+    "steps": {
+     "1": "PASS",
+     "2": "FAIL",
+     "3": "PASS"
+    },
+    "failed": [
+     2
+    ],
+    "follow_up": true,
+    "follow_up_steps": [
+     2
+    ],
+    "label": "bug"
+   }
+  },
+  {
+   "name": "Nur BLOCKED: Folgeauftrag ohne Etikett",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n2: BLOCKED kein Terminal da\n3: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "FAIL",
+    "steps": {
+     "1": "PASS",
+     "2": "BLOCKED",
+     "3": "PASS"
+    },
+    "failed": [
+     2
+    ],
+    "follow_up": true,
+    "follow_up_steps": [
+     2
+    ],
+    "label": null
+   }
+  },
+  {
+   "name": "Nicht ausgeführt mit Gesamt FAIL und Satz",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n2:\n3: PASS\nGesamt: FAIL Schritt 2 ging heute nicht\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "FAIL",
+    "steps": {
+     "1": "PASS",
+     "2": "",
+     "3": "PASS"
+    },
+    "failed": [],
+    "follow_up": true,
+    "follow_up_steps": [
+     2
+    ],
+    "label": null
+   }
+  },
+  {
+   "name": "Runde 2: nur die offenen Schritte",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "previous": {
+    "1": "PASS",
+    "3": "SKIP"
+   },
+   "answer": "2: PASS\nGesamt: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "PASS",
+    "steps": {
+     "2": "PASS"
+    },
+    "failed": [],
+    "follow_up": false,
+    "follow_up_steps": [],
+    "label": null
+   }
+  },
+  {
+   "name": "Schritte in zwei Gruppen (fq9qvy)",
+   "steps": "Vorbereitung auf rechner-a:\n\n1. Dienst starten\n   Erwartet: der Dienst läuft.\n\nAuf handy-a:\n\n2. App öffnen\n   Erwartet: Liste „Wartet“.\n3. Antworten\n   Erwartet: Hinweis „gespeichert“.\n\nAntwort: werkzeug answer k7m2qa öffnet die Vorlage im Editor.\n",
+   "answer": "1: PASS\n2: PASS\n3: FAIL kein Hinweis\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "verdict": "FAIL",
+    "steps": {
+     "1": "PASS",
+     "2": "PASS",
+     "3": "FAIL"
+    },
+    "failed": [
+     3
+    ],
+    "follow_up": true,
+    "follow_up_steps": [
+     3
+    ],
+    "label": "bug"
+   }
+  },
+  {
+   "name": "Fehler: Gesamt PASS trotz FAIL",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n2: FAIL Farbe\n3: PASS\nGesamt: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "error": "Gesamt: PASS passt nicht zu Schritt 2 FAIL"
+   }
+  },
+  {
+   "name": "Fehler: FAIL ohne Satz",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n2: FAIL\n3: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "error": "Schritt 2: FAIL braucht einen Satz"
+   }
+  },
+  {
+   "name": "Fehler: Schritt ohne Ergebnis und ohne Gesamt",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n3: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "error": "ohne Ergebnis: Schritt 2"
+   }
+  },
+  {
+   "name": "Fehler: unbekannter Schritt",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: PASS\n9: PASS\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "error": "Schritt 9 gibt es nicht"
+   }
+  },
+  {
+   "name": "Fehler: kein Ergebniswort",
+   "steps": "Abnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\n3. Hilfe:\n   werkzeug --help\n   Erwartet: Abschnitte fett.\n",
+   "answer": "1: gut\n",
+   "expect_steps": [
+    1,
+    2,
+    3
+   ],
+   "expect": {
+    "error": "Schritt 1: „gut“ ist kein Ergebnis"
+   }
+  }
+ ],
+ "secrets": [
+  {
+   "name": "GitHub-Token",
+   "text": [
+    "Token im Log: ",
+    "gh",
+    "p_",
+    "Ab3dE5gH7jK9mN1pQ3sT5vW7yZ9bC1dE3fG5"
+   ],
+   "expect": [
+    [
+     1,
+     "GitHub-Token"
+    ]
+   ]
+  },
+  {
+   "name": "Schlüsselwert in der zweiten Zeile",
+   "text": [
+    "Zeile eins\n",
+    "pass",
+    "word",
+    " = ",
+    "Xq7",
+    "Lm2",
+    "Rt9",
+    "Zk4"
+   ],
+   "expect": [
+    [
+     2,
+     "Schlüsselwert"
+    ]
+   ]
+  },
+  {
+   "name": "Platzhalter ist kein Geheimnis",
+   "text": [
+    "pass",
+    "word",
+    ": $PASSWORD"
+   ],
+   "expect": []
+  },
+  {
+   "name": "Wort aus Kleinbuchstaben nach token ist kein Geheimnis",
+   "text": [
+    "tok",
+    "en: ",
+    "verfallen"
+   ],
+   "expect": []
+  },
+  {
+   "name": "Zugangsdaten in einer URL",
+   "text": [
+    "https://",
+    "nutzer",
+    ":",
+    "Gx8",
+    "Pw3",
+    "Kz7",
+    "@git.example.org/repo"
+   ],
+   "expect": [
+    [
+     1,
+     "Zugangsdaten in URL"
+    ]
+   ]
+  },
+  {
+   "name": "Privater Schlüssel",
+   "text": [
+    "-----BEGIN ",
+    "OPENSSH PRIVATE",
+    " KEY-----\nAAAA\n-----END ",
+    "OPENSSH PRIVATE",
+    " KEY-----"
+   ],
+   "expect": [
+    [
+     1,
+     "privater Schlüssel"
+    ]
+   ]
+  }
+ ],
+ "personal": [
+  {
+   "name": "E-Mail-Adresse",
+   "text": "Schreib an erika.mustermann@mail.example",
+   "expect": [
+    [
+     1,
+     "E-Mail"
+    ]
+   ]
+  },
+  {
+   "name": "E-Mail an example.com zählt nicht",
+   "text": "Beispiel: name@example.com",
+   "expect": []
+  },
+  {
+   "name": "noreply zählt nicht",
+   "text": "Von noreply@anthropic.com",
+   "expect": []
+  },
+  {
+   "name": "Telefon international",
+   "text": "Ruf an: +49 171 2345678",
+   "expect": [
+    [
+     1,
+     "Telefon"
+    ]
+   ]
+  },
+  {
+   "name": "IBAN mit gültiger Prüfziffer",
+   "text": "IBAN DE89370400440532013000",
+   "expect": [
+    [
+     1,
+     "IBAN"
+    ]
+   ]
+  },
+  {
+   "name": "IBAN mit Leerzeichen trifft auch das Muster für Telefon",
+   "text": "IBAN DE89 3704 0044 0532 0130 00",
+   "expect": [
+    [
+     1,
+     "IBAN"
+    ],
+    [
+     1,
+     "Telefon"
+    ]
+   ]
+  },
+  {
+   "name": "IBAN mit falscher Prüfziffer zählt nicht",
+   "text": "IBAN DE00370400440532013000",
+   "expect": []
+  },
+  {
+   "name": "Geburtsdatum",
+   "text": "Zeile\ngeb. 01.02.1990",
+   "expect": [
+    [
+     2,
+     "Geburtsdatum"
+    ]
+   ]
+  }
+ ],
+ "write": [
+  {
+   "name": "Frage beantwortet mit Möglichkeit und Text",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "k7m2qa": {
+     "0-entry.md": "# Soll zaehle.sh die letzte Zeile mitzählen?\n\n- Kind: question\n- To: user\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n- Options: A: ja (Empfehlung) | B: nein\n- Blocking: no (weiter mit A)\n\nKontext in zwei Zeilen.\n"
+    }
+   },
+   "command": [
+    "answer",
+    "k7m2qa",
+    "--option",
+    "A"
+   ],
+   "stdin": "Weil die Datei so endet.",
+   "expect": [
+    {
+     "path": "entries/k7/k7m2qa/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Answer: A: ja (Empfehlung)\n\nWeil die Datei so endet.\n"
+    },
+    {
+     "path": "entries/k7/k7m2qa/{ulid}-status.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Status: done\n- Result: Antwort: A: ja (Empfehlung)\n"
+    }
+   ]
+  },
+  {
+   "name": "Frage beantwortet mit Möglichkeit ohne Text",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "k7m2qa": {
+     "0-entry.md": "# Soll zaehle.sh die letzte Zeile mitzählen?\n\n- Kind: question\n- To: user\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n- Options: A: ja (Empfehlung) | B: nein\n- Blocking: no (weiter mit A)\n\nKontext in zwei Zeilen.\n"
+    }
+   },
+   "command": [
+    "answer",
+    "k7m2qa",
+    "--option",
+    "A"
+   ],
+   "stdin": "",
+   "expect": [
+    {
+     "path": "entries/k7/k7m2qa/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Answer: A: ja (Empfehlung)\n"
+    },
+    {
+     "path": "entries/k7/k7m2qa/{ulid}-status.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Status: done\n- Result: Antwort: A: ja (Empfehlung)\n"
+    }
+   ]
+  },
+  {
+   "name": "Frage beantwortet mit freiem Text",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "k7m2qa": {
+     "0-entry.md": "# Soll zaehle.sh die letzte Zeile mitzählen?\n\n- Kind: question\n- To: user\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n- Options: A: ja (Empfehlung) | B: nein\n- Blocking: no (weiter mit A)\n\nKontext in zwei Zeilen.\n"
+    }
+   },
+   "command": [
+    "answer",
+    "k7m2qa"
+   ],
+   "stdin": "Beides ist falsch.\nZweite Zeile.",
+   "expect": [
+    {
+     "path": "entries/k7/k7m2qa/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n\nBeides ist falsch.\nZweite Zeile.\n"
+    },
+    {
+     "path": "entries/k7/k7m2qa/{ulid}-status.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Status: done\n- Result: Antwort: Beides ist falsch.\n"
+    }
+   ]
+  },
+  {
+   "name": "Abnahme bestanden",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "q2ytn0": {
+     "0-entry.md": "# Abnahme der Liste\n\n- Kind: test\n- To: user, host:rechner-a\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nAbnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\nAntwort: 1 bis 2 mit PASS, FAIL, BLOCKED oder SKIP\n"
+    }
+   },
+   "command": [
+    "answer",
+    "q2ytn0"
+   ],
+   "stdin": "1: PASS\n2: PASS\nGesamt: PASS\n",
+   "expect": [
+    {
+     "path": "entries/q2/q2ytn0/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Verdict: PASS\n- Round: 1\n- Step: 1 PASS\n- Step: 2 PASS\n\nAbnahme Runde 1: PASS\n1: PASS\n2: PASS\n"
+    },
+    {
+     "path": "entries/q2/q2ytn0/{ulid}-status.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Status: done\n- Result: Abnahme bestanden in Runde 1: 2 PASS\n"
+    }
+   ]
+  },
+  {
+   "name": "Abnahme mit FAIL legt einen Folgeauftrag an",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "q2ytn0": {
+     "0-entry.md": "# Abnahme der Liste\n\n- Kind: test\n- To: user, host:rechner-a\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nAbnahme auf rechner-a.\n\n1. Liste zeigen:\n   werkzeug --list\n   Erwartet: Gruppe „Für dich“ oben.\n\n2. Pipe:\n   werkzeug | cat\n   Erwartet: keine Farbe.\n\nAntwort: 1 bis 2 mit PASS, FAIL, BLOCKED oder SKIP\n"
+    }
+   },
+   "command": [
+    "answer",
+    "q2ytn0"
+   ],
+   "stdin": "1: PASS\n2: FAIL Die Pipe zeigt Farbe.\nGesamt: FAIL\n",
+   "expect": [
+    {
+     "path": "entries/{id2}/{id}/0-entry.md",
+     "content": "# Abnahme q2ytn0, Runde 1: Schritt 2 nicht bestanden: Abnahme der Liste\n\n- Kind: task\n- To: project:demo\n- Project: demo\n- From: user, handy-a, 2026-11-14T12:00Z\n- Labels: bug\n- Parent: q2ytn0\n\nAbnahme q2ytn0 „Abnahme der Liste“, Runde 1: FAIL.\n\n2. Pipe\n   werkzeug | cat\n   Erwartet: keine Farbe.\n   Ergebnis: FAIL Die Pipe zeigt Farbe.\n\nDanach kommt die Abnahme q2ytn0 mit den offenen Schritten zu dir zurück; vorher in einem Nachtrag zu q2ytn0 sagen, was sich geändert hat.\n"
+    },
+    {
+     "path": "entries/q2/q2ytn0/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Verdict: FAIL\n- Round: 1\n- Step: 1 PASS\n- Step: 2 FAIL\n\nAbnahme Runde 1: FAIL\n1: PASS\n2: FAIL Die Pipe zeigt Farbe.\n"
+    },
+    {
+     "path": "entries/q2/q2ytn0/{ulid}-status.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- Status: waiting\n- Condition: done:{id}\n- Note: Runde 1: FAIL, Folgeauftrag {id}\n"
+    }
+   ]
+  },
+  {
+   "name": "Neuer Auftrag an ein Projekt mit Rang und dringend",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {},
+   "command": [
+    "new",
+    "task",
+    "Datei prüfen",
+    "--to",
+    "project:projekt-a",
+    "--priority",
+    "1",
+    "--urgent"
+   ],
+   "stdin": "Bitte bis Freitag.",
+   "expect": [
+    {
+     "path": "entries/{id2}/{id}/0-entry.md",
+     "content": "# Datei prüfen\n\n- Kind: task\n- To: project:projekt-a\n- Project: projekt-a\n- From: user, handy-a, 2026-11-14T12:00Z\n- Priority: 1\n- Urgent: yes\n\nBitte bis Freitag.\n"
+    }
+   ]
+  },
+  {
+   "name": "Neue Frage an dich",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {},
+   "command": [
+    "new",
+    "question",
+    "Soll das so bleiben?",
+    "--to",
+    "user"
+   ],
+   "stdin": "Kontext in einem Satz.",
+   "expect": [
+    {
+     "path": "entries/{id2}/{id}/0-entry.md",
+     "content": "# Soll das so bleiben?\n\n- Kind: question\n- To: user\n- From: user, handy-a, 2026-11-14T12:00Z\n\nKontext in einem Satz.\n"
+    }
+   ]
+  },
+  {
+   "name": "Neue Idee an dich mit Rang 3",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {},
+   "command": [
+    "new",
+    "idea",
+    "Pager auch für show",
+    "--to",
+    "user",
+    "--priority",
+    "3"
+   ],
+   "stdin": "Nur eine Idee.",
+   "expect": [
+    {
+     "path": "entries/{id2}/{id}/0-entry.md",
+     "content": "# Pager auch für show\n\n- Kind: idea\n- To: user\n- From: user, handy-a, 2026-11-14T12:00Z\n- Priority: 3\n\nNur eine Idee.\n"
+    }
+   ]
+  },
+  {
+   "name": "Neuer Eintrag im Eingang",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {},
+   "command": [
+    "new",
+    "task",
+    "Notiz ohne Ziel"
+   ],
+   "stdin": "Text des Eintrags.",
+   "expect": [
+    {
+     "path": "entries/{id2}/{id}/0-entry.md",
+     "content": "# Notiz ohne Ziel\n\n- Kind: task\n- From: user, handy-a, 2026-11-14T12:00Z\n\nText des Eintrags.\n"
+    }
+   ]
+  },
+  {
+   "name": "Eingang einem Projekt zuweisen",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "n4x8wd": {
+     "0-entry.md": "# Noch im Eingang\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "command": [
+    "route",
+    "n4x8wd",
+    "--to",
+    "project:projekt-a",
+    "--reason",
+    "Gehört zu projekt-a."
+   ],
+   "stdin": "",
+   "expect": [
+    {
+     "path": "entries/n4/n4x8wd/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- To: project:projekt-a\n- Project: projekt-a\n\nGehört zu projekt-a.\n"
+    }
+   ]
+  },
+  {
+   "name": "Eingang an dich und einen Rechner",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "n4x8wd": {
+     "0-entry.md": "# Noch im Eingang\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "command": [
+    "route",
+    "n4x8wd",
+    "--to",
+    "user",
+    "--to",
+    "host:rechner-a"
+   ],
+   "stdin": "",
+   "expect": [
+    {
+     "path": "entries/n4/n4x8wd/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- To: user, host:rechner-a\n"
+    }
+   ]
+  },
+  {
+   "name": "Zweites Neuadressieren ändert das Projekt",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "n4x8wd": {
+     "0-entry.md": "# Schon einmal verschoben\n\n- Kind: task\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n",
+     "01M7CQZS800000000000000001-addendum.md": "- By: user, handy-a, 2026-11-14T10:00Z\n- To: project:projekt-a\n- Project: projekt-a\n"
+    }
+   },
+   "command": [
+    "route",
+    "n4x8wd",
+    "--to",
+    "project:demo",
+    "--project",
+    "demo"
+   ],
+   "stdin": "",
+   "expect": [
+    {
+     "path": "entries/n4/n4x8wd/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- To: project:demo\n- Project: demo\n"
+    }
+   ]
+  },
+  {
+   "name": "Neu adressieren ohne Projekt lässt das Projekt stehen",
+   "at": "2026-11-14T12:00Z",
+   "from": "user, handy-a",
+   "projects": "# Projekte\n\n## projekt-a\n\n## demo\n",
+   "entries": {
+    "q8s2vb": {
+     "0-entry.md": "# Projekt im Kopf\n\n- Kind: task\n- To: project:demo\n- Project: demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "command": [
+    "route",
+    "q8s2vb",
+    "--to",
+    "host:rechner-a"
+   ],
+   "stdin": "",
+   "expect": [
+    {
+     "path": "entries/q8/q8s2vb/{ulid}-addendum.md",
+     "content": "- By: user, handy-a, 2026-11-14T12:00Z\n- To: host:rechner-a\n"
+    }
+   ]
+  }
+ ]
+}

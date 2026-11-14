@@ -1,11 +1,10 @@
 // Service Worker: hält die Hülle der App nach Fassung, damit sie ohne Netz startet (UOF-1). Daten gehen ans
-// Netz und liegen in IndexedDB (ab Teil C), nicht hier. Die Fassung steht gleich in js/version.js; neue Dateien
+// Netz und liegen in IndexedDB (js/speicher.js), nicht hier. Die Fassung steht gleich in js/version.js; neue Dateien
 // gehören in DATEIEN (tests/geruest.test.mjs prüft beides).
 const FASSUNG = 'postfach-20261114.01';
 const DATEIEN = [
   './', './index.html', './app.css', './manifest.webmanifest',
-  './js/adressen.js', './js/anzeigen.js', './js/dom.js', './js/navigation.js', './js/netz.js',
-  './js/start.js', './js/statusleiste.js', './js/version.js',
+  './js/adressen.js', './js/anzeigen.js', './js/dom.js', './js/format.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/start.js', './js/statusleiste.js', './js/urteil.js', './js/version.js', './js/zustand.js',
   './symbole/symbol-192.png', './symbole/symbol-512.png', './symbole/maskierbar-512.png',
 ];
 
