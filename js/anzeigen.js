@@ -1,8 +1,8 @@
 // Zeigt eine Ansicht: Titel, Pfeil Zurück, Leiste, Inhalt und Blatt. Bis Teil D sind die Ansichten leere
-// Hüllen mit eigener Adresse; Mehr zeigt die Fassung der App.
+// Hüllen mit eigener Adresse; Mehr zeigt den Zustand dieses Geräts (mehr.js).
 import { BEREICHE, blattTitelVon, hatZurueck, idMitStrich, titelVon } from './adressen.js';
 import { el, vorlage } from './dom.js';
-import { VERSION } from './version.js';
+import { mehr as mehrAbschnitt } from './mehr.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -13,11 +13,10 @@ function platz(titel, satz) {
   return teil;
 }
 
-function mehr() {
-  const teil = vorlage('t-mehr');
-  teil.getElementById('fassung').textContent = VERSION;
-  return teil;
-}
+// Datenbank und Steuerung des Abgleichs setzt start.js, ehe die erste Ansicht erscheint.
+let kontext = null;
+export const setzeKontext = (k) => { kontext = k; };
+const mehr = () => mehrAbschnitt(kontext);
 
 function inhalt(o) {
   if (o.ansicht === 'mehr') return [mehr()];

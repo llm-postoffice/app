@@ -29,6 +29,9 @@
 <symbol id="i-menu-f" viewBox="0 -960 960 960"><path d="M160-240q-17 0-28.5-11.5T120-280q0-17 11.5-28.5T160-320h640q17 0 28.5 11.5T840-280q0 17-11.5 28.5T800-240H160Zm0-200q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520h640q17 0 28.5 11.5T840-480q0 17-11.5 28.5T800-440H160Zm0-200q-17 0-28.5-11.5T120-680q0-17 11.5-28.5T160-720h640q17 0 28.5 11.5T840-680q0 17-11.5 28.5T800-640H160Z"/></symbol>
 <symbol id="i-info-f" viewBox="0 -960 960 960"><path d="M480-280q17 0 28.5-11.5T520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280Zm0-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/></symbol>
 <symbol id="i-cloud_off-f" viewBox="0 -960 960 960"><path d="M260-160q-92 0-156-64T40-380q0-77 47.5-137T210-594q3-8 6-15.5t6-16.5L84-764q-11-11-11-28t11-28q11-11 28-11t28 11l680 680q11 11 11.5 27.5T820-84q-11 11-27.5 11.5T764-83l-78-77H260Zm604-50L322-751q35-24 74.5-36.5T480-800q117 0 198.5 81.5T760-520q69 8 114.5 59.5T920-340q0 39-15 72.5T864-210Z"/></symbol>
+<symbol id="i-key-f" viewBox="0 -960 960 960"><path d="M280-360q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35Zm0 120q77 0 139-44t87-116h14l52 52q6 6 13 8.5t15 2.5q8 0 15-2.5t13-8.5l52-52 70 55q6 5 13.5 7.5T779-336q8-1 14.5-4.5T805-350l90-103q5-6 7.5-13t2.5-15q0-8-3-14.5t-8-11.5l-41-41q-6-6-13.5-9t-15.5-3H506q-24-68-84.5-114T280-720q-100 0-170 70T40-480q0 100 70 170t170 70Z"/></symbol>
+<symbol id="i-error-f" viewBox="0 -960 960 960"><path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm0-160q17 0 28.5-11.5T520-480v-160q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v160q0 17 11.5 28.5T480-440Zm0 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/></symbol>
+<symbol id="i-schedule" viewBox="0 -960 960 960"><path d="M520-496v-144q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v159q0 8 3 15.5t9 13.5l132 132q11 11 28 11t28-11q11-11 11-28t-11-28L520-496ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z"/></symbol>
 </svg>
 <header class="kopf">
   <button class="symbol" id="zurueck" type="button" aria-label="Zurück" hidden><svg class="ico" aria-hidden="true"><use href="#i-arrow_back"/></svg></button>
@@ -65,8 +68,21 @@
 <template id="t-mehr">
   <section>
     <h2>Dieses Gerät</h2>
-    <dl class="werte"><div><dt>Fassung</dt><dd id="fassung"></dd></div></dl>
+    <dl class="werte">
+      <div><dt>Speicher</dt><dd id="speicher"></dd></div>
+      <div><dt>Fassung</dt><dd id="fassung"></dd></div>
+      <div><dt>Abgleich</dt><dd id="abgleich"></dd></div>
+      <div><dt><label for="takt">Abgleich im Vordergrund</label></dt><dd><select id="takt" class="wahl"></select></dd></div>
+    </dl>
+    <p class="neben" id="speicher-warnung" hidden></p>
+    <div id="abgleich-stand"></div>
   </section>
+</template>
+<template id="t-fortschritt">
+  <div class="fortschritt"><p></p><progress aria-label="Abgleich läuft"></progress><p class="neben" hidden></p></div>
+</template>
+<template id="t-band">
+  <div class="band" role="status"><svg class="ico" aria-hidden="true"><use href=""/></svg><div><strong></strong><p></p><div class="zeilenknoepfe"></div><details hidden><summary>Einzelheiten</summary><pre></pre></details></div></div>
 </template>
 </body>
 </html>
