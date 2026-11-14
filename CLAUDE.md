@@ -11,15 +11,26 @@ arbeitet offline mit einer Warteschlange.
   kein Inline-Stil und kein Host außer `api.github.com` und `ntfy.sh`. Zu `default-src 'none'` gehört `manifest-src
   'self'`: ohne es blockt Chromium das Manifest, und die App ließe sich nicht installieren. Der Renderer merkt das
   nicht, `tools/wege.mjs` schon (Verstöße gegen die CSP werden aufgezeichnet).
-- Aufbau: `index.html` und `app.css` (Hülle, Farben, Maße), `js/` (Module; `adressen.js` ist rein und wird mit
-  `node --test` geprüft), `sw.js` (Hülle nach Fassung, neue Dateien gehören in `DATEIEN`), `tools/` (Wegetest,
-  Fremdhost-Prüfung), `tests/`. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0).
+- Aufbau: `index.html` und `app.css` (Hülle, Farben, Maße), `js/` (Module), `sw.js` (Hülle nach Fassung, neue Dateien
+  gehören in `DATEIEN`), `tools/` (Wegetest, Fremdhost-Prüfung), `tests/`. Module: `adressen.js`, `format.js`,
+  `pytext.js`, `zustand.js`, `urteil.js`, `pruefen.js` und `texte.js` sind rein und laufen unter `node --test`;
+  `speicher.js` (IndexedDB oder Arbeitsspeicher, dieselbe Schnittstelle), `abgleich.js` (GitHub lesen; `fetch` und
+  Datenbank sind Parameter) und `steuerung.js` (wann der Abgleich läuft; auch Zeitgeber, Uhr und Sichtbarkeit sind
+  Parameter) kennen den Browser nicht selbst; `mehr.js`, `start.js` und `netz.js` verbinden sie mit der Seite. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0).
   Feste Bausteine sind `<template>` in `index.html`; Daten kommen nur über `textContent` in den Baum.
 - Gates: `make check` (Tests, Prüfung auf Fremdhosts, gitleaks, Rendern aller Zustände mit `rendern-mobil.mjs` aus dem
   p94-hig-Klon, Wegetest). Pfad des Klons: `make check HIG=PFAD`.
 - Lizenz GPL-3.0-or-later. Version `YYYYMMDD.NN` steht gleich in `js/version.js`, `sw.js` und der obersten
   CHANGELOG-Überschrift und ist in der Ansicht Mehr sichtbar.
 - Nie Tokens, PATs oder ntfy-Topics in Dateien, Logs oder Ausgaben; Testgeheimnisse nur zur Laufzeit verkettet.
+- Zustand, Urteile und Prüfmuster sind ein Nachbau des Postwerkzeugs in Python (`zustand.js` und die Dateien daneben).
+  Gleich bleiben sie durch die gemeinsamen Testfälle (`tests/testfaelle/cases.json`, wörtliche Kopie, Herkunft in
+  `QUELLE.json`) und den Vergleich mit dem Werkzeug über `POST_QUELLE`, `POST_DATEN`, `POST_BEFEHL` und
+  `POST_WERKZEUG` (siehe README). Weicht ein Regex-Muster von Python ab, steht die Abweichung mit Grund im Kopf von
+  `js/pruefen.js`.
+- Der Wegetest fängt `api.github.com` in Chromium ab (CDP `Fetch`) und antwortet aus einer Mock-Quelle; mit einem Testtoken
+  geht nie eine Anfrage ins Netz. Der Browser-Test fand Fehler, die node nicht findet (Zeitgeber ohne Empfänger,
+  MIME-Typ von `.mjs`); neue Browser-Schnittstellen darum dort prüfen.
 - Das Repo ist öffentlich: kein Name des privaten Datenrepos, keine Rechner-, Personen- oder Pfadnamen in Code, Tests,
   Doku, Commits und PRs. Repo und Eigentümer trägt der Nutzer bei der Anmeldung ein.
 - PR-Fluss: Arbeit auf einem Zweig, ein PR gegen `main` mit dem Prüfergebnis in der Beschreibung. `main` verlangt einen
