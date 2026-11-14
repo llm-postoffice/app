@@ -64,29 +64,30 @@ button, input, textarea, select { font: inherit; color: inherit; }
   padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
   background: var(--grund);
 }
-.kopf h1 { flex: 1; min-width: 0; margin: 0 0 0 12px; font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; overflow-wrap: anywhere; }
+.kopf h1 { flex: 1; min-width: 0; margin: 0 0 0 12px; font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; overflow-wrap: anywhere; hyphens: auto; }
 .kopf button + h1 { margin-left: 4px; }
+.kopf .suchfeld { flex: 1; min-width: 0; margin: 0 8px 0 4px; }
+.kopf .suchfeld input { width: 100%; min-height: 48px; padding: 8px 16px; border: 0; border-radius: 24px; background: var(--flaeche); font-size: 1rem; line-height: 1.5rem; }
+.kopf .suchfeld input::placeholder { color: var(--neben); opacity: 1; }
 .symbol { min-width: 48px; min-height: 48px; display: grid; place-items: center; border: 0; border-radius: 24px; background: none; color: inherit; text-decoration: none; }
 .symbol:active { background: var(--flaeche); }
 
 /* Ruhige Zeile unter der Leiste: ohne Netz (UOF-4) */
+.stand .ico { margin-top: -2px; }
 .stand { margin: 0; padding: 8px max(var(--rand), env(safe-area-inset-right)) 8px max(var(--rand), env(safe-area-inset-left)); background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; display: flex; gap: 12px; align-items: flex-start; }
 
 /* Inhalt: eine Spalte mit 16 px Rand (UAN-1) */
 main { padding: 0 max(var(--rand), env(safe-area-inset-right)) 16px max(var(--rand), env(safe-area-inset-left)); overflow-wrap: anywhere; }
+main > :first-child { margin-top: 0; }
 h2 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; margin: 24px 0 4px; }
 p { margin: 0 0 12px; }
+a { color: var(--akzent); }
+code, pre, .mono { font-family: ui-monospace, monospace; font-size: 0.875rem; line-height: 1.25rem; }
 .neben { color: var(--neben); font-size: 0.875rem; line-height: 1.25rem; }
 
 /* ID mit Strich, Monospace, in Kupfer; Sitzung in Monospace ohne Farbe (Nachtrag, Abschnitt e) */
 .id { font-family: ui-monospace, monospace; font-size: 0.8125rem; line-height: 1.25rem; font-weight: 600; color: var(--id); white-space: nowrap; }
 .sitzung { font-family: ui-monospace, monospace; font-size: 0.8125rem; line-height: 1.25rem; font-weight: 500; overflow-wrap: anywhere; }
-
-/* Werte als Liste, Wert unter der Beschriftung (GWE-7) */
-.werte { margin: 0 0 12px; }
-.werte div { padding: 8px 0; border-bottom: 1px solid var(--linie); }
-.werte dt { font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
-.werte dd { margin: 0; }
 
 /* Knöpfe: 48 px hoch (UZI-1), ein gefüllter je Ansicht (USE-1) */
 .gefuellt, .tonal, .text {
@@ -111,39 +112,273 @@ button:disabled { opacity: 0.38; }
 .bild .p2 { width: 8px; height: 8px; right: 6px; top: 6px; }
 .bild .p3 { width: 10px; height: 10px; right: 12px; bottom: 6px; }
 
-/* Mehr, Abgleich: Auswahl, Fortschritt und Band für Zustand und Fehler (UOF-4, UFA-1, URM-3) */
-.wahl {
-  min-height: 48px; width: 100%; padding: 8px 12px; border: 1px solid var(--linie); border-radius: 12px;
-  background: var(--grund); color: var(--text);
-}
-#abgleich-stand { display: grid; gap: 12px; margin: 12px 0 0; justify-items: start; }
-#abgleich-stand > * { max-width: 100%; }
-.fortschritt { width: 100%; }
-.fortschritt p { margin: 0 0 8px; }
-.fortschritt p.neben { margin: 8px 0 0; }
+/* Knöpfe */
+.breit { display: block; width: 100%; }
+a.gefuellt, a.tonal, a.text { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.ik { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.links { text-align: left; justify-content: flex-start; }
+
+/* Zustandsgrafik für leer, lädt und Fehler: Fläche, Symbol, drei Punkte, ohne Bilddatei (UFA-10) */
+.platz { text-align: center; padding: 48px 8px 24px; }
+.platz h2 { font-size: 1.375rem; line-height: 1.75rem; font-weight: 600; margin: 0 0 8px; }
+.platz p { margin: 0 auto 16px; max-width: 28rem; }
+.platz .neben { margin-bottom: 8px; }
+.platz > .tonal, .platz > .gefuellt { margin-bottom: 16px; }
+.platz progress { margin: 8px auto 12px; max-width: 28rem; }
+.platz details { margin: 0 auto 16px; max-width: 28rem; text-align: left; }
+.bild { position: relative; width: 144px; height: 112px; margin: 0 auto 16px; --b-acc: var(--akzent); --b-cont: var(--tonal); }
+.bild .blob { position: absolute; inset: 8px 16px; border-radius: 48% 52% 50% 50% / 55% 50% 50% 45%; background: var(--b-cont); }
+.bild .mitte { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 64px; height: 64px; border-radius: 32px; background: var(--grund); color: var(--b-acc); box-shadow: 0 1px 3px rgb(0 0 0 / 0.18); }
+.bild .mitte .ico { width: 40px; height: 40px; }
+.bild .punkt { position: absolute; border-radius: 50%; background: var(--b-acc); opacity: 0.55; }
+.bild .p1 { width: 12px; height: 12px; left: 6px; top: 16px; }
+.bild .p2 { width: 8px; height: 8px; right: 6px; top: 6px; }
+.bild .p3 { width: 10px; height: 10px; right: 12px; bottom: 6px; }
+.bild.ok { --b-acc: var(--ok-acc); --b-cont: var(--ok-cont); }
+.bild.warn { --b-acc: var(--w-acc); --b-cont: var(--w-cont); }
+.bild.fehler { --b-acc: var(--f-acc); --b-cont: var(--f-cont); }
+.bild.blau { --b-acc: var(--akzent); --b-cont: var(--tonal); }
+.bild.nachricht { --b-acc: var(--nachricht-acc); --b-cont: var(--nachricht-cont); }
+
+/* Fortschritt: bestimmt nur mit echter Gesamtzahl (URM-3) */
 progress { display: block; width: 100%; height: 8px; border: 0; border-radius: 4px; background: var(--tonal); accent-color: var(--akzent); overflow: hidden; }
 progress::-webkit-progress-bar { background: var(--tonal); }
 progress::-webkit-progress-value { background: var(--akzent); }
 progress::-moz-progress-bar { background: var(--akzent); }
-.band {
-  display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px 16px; border-radius: 16px;
-  background: var(--flaeche); color: var(--text); --b-acc: var(--neben);
-}
+.fortschritt { width: 100%; margin: 8px 0 12px; }
+.fortschritt p { margin: 0 0 8px; }
+.fortschritt p.neben { margin: 8px 0 0; }
+
+/* Bänder für Zustände (URM-4, UOF-4): Symbol, Satz, Wort; Farbe nie allein */
+.band { display: flex; gap: 12px; align-items: flex-start; width: 100%; margin: 8px 0 16px; padding: 12px 16px; border-radius: 16px; background: var(--flaeche); color: var(--text); }
 .band > div { min-width: 0; flex: 1; }
-.band .ico { color: var(--b-acc); margin-top: 2px; }
+.band .ico { color: inherit; margin-top: 2px; }
 .band strong { display: block; font-weight: 600; }
 .band p { margin: 0 0 8px; font-size: 0.875rem; line-height: 1.25rem; }
-.band.warnung { background: var(--w-cont); color: var(--w-on); --b-acc: var(--w-acc); }
-.band.fehler { background: var(--f-cont); color: var(--f-on); --b-acc: var(--f-acc); }
+.band p:last-child { margin-bottom: 0; }
+.band.warn { background: var(--w-cont); color: var(--w-on); }
+.band.fehler { background: var(--f-cont); color: var(--f-on); }
+.band.ok { background: var(--ok-cont); color: var(--ok-on); }
+.band.info { background: var(--tonal); color: var(--auf-tonal); }
+.band .zeilenknoepfe { margin: 8px 0 0; }
 .zeilenknoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
 .zeilenknoepfe:empty { display: none; }
-.band details summary { padding: 14px 0; cursor: pointer; font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
-.band pre {
+.band details { margin: 0; }
+.band details summary { min-height: 48px; color: inherit; font-size: 0.875rem; line-height: 1.25rem; }
+.band pre, details pre {
   margin: 0 0 4px; padding: 8px 12px; border-radius: 8px; background: var(--grund); color: var(--text);
   font: 0.8125rem/1.25rem ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text;
 }
 
-/* Untere Leiste: Navigation klebt unten und verdeckt nichts (UAN-4); bei Schrift 200 % bricht sie in zwei Zeilen um */
+/* Aufklappbare Teile: Dreieck als Zeichen für auf und zu */
+details { margin: 8px 0 16px; }
+summary { min-height: 48px; display: flex; align-items: center; color: var(--akzent); font-weight: 500; cursor: pointer; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: ""; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid currentColor; margin-left: 8px; }
+details[open] > summary::after { transform: rotate(180deg); }
+
+/* Rollen: Art (k-) und Zustand (s-) tragen Akzent, Fläche und Text auf der Fläche */
+.k-frage { --k-acc: var(--frage-acc); --k-cont: var(--frage-cont); --k-on: var(--frage-on); }
+.k-freigabe { --k-acc: var(--freigabe-acc); --k-cont: var(--freigabe-cont); --k-on: var(--freigabe-on); }
+.k-abnahme { --k-acc: var(--abnahme-acc); --k-cont: var(--abnahme-cont); --k-on: var(--abnahme-on); }
+.k-auftrag { --k-acc: var(--auftrag-acc); --k-cont: var(--auftrag-cont); --k-on: var(--auftrag-on); }
+.k-nachricht { --k-acc: var(--nachricht-acc); --k-cont: var(--nachricht-cont); --k-on: var(--nachricht-on); }
+.s-ok { --s-acc: var(--ok-acc); --s-cont: var(--ok-cont); --s-on: var(--ok-on); }
+.s-warn { --s-acc: var(--w-acc); --s-cont: var(--w-cont); --s-on: var(--w-on); }
+.s-fehler { --s-acc: var(--f-acc); --s-cont: var(--f-cont); --s-on: var(--f-on); }
+.s-neutral { --s-acc: var(--neben); --s-cont: var(--flaeche); --s-on: var(--text); }
+
+/* Chips: Art, Dringlichkeit, Zustand (Symbol, Wort, Farbe) */
+.chip-art .ico, .chip-zst .ico, .chip-dringend .ico, .zst .ico, .chip-rat .ico { width: 1.25em; height: 1.25em; }
+.chip-art, .chip-zst, .chip-dringend, .chip-rat { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 6px; border-radius: 8px; font-size: 0.8125rem; line-height: 1.25rem; font-weight: 600; white-space: nowrap; }
+.chip-art { background: var(--k-cont); color: var(--k-on); }
+.chip-art .ico { color: var(--k-acc); }
+.chip-zst { background: var(--s-cont); color: var(--s-on); white-space: normal; align-items: flex-start; }
+.chip-zst .ico { color: var(--s-acc); margin-top: 1px; }
+.chip-dringend { background: var(--f-acc); color: var(--f-solid-on); }
+.chip-rat { background: var(--ok-cont); color: var(--ok-on); justify-self: start; }
+.chip-rat .ico { color: var(--ok-acc); }
+.zst { display: flex; align-items: flex-start; gap: 6px; font-size: 0.875rem; line-height: 1.25rem; color: var(--text); }
+.zst .ico { margin-top: 1px; color: var(--s-acc, var(--k-acc, var(--neben))); }
+.zst.stark { font-weight: 600; }
+
+/* Karten der Liste: Kante in der Farbe der Art, bei dringend rote Fläche; die Karte ist als Ganzes ein Ziel (UZI-4) */
+.karten { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.karten + .karten, .karten + .gruppentitel { margin-top: 16px; }
+.karte { display: grid; gap: 6px; min-height: 72px; padding: 14px 16px 14px 22px; border-radius: 16px; background: var(--flaeche); color: var(--text); text-decoration: none; box-shadow: inset 6px 0 0 var(--k-acc); }
+.karte:active { filter: brightness(0.96); }
+.karte.dringend { background: var(--f-cont); color: var(--f-on); box-shadow: inset 6px 0 0 var(--f-acc); }
+.karte.dringend .zst { color: var(--f-on); }
+.karte .kopfzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.8125rem; line-height: 1.25rem; }
+.karte .projekt { font-size: 1rem; line-height: 1.5rem; font-weight: 700; }
+.karte .projekt .rest { font-weight: 400; font-size: 0.875rem; }
+.karte .projekt.keins { font-weight: 400; color: var(--neben); font-size: 0.875rem; }
+.karte .titel { font-size: 1.0625rem; line-height: 1.5rem; font-weight: 600; }
+.karte .von { font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); }
+.karte.dringend .von { color: var(--f-on); }
+.karte.ruhig { display: flex; align-items: center; gap: 12px; box-shadow: none; }
+.karte.ruhig .rund { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 20px; background: var(--tonal); color: var(--auf-tonal); flex: none; }
+.karte.ruhig .daten { flex: 1; min-width: 0; display: grid; }
+.karte.ruhig .daten b { font-size: 1rem; line-height: 1.5rem; font-weight: 600; }
+.karte.ruhig .daten span { font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.gruppentitel { margin: 12px 0 8px; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; color: var(--neben); }
+.mehr-liste { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 12px; }
+.mehr-liste > li { container-type: inline-size; }
+@container (max-width: 12em) { .karte.ruhig .rund { display: none; } }
+
+/* Übersicht oben in Wartet und Abnahmen: Ergebnis zuerst, groß (GRM-6) */
+.uebersicht { margin: 8px 0 16px; display: grid; gap: 8px; }
+.uebersicht .zahl { margin: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 600; }
+.uebersicht .zahl .n { font-size: 2.5rem; line-height: 2.75rem; font-weight: 700; color: var(--akzent); margin-right: 4px; }
+.uebersicht .chips-reihe { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.uebersicht .neben, .eintragszeile { margin: 0; }
+.eintragszeile { margin-bottom: 8px; font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+
+/* Kopfkarte eines Eintrags: Fläche der Art, Symbol, Titel, Zustand */
+.kopfkarte { display: grid; gap: 8px; margin: 8px 0 16px; padding: 16px; border-radius: 20px; background: var(--k-cont); color: var(--k-on); }
+.kopfkarte .zeile1 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.kopfkarte .zeile1 .id { margin-left: auto; font-size: 1rem; line-height: 1.5rem; }
+.kopfkarte .rund { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 20px; background: var(--k-acc); color: var(--grund); flex: none; }
+.kopfkarte .art { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
+.kopfkarte .meta { font-size: 0.8125rem; line-height: 1.25rem; }
+.kopfkarte h2 { margin: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 600; }
+.kopfkarte .zst { color: var(--k-on); font-weight: 600; }
+.kopfkarte .zst .ico { color: var(--k-acc); }
+.kopfkarte .zst.s-ok, .kopfkarte .zst.s-warn, .kopfkarte .zst.s-fehler { color: var(--k-on); }
+.kopfkarte .projektzeile { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 1.0625rem; line-height: 1.5rem; font-weight: 700; }
+.kopfkarte .projektzeile .rest { font-weight: 400; font-size: 0.875rem; }
+.kopfkarte .projektzeile.keins { font-weight: 400; font-size: 0.875rem; }
+.kopfkarte .chip-zst { justify-self: start; }
+
+/* Abschnitte im Eintrag: Text, Möglichkeiten, Faden, Quelle */
+.text-block { margin: 0 0 16px; }
+.text-block > :last-child { margin-bottom: 0; }
+.text-block h3, .text-block h4 { margin: 16px 0 4px; font-size: 1rem; line-height: 1.5rem; font-weight: 600; }
+.text-block ul, .text-block ol { margin: 0 0 12px; padding-left: 1.5rem; }
+.text-block li { margin-bottom: 4px; }
+.text-block pre.text-code { margin: 0 0 12px; padding: 12px 16px; background: var(--flaeche); border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.text-block code { background: var(--flaeche); padding: 0 4px; border-radius: 4px; }
+.text-block pre code { background: none; padding: 0; }
+.text-block hr { border: 0; border-top: 1px solid var(--linie); margin: 16px 0; }
+.zitat { margin: 0 0 12px; padding: 4px 0 4px 12px; border-left: 3px solid var(--linie); color: var(--neben); }
+.zitat > :last-child { margin-bottom: 0; }
+.fremd-hinweis { margin: 0 0 4px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); }
+.moeglichkeiten { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.moeglichkeiten li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--flaeche); }
+.buchstabe { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 16px; background: var(--k-cont, var(--tonal)); color: var(--k-on, var(--auf-tonal)); font-weight: 700; flex: none; }
+.moeglichkeiten .was { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.faden { margin: 0 0 16px; padding: 0; list-style: none; }
+.faden li { padding: 8px 0 8px 12px; border-left: 3px solid var(--linie); margin: 0 0 8px; }
+.faden .kopf-zeile { display: block; font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.faden .text-block { margin: 4px 0 0; }
+.faden .gesendet { display: block; margin-top: 4px; }
+.faden a.folge { display: block; min-height: 48px; color: inherit; text-decoration: none; }
+.quelle { margin: 0 0 16px; }
+.befehl { display: block; margin: 4px 0 12px; padding: 12px 16px; min-height: 48px; background: var(--flaeche); border-radius: 8px; word-break: break-all; overflow-wrap: anywhere; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 0.875rem; line-height: 1.5rem; user-select: all; }
+.erwartet { margin: 0 0 16px; padding: 12px 16px 12px 22px; border-radius: 12px; background: var(--flaeche); box-shadow: inset 6px 0 0 var(--abnahme-acc); }
+.titel-gross { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; margin: 4px 0 8px; }
+main > h2:first-child, .blatt h2 { margin-top: 0; }
+
+/* Werte als Liste (GWE-7), Wert unter der Beschriftung */
+.werte { margin: 0 0 12px; }
+.werte div { padding: 8px 0; border-bottom: 1px solid var(--linie); }
+.werte dt { font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.werte dd { margin: 0; }
+.werte select { min-height: 48px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--neben); border-radius: 4px; background: var(--grund); }
+.werte .mit-knopf { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 12px; }
+.werte .mit-knopf dt { flex: 1 1 100%; }
+.werte .mit-knopf .text { padding: 10px 16px; margin-right: -16px; }
+#abgleich-stand { display: grid; gap: 12px; margin: 12px 0 0; justify-items: start; }
+#abgleich-stand > * { max-width: 100%; }
+.ablauf-schritte { padding-left: 1.5rem; margin: 0 0 12px; }
+.ablauf-schritte li { margin-bottom: 8px; }
+.bereich-gap { margin-top: 24px; }
+
+/* Schritte einer Abnahme: Nummer, Aktion, Urteil mit Symbol, Wort und Farbe */
+.schritte { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.schritt { display: flex; gap: 12px; align-items: center; min-height: 56px; padding: 8px 16px; border-radius: 12px; background: var(--flaeche); color: inherit; text-decoration: none; }
+.schritt .nr { background: var(--grund); border-radius: 14px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 0.8125rem; font-weight: 600; flex: none; }
+.schritt .was { flex: 1; min-width: 0; }
+.schritt .urteil { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 6px; border-radius: 8px; background: var(--s-cont); color: var(--s-on); font-size: 0.8125rem; line-height: 1.25rem; font-weight: 600; flex: none; }
+.schritt .urteil .ico { width: 1.25em; height: 1.25em; color: var(--s-acc); }
+.schritt .urteil.offen { font-weight: 500; }
+.schritt:active { filter: brightness(0.96); }
+.urteile { display: grid; gap: 8px; margin: 8px 0 12px; }
+.urteile .tonal.v { background: var(--s-cont); color: var(--s-on); display: grid; grid-template-columns: auto 1fr; align-items: center; justify-items: start; column-gap: 12px; padding: 8px 16px; min-height: 56px; border-radius: 16px; text-align: left; }
+.urteile .tonal.v .ico { color: var(--s-acc); width: 28px; height: 28px; grid-row: span 2; }
+.urteile .tonal.v b { font-size: 1rem; line-height: 1.25rem; font-weight: 700; }
+.urteile .tonal.v span { font-size: 0.8125rem; line-height: 1.125rem; font-weight: 400; }
+.urteile .tonal.v[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--s-acc); }
+.ergebnis { display: grid; gap: 8px; margin: 8px 0 16px; padding: 16px; border-radius: 20px; background: var(--s-cont); color: var(--s-on); }
+.ergebnis .gesamt { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 700; }
+.ergebnis .gesamt .ico { width: 40px; height: 40px; color: var(--s-acc); }
+.ergebnis p { margin: 0; }
+.ergebnis .chips-reihe { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.fall-liste { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.fall-liste li { display: grid; gap: 4px; padding: 12px 16px; border-radius: 12px; background: var(--flaeche); }
+.fall-liste .chip-zst { justify-self: start; }
+.fall-liste .satz { margin: 0; }
+
+/* Formulare (UEI-5): Beschriftung über dem Feld, Hinweis darunter, Fehler am Feld mit Symbol und Satz */
+.feld { display: grid; gap: 4px; margin: 16px 0; font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+.feld input, .feld textarea, .feld select { min-height: 48px; width: 100%; padding: 12px 16px; border: 1px solid var(--neben); border-radius: 4px; background: var(--grund); font-size: 1rem; line-height: 1.5rem; font-weight: 400; }
+.feld textarea { field-sizing: content; min-height: 96px; resize: vertical; }
+.feld small { font-size: inherit; font-weight: 400; color: var(--neben); }
+.feld.mit-fehler input, .feld.mit-fehler select, .feld.mit-fehler textarea { border: 2px solid var(--f-acc); padding: 11px 15px; }
+.feld .fehlertext { display: flex; gap: 8px; align-items: flex-start; color: var(--f-acc); font-weight: 500; }
+.feld .fehlertext .ico { width: 20px; height: 20px; }
+fieldset.feld { border: 0; padding: 0; margin-left: 0; margin-right: 0; min-width: 0; }
+fieldset.feld legend { padding: 0; margin-bottom: 4px; font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; }
+.chip span { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border: 1px solid var(--neben); border-radius: 12px; font-size: 0.875rem; font-weight: 500; }
+.chip input:checked + span { background: var(--tonal); color: var(--auf-tonal); border-color: var(--tonal); }
+.chip input:checked + span::before { content: "\2713"; }
+.chip input:focus-visible + span { outline: 3px solid var(--akzent); outline-offset: 2px; }
+.chips.arten .chip span { gap: 6px; padding: 0 16px 0 12px; }
+.chips.arten .chip .ico { width: 1.25rem; height: 1.25rem; color: var(--k-acc); }
+.chips.arten .chip input:checked + span { background: var(--k-cont); color: var(--k-on); border-color: var(--k-acc); box-shadow: inset 0 0 0 1px var(--k-acc); }
+.chips.arten .chip input:checked + span::before { content: none; }
+.chips.arten .chip .gewaehlt { display: none; font-style: normal; }
+.chips.arten .chip input:checked + span .gewaehlt { display: inline-flex; }
+.haken { display: flex; gap: 12px; align-items: flex-start; min-height: 48px; padding: 12px 0; font-size: 0.875rem; font-weight: 500; }
+.haken input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--akzent); }
+.haken .ico { color: var(--f-acc); }
+/* Auswahl im Blatt Einsortieren: Zeile als Ganzes ein Ziel (UZI-4), Haken und Rand beim gewählten (UFA-11) */
+.wahlliste { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.wahl { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--linie); background: var(--grund); }
+.wahl input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 12px; background: none; opacity: 0; }
+.wahl > .ico { color: var(--neben); }
+.wahl .an { display: none; color: var(--akzent); }
+.wahl input:checked ~ .an { display: block; }
+.wahl input:checked ~ .aus { display: none; }
+.wahl:has(input:checked) { background: var(--tonal); color: var(--auf-tonal); border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
+.wahl:has(input:checked) > .ico, .wahl:has(input:checked) .an { color: var(--auf-tonal); }
+.wahl:has(input:focus-visible) { outline: 3px solid var(--akzent); outline-offset: 2px; }
+.wahl .wahl-text { flex: 1; min-width: 0; display: grid; }
+.wahl .wahl-text b { font-weight: 600; font-size: 1rem; line-height: 1.5rem; }
+.wahl .wahl-text span { font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.wahl:has(input:checked) .wahl-text span { color: var(--auf-tonal); }
+.antworten { display: grid; gap: 8px; margin: 0 0 12px; }
+.antworten .tonal { display: flex; align-items: flex-start; gap: 12px; text-align: left; border-radius: 16px; padding: 12px 20px; }
+.antworten .tonal .buchstabe { background: var(--grund); }
+.antworten .tonal .was { display: grid; gap: 4px; justify-items: start; }
+
+/* Hinweis unten (Snackbar, URM-2) */
+.hinweis { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; margin: 0 8px 8px; padding: 4px 8px 4px 16px; border-radius: 4px; background: var(--umgekehrt); color: var(--auf-umgekehrt); font-size: 0.875rem; line-height: 1.25rem; }
+.hinweis span { flex: 1 1 12rem; min-width: 0; padding: 10px 0; }
+.hinweis button { min-height: 48px; padding: 0 12px; border: 0; background: none; color: var(--tonal); font-weight: 500; }
+@media (prefers-color-scheme: dark) { .hinweis button { color: #0b57d0; } }
+
+/* Aktionsleiste über der Navigationsleiste: Hauptaktion in Daumenreichweite (UAN-3) */
+.aktion { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px max(var(--rand), env(safe-area-inset-right)) 8px max(var(--rand), env(safe-area-inset-left)); background: var(--grund); border-top: 1px solid var(--linie); }
+.aktion > * { flex: 1 1 9rem; }
+/* Ohne Navigationsleiste (Anmeldung) trägt die Aktionsleiste den Abstand zur Gestenleiste selbst (UPL-4) */
+body:has(#leiste[hidden]) .aktion { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.aktion .satz { flex: 1 1 100%; margin: 0; }
+
+/* Untere Leiste: Hinweis, Aktion und Navigation kleben unten und verdecken nichts (UAN-4); bei Schrift 200 % bricht sie um */
 .unten { position: sticky; bottom: 0; z-index: 2; }
 .leiste {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
@@ -157,20 +392,23 @@ progress::-moz-progress-bar { background: var(--akzent); }
 .leiste a[aria-current="page"] .sym { background: var(--tonal); color: var(--auf-tonal); }
 .leiste a[aria-current="page"] .an { display: block; }
 .leiste a[aria-current="page"] .aus { display: none; }
+.plakette { position: absolute; top: -4px; right: 2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--akzent); color: var(--auf-akzent); font-size: 0.75rem; line-height: 20px; font-weight: 600; text-align: center; }
 
 /* Blatt von unten (UDI-3): ein dialog; Zurück schließt es als Schließanforderung (UNA-3) */
 .blatt {
-  margin: auto 0 0; width: 100%; max-width: 100%; max-height: 90dvh; border: 0; overflow: hidden;
-  border-radius: 28px 28px 0 0; padding: 8px var(--rand) 0;
+  margin: auto 0 0; width: 100%; max-width: 100%; max-height: 90dvh; border: 0; overflow-y: auto; overscroll-behavior: contain;
+  border-radius: 28px 28px 0 0; padding: 8px max(var(--rand), env(safe-area-inset-right)) 0 max(var(--rand), env(safe-area-inset-left));
   background: var(--flaeche); color: var(--text);
 }
-/* Inhalt scrollt, die Knopfzeile bleibt bei Schrift 200 % unten sichtbar (UDI-6) */
 .blatt[open] { display: flex; flex-direction: column; }
-.blatt-inhalt { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.blatt-inhalt { flex: none; }
 .blatt::backdrop { background: rgb(0 0 0 / 0.4); }
 .griff { width: 32px; height: 4px; margin: 8px auto 16px; border-radius: 2px; background: var(--neben); }
-.blatt h2 { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; margin: 0 0 16px; }
-.knoepfe { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: none; padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); }
+.blatt h2 { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; margin: 0 0 16px; display: flex; align-items: flex-start; gap: 8px; }
+.blatt h2 .ico { color: var(--s-acc); flex: none; margin-top: calc((1lh - 24px) / 2); }
+.blatt .feld { margin: 12px 0; }
+.blatt .band { margin-top: 0; }
+.knoepfe { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: none; position: sticky; bottom: 0; margin-top: auto; background: var(--flaeche); padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); }
 @media (prefers-reduced-motion: no-preference) {
   .blatt[open] { animation: hoch 200ms ease-out; }
   @keyframes hoch { from { transform: translateY(100%); } }
@@ -178,12 +416,13 @@ progress::-moz-progress-bar { background: var(--akzent); }
 
 /* Ab 600 px Breite: Navigationsleiste an der Seite (UAN-5), eine Codebasis für schmal und breit (UEW-3) */
 @media (min-width: 600px) {
-  body { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto 1fr; }
-  .kopf, .stand, main { grid-column: 2; }
-  .unten { grid-column: 1; grid-row: 1 / 4; position: sticky; top: 0; height: 100dvh; }
-  .leiste { grid-template-columns: 1fr; align-content: start; padding-top: max(16px, env(safe-area-inset-top)); height: 100%; }
+  body { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; }
+  .kopf, .stand, main, .boden { grid-column: 2; }
+  .unten { display: contents; }
+  .boden { grid-row: 4; position: sticky; bottom: 0; z-index: 2; }
+  .leiste { grid-column: 1; grid-row: 1 / 5; grid-template-columns: 1fr; align-content: start; padding-top: max(16px, env(safe-area-inset-top)); position: sticky; top: 0; height: 100dvh; z-index: 2; }
   main { max-width: 840px; }
   /* ohne Leiste (Anmeldung) bleibt keine leere Spalte */
   body:has(#leiste[hidden]) { grid-template-columns: minmax(0, 1fr); }
-  body:has(#leiste[hidden]) :is(.kopf, .stand, main) { grid-column: 1; }
+  body:has(#leiste[hidden]) :is(.kopf, .stand, main, .boden) { grid-column: 1; }
 }

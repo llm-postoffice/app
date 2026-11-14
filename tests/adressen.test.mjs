@@ -22,6 +22,9 @@ const TABELLE = [
   ['#mehr/geraet', 'mehr', 'mehr', ['#wartet', '#mehr']],
   ['#suche', 'suche', 'wartet', ['#wartet']],
   ['#anmelden', 'anmelden', null, []],
+  [`#eintrag/${ID}/antworten`, 'eintrag', 'wartet', ['#wartet', `#eintrag/${ID}`]],
+  [`#eintrag/${ID}/ergebnis`, 'ergebnis', 'wartet', ['#wartet', `#eintrag/${ID}`]],
+  [`#eintrag/${ID}/schritt/3/fail`, 'schritt', 'wartet', ['#wartet', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/3`]],
 ];
 
 for (const [adresse, ansicht, bereich, unter] of TABELLE) {
@@ -70,4 +73,24 @@ test('Blätter haben einen Titel, Ansichten ohne Blatt keinen', () => {
   assert.equal(blattTitelVon(parse(`#eintrag/${ID}/einsortieren`)), 'Einsortieren');
   assert.equal(blattTitelVon(parse('#mehr/geraet')), 'Gerätename');
   assert.equal(blattTitelVon(parse('#mehr')), null);
+});
+
+test('der Stapel unter einem Eintrag hängt davon ab, woher er kommt (UNA-4)', () => {
+  const woher = (ort) => () => ort;
+  const eintrag = parse(`#eintrag/${ID}`);
+  assert.deepEqual(stapelUnter(eintrag, woher('eingang')), ['#wartet', '#eingang']);
+  assert.deepEqual(stapelUnter(eintrag, woher('ideen')), ['#wartet', '#mehr', '#ideen']);
+  assert.deepEqual(stapelUnter(eintrag, woher('abnahmen')), ['#wartet', '#abnahmen']);
+  assert.deepEqual(stapelUnter(eintrag, woher(null)), ['#wartet']);
+  assert.deepEqual(stapelUnter(parse(`#eintrag/${ID}/schritt/2`), woher('abnahmen')), ['#wartet', '#abnahmen', `#eintrag/${ID}`]);
+  assert.deepEqual(stapelUnter(parse(`#eintrag/${ID}/ergebnis`), woher('abnahmen')), ['#wartet', '#abnahmen', `#eintrag/${ID}`]);
+  assert.deepEqual(stapelUnter(parse(`#eintrag/${ID}/schritt/2/skip`), woher('abnahmen')), ['#wartet', '#abnahmen', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`]);
+  assert.deepEqual(stapelUnter(parse(`#eintrag/${ID}/antworten`), woher(null)), ['#wartet', `#eintrag/${ID}`]);
+});
+
+test('Titel und Blätter der neuen Adressen', () => {
+  assert.equal(blattTitelVon(parse(`#eintrag/${ID}/antworten`)), 'Deine Antwort');
+  assert.equal(blattTitelVon(parse(`#eintrag/${ID}/schritt/3/blocked`)), 'BLOCKED für Schritt 3');
+  assert.equal(titelVon(parse(`#eintrag/${ID}/ergebnis`)), 'Ergebnis');
+  assert.equal(parse(`#eintrag/${ID}/schritt/3/FAIL`), null);
 });

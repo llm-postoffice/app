@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Wegetest der App in Chromium (headless, frisches Profil, nur Node ab 22): Zurück (UNA-3, UNA-4), Blatt (UDI-3),
-// Leiste (UNA-1, UNA-2), Statusleiste (UFA-1), Netzzeile (UOF-4), Fassung in Mehr und eine fehlerfreie Konsole
-// (CSP, UPL-3). Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg je Zeile: PASS, FAIL oder BLOCKED.
+// Wegetest der App in Chromium (headless, frisches Profil, nur Node ab 22): Anmeldung, Zurück (UNA-3, UNA-4), Blatt
+// (UDI-3), Leiste (UNA-1, UNA-2), ein Knopf je Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe (UEI-6),
+// Statusleiste (UFA-1), Netzzeile (UOF-4), Fassung in Mehr und eine fehlerfreie Konsole (CSP, UPL-3). Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg je Zeile: PASS, FAIL oder BLOCKED.
 // Dazu IndexedDB und der Abgleich gegen eine nachgebaute GitHub-API: Chromium fängt api.github.com ab, kein Paket
 // geht ins Netz.
 import { spawn } from 'node:child_process';
@@ -12,12 +12,15 @@ import { extname, join, normalize } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { VERSION } from '../js/version.js';
 import { mockQuelle } from '../tests/hilfen/mockquelle.mjs';
+import { REPO, SZENARIEN, TOKEN, eintraege } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'wege';
 const HILFE = `Aufruf: node tools/wege.mjs [OPTIONEN]
 
-Spielt die Wege der App in Chromium nach: Zurück-Reihenfolge, Blätter, Navigationsleiste,
-Statusleiste, Netzzeile, Fassung in Mehr, IndexedDB, den Abgleich und eine Konsole ohne Fehler.
+Spielt die Wege der App in Chromium nach: Anmeldung, alle Zurück-Wege der Tabelle, Blätter,
+Navigationsleiste, einen Knopf zu jeder Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe
+über Neuladen, Statusleiste, Netzzeile, Fassung in Mehr, IndexedDB, den Abgleich und eine Konsole ohne
+Fehler. Die Daten sind erfunden (tests/hilfen/beispieldaten.mjs).
 Chromium läuft headless mit einem frischen Profil in $TMPDIR (Vorgabe /tmp) und wird danach entfernt.
 Die Anfragen an api.github.com fängt Chromium ab und beantwortet sie aus einem nachgebauten Repo.
 
@@ -73,7 +76,7 @@ chrome.on('error', () => { gestartet = false; });
 for (const i of [3, 4]) chrome.stdio[i]?.on('error', () => {});   // Chromium endet vorzeitig: das meldet BLOCKED
 
 let id = 0; let puffer = ''; const offen = new Map();
-let abgefangen = null;   // Antwortet auf Anfragen an api.github.com, solange ein Weg eine Quelle nachbaut
+let abgefangen = null;   // Antwortet auf Anfragen an api.github.com aus der Quelle, die der Weg gerade nachbaut
 chrome.stdio[4]?.on('data', (d) => {
   puffer += d; let i;
   while ((i = puffer.indexOf('\0')) >= 0) {
@@ -109,18 +112,48 @@ const WAECHTER = `window.__melde = [];
   addEventListener('error', (e) => __melde.push('Fehler ' + e.message));
   addEventListener('unhandledrejection', (e) => __melde.push('Zusage abgelehnt ' + e.reason));`;
 
+// Chromium fängt api.github.com ab und beantwortet die Anfragen aus der Mock-Quelle q (wirft sie, fällt das Netz aus).
+// Es geht nichts ins Netz; die Anfragen stehen in q.protokoll.
+const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'etag, retry-after, date, x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset' };
+const fange = (q) => async (m) => {
+  const { requestId, request } = m.params;
+  const kopf = (o) => Object.entries(o).map(([name, value]) => ({ name, value: String(value) }));
+  if (request.method === 'OPTIONS') {
+    await senden('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: kopf({ ...CORS,
+      'access-control-allow-headers': 'authorization, content-type, if-none-match', 'access-control-allow-methods': 'GET, POST', 'access-control-max-age': '600' }) }, m.sessionId);
+    return;
+  }
+  const eigene = Object.fromEntries(Object.entries(request.headers).map(([k, v]) => [k.toLowerCase(), v]));
+  let antwort;
+  try { antwort = await q.fetch(request.url, { method: request.method, headers: eigene, body: request.postData }); } catch {
+    await senden('Fetch.failRequest', { requestId, errorReason: 'InternetDisconnected' }, m.sessionId);   // wirft die Quelle, fällt das Netz aus
+    return;
+  }
+  const koerper = Buffer.from(await antwort.arrayBuffer()).toString('base64');
+  await senden('Fetch.fulfillRequest', { requestId, responseCode: antwort.status, responseHeaders: kopf({ ...Object.fromEntries(antwort.headers), ...CORS }), ...(koerper ? { body: koerper } : {}) }, m.sessionId);
+};
+// Die Standardquelle: die erfundenen Einträge des Szenarios „normal“ (tests/hilfen/beispieldaten.mjs)
+const standardQuelle = () => mockQuelle({ dateien: SZENARIEN.normal.daten, repo: REPO, token: TOKEN });
+let aktuell = null;   // die zuletzt geöffnete Seite; die nächste schließt sie, damit alte Seiten nicht weiter abgleichen
+
+/**
+ * Öffnet eine Seite in einem Fenster der Größe breite × hoehe. Sie startet mit dem, was auf dem Gerät liegt (vorbereiten legt
+ * Anmeldung und Stand ab); die Anfragen an api.github.com beantwortet `abgefangen`.
+ */
 async function seite(url, breite = 360, hoehe = 800) {
+  if (aktuell) { await aktuell(); aktuell = null; }
   const { result: { targetId } } = await senden('Target.createTarget', { url: 'about:blank' });
   const { result: { sessionId: s } } = await senden('Target.attachToTarget', { targetId, flatten: true });
   await senden('Emulation.setDeviceMetricsOverride', { width: breite, height: hoehe, deviceScaleFactor: 2, mobile: true }, s);
   await senden('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 }, s);
   await senden('Page.enable', {}, s);
   await senden('Network.enable', {}, s);
+  await senden('Fetch.enable', { patterns: [{ urlPattern: 'https://api.github.com/*' }] }, s);
   await senden('Page.addScriptToEvaluateOnNewDocument', { source: WAECHTER }, s);
   await senden('Page.navigate', { url }, s); await pause(700);
   const werte = async (x) => (await senden('Runtime.evaluate', { expression: x, returnByValue: true, awaitPromise: true }, s)).result?.result?.value;
   const tippe = async (sel) => {
-    const [x, y] = await werte(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+    const [x, y] = await werte(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
     await senden('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] }, s);
     await senden('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, s); await pause(400);
   };
@@ -128,34 +161,17 @@ async function seite(url, breite = 360, hoehe = 800) {
     for (const type of ['keyDown', 'keyUp']) await senden('Input.dispatchKeyEvent', { type, key, code, windowsVirtualKeyCode: kc }, s);
     await pause(500);
   };
+  // Text eintippen wie auf dem Handy: Feld fokussieren, den Inhalt wählen, Text einfügen (löst input aus)
+  const schreibe = async (sel, text) => {
+    await werte(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); e.focus(); e.select?.(); })()`);
+    await senden('Input.insertText', { text }, s); await pause(200);
+  };
   const zurueck = async () => { await werte('history.back()'); await pause(500); };
   const medien = async (modus) => { await senden('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: modus }] }, s); await pause(300); };
   const netz = async (an) => {
     await senden('Network.emulateNetworkConditions', { offline: !an, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, s); await pause(400);
   };
-  // Chromium fängt api.github.com ab und beantwortet die Anfragen aus der Mock-Quelle q (wirft sie, fällt das Netz
-  // aus). Es geht nichts ins Netz; die Anfragen stehen in q.protokoll.
-  const quelle = async (q) => {
-    await senden('Fetch.enable', { patterns: [{ urlPattern: 'https://api.github.com/*' }] }, s);
-    const cors = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'etag, retry-after, date, x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset' };
-    abgefangen = async (m) => {
-      const { requestId, request } = m.params;
-      const kopf = (o) => Object.entries(o).map(([name, value]) => ({ name, value: String(value) }));
-      if (request.method === 'OPTIONS') {
-        await senden('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: kopf({ ...cors,
-          'access-control-allow-headers': 'authorization, content-type, if-none-match', 'access-control-allow-methods': 'GET, POST', 'access-control-max-age': '600' }) }, m.sessionId);
-        return;
-      }
-      const eigene = Object.fromEntries(Object.entries(request.headers).map(([k, v]) => [k.toLowerCase(), v]));
-      let antwort;
-      try { antwort = await q.fetch(request.url, { method: request.method, headers: eigene, body: request.postData }); } catch {
-        await senden('Fetch.failRequest', { requestId, errorReason: 'InternetDisconnected' }, m.sessionId);   // wirft die Quelle, fällt das Netz aus
-        return;
-      }
-      const koerper = Buffer.from(await antwort.arrayBuffer()).toString('base64');
-      await senden('Fetch.fulfillRequest', { requestId, responseCode: antwort.status, responseHeaders: kopf({ ...Object.fromEntries(antwort.headers), ...cors }), ...(koerper ? { body: koerper } : {}) }, m.sessionId);
-    };
-  };
+  const quelle = async (q) => { abgefangen = fange(q); };
   // Bilder von Mehr: hell, dunkel, Text 200 % (UEW-2); nur mit --bilder
   const bild = async (name) => {
     if (!bilderOrdner) return;
@@ -178,8 +194,9 @@ async function seite(url, breite = 360, hoehe = 800) {
     return false;
   };
   const schliesse = () => senden('Target.closeTarget', { targetId });
+  aktuell = schliesse;
   const stand = async () => werte(`[location.hash, document.getElementById('titel').textContent, document.getElementById('zurueck').hidden ? 'ohne Pfeil' : 'mit Pfeil'].join(' | ')`);
-  return { werte, tippe, taste, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
+  return { werte, tippe, schreibe, taste, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
 }
 
 // Startet Chromium nicht, ist das BLOCKED und kein FAIL (TXT-14): der Test konnte nicht laufen.
@@ -192,7 +209,25 @@ if (!bereit) {
 
 try {
   const t = (x) => `${basis}${x}`;
-  const ID = '9f3k2a';
+  const ID = 'r2d4vn';        // eine Frage an dich: liegt unter Wartet
+  const EINGANG = 'k7m2qa';   // eine Notiz ohne Ziel: liegt im Eingang
+  const ABNAHME = '8k3m1x';   // eine Abnahme mit neun Schritten
+
+  // 0. Was auf dem Gerät liegt: Anmeldung, Gerätename und der Stand des ersten Abgleichs. Eine eigene Seite legt es ab
+  //    (dieselbe IndexedDB wie bei allen folgenden Seiten) und wartet, bis die Einträge da sind.
+  abgefangen = fange(standardQuelle());
+  const vorbereiten = async () => {
+    const v = await seite(t('#anmelden'));
+    await v.werte(`(async () => { const { oeffneDatenbank, setzeEinstellung, SPEICHER } = await import('/js/speicher.js'); const db = await oeffneDatenbank();
+      for (const n of Object.keys(SPEICHER)) for (const k of await db.schluessel(n)) await db.entferne(n, k);
+      await setzeEinstellung(db, 'anmeldung', { repo: ${JSON.stringify(REPO)}, token: ${JSON.stringify(TOKEN)} }); await setzeEinstellung(db, 'geraet', 'handy'); db.schliesse(); })()`);
+    await v.werte("location.hash = '#wartet'; location.reload()"); await pause(600);
+    const da = await v.warte(`document.querySelectorAll('main .karte').length > 3`, 15000);
+    await v.schliesse();
+    return da;
+  };
+  melde(await vorbereiten(), 'der erste Start mit Anmeldung gleicht ab und zeigt Einträge in Wartet', 'keine Karten nach 15 s');
+  const vergessen = (seiteP) => seiteP.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('einstellungen', 'anmeldung'); db.schliesse(); })()`);
 
   // 1. Hauptbereiche: kein Pfeil, Zurück führt nach Wartet, aus Wartet hinaus
   let p = await seite(t('#wartet'));
@@ -207,7 +242,7 @@ try {
 
   // 2. Tiefer Link: der Stapel darunter wird aufgebaut
   p = await seite(t(`#eintrag/${ID}`));
-  melde(await p.werte('!document.getElementById("zurueck").hidden && document.querySelector("main .id").textContent') === '9f3-k2a', 'ein Eintrag zeigt Pfeil Zurück und die ID mit Strich', await p.stand());
+  melde(await p.werte('!document.getElementById("zurueck").hidden && document.querySelector("main .id").textContent') === 'r2d-4vn', 'ein Eintrag zeigt Pfeil Zurück und die ID mit Strich', await p.stand());
   melde(await p.werte('document.querySelector("#leiste [aria-current=page]").dataset.bereich') === 'wartet', 'unter einem Eintrag ist Wartet in der Leiste gewählt', 'anderer Bereich');
   await p.zurueck();
   melde(await p.hash() === '#wartet', 'Zurück aus einem tiefen Link führt nach Wartet', await p.stand());
@@ -227,19 +262,19 @@ try {
   melde(await p.hash() === '#wartet', 'Zurück aus einem Hauptbereich nach einem Eintrag führt nach Wartet', await p.stand());
 
   // 3. Blatt Einsortieren: Zurück schließt zuerst das Blatt, dann geht es eine Ebene nach der anderen hoch
-  p = await seite(t(`#eintrag/${ID}/einsortieren`));
+  p = await seite(t(`#eintrag/${EINGANG}/einsortieren`));
   melde(await p.werte('document.getElementById("blatt").open && document.getElementById("blatt-titel").textContent') === 'Einsortieren', 'ein tiefer Link zum Blatt Einsortieren öffnet das Blatt', await p.stand());
   await p.taste('Escape', 'Escape', 27);
-  melde(!await p.werte('document.getElementById("blatt").open') && await p.hash() === `#eintrag/${ID}`, 'Esc schließt zuerst das Blatt, der Eintrag bleibt', `${await p.stand()}, Blatt ${await p.werte('document.getElementById("blatt").open') ? 'offen' : 'zu'}`);
+  melde(!await p.werte('document.getElementById("blatt").open') && await p.hash() === `#eintrag/${EINGANG}`, 'Esc schließt zuerst das Blatt, der Eintrag bleibt', `${await p.stand()}, Blatt ${await p.werte('document.getElementById("blatt").open') ? 'offen' : 'zu'}`);
   await p.zurueck();
   melde(await p.hash() === '#eingang', 'Zurück vom Eintrag unter Einsortieren führt in den Eingang', await p.stand());
   await p.zurueck();
   melde(await p.hash() === '#wartet', 'Zurück aus dem Eingang führt nach Wartet', await p.stand());
-  p = await seite(t(`#eintrag/${ID}/einsortieren`));
+  p = await seite(t(`#eintrag/${EINGANG}/einsortieren`));
   await p.zurueck();
-  melde(!await p.werte('document.getElementById("blatt").open') && await p.hash() === `#eintrag/${ID}`, 'der Zurück-Eintrag im Verlauf schließt das Blatt, ohne eine Ebene zu überspringen', `${await p.stand()}, Blatt ${await p.werte('document.getElementById("blatt").open') ? 'offen' : 'zu'}`);
+  melde(!await p.werte('document.getElementById("blatt").open') && await p.hash() === `#eintrag/${EINGANG}`, 'der Zurück-Eintrag im Verlauf schließt das Blatt, ohne eine Ebene zu überspringen', `${await p.stand()}, Blatt ${await p.werte('document.getElementById("blatt").open') ? 'offen' : 'zu'}`);
   p = await seite(t('#mehr/geraet'));
-  await p.tippe('#blatt-abbrechen');
+  await p.tippe('#blatt-knoepfe button.text');
   melde(!await p.werte('document.getElementById("blatt").open') && await p.hash() === '#mehr', 'Abbrechen schließt das Blatt Gerätename und bleibt in Mehr', await p.stand());
 
   // 4. Weitere Ebenen
@@ -248,23 +283,49 @@ try {
   await p.zurueck(); const ideenHoch = await p.hash();
   await p.zurueck();
   melde(ideenHoch === '#mehr' && await p.hash() === '#wartet', 'Zurück aus der Ideensammlung führt über Mehr nach Wartet', `${ideenHoch}, danach ${await p.hash()}`);
-  p = await seite(t(`#eintrag/${ID}/schritt/2`));
+  p = await seite(t(`#eintrag/${ABNAHME}/schritt/2`));
   const schritt = await p.stand();
   await p.zurueck(); const schrittHoch = await p.hash();
   await p.zurueck();
-  melde(schritt.includes('Schritt 2') && schrittHoch === `#eintrag/${ID}` && await p.hash() === '#wartet', 'Zurück aus einem Schritt führt zum Eintrag, dann nach Wartet', `${schritt}, ${schrittHoch}, danach ${await p.hash()}`);
+  melde(schritt.includes('Schritt 2') && schrittHoch === `#eintrag/${ABNAHME}` && await p.hash() === '#abnahmen', 'Zurück aus einem Schritt führt zum Eintrag, dann zu den Abnahmen', `${schritt}, ${schrittHoch}, danach ${await p.hash()}`);
   p = await seite(t('#wartet'));
   await p.tippe('#suchen');
   melde(await p.hash() === '#suche' && await p.werte('!document.getElementById("zurueck").hidden'), 'das Symbol Suchen öffnet die Suche mit Pfeil Zurück', await p.stand());
   await p.zurueck();
   melde(await p.hash() === '#wartet', 'Zurück aus der Suche führt dorthin, woher du kamst', await p.stand());
-  p = await seite(t('#anmelden'));
-  melde(await p.werte('document.getElementById("leiste").hidden && document.getElementById("zurueck").hidden'), 'die Anmeldung zeigt weder Navigationsleiste noch Pfeil Zurück', await p.stand());
+  // Anmeldung und Gerätename: ohne Anmeldung öffnet jede Adresse die Anmeldung (E7), Zurück verlässt die App
+  p = await seite(t('#mehr')); await vergessen(p); await p.schliesse();
+  p = await seite(t('#wartet'));
+  melde(await p.hash() === '#anmelden' && await p.werte('document.getElementById("leiste").hidden && document.getElementById("zurueck").hidden'), 'ohne Anmeldung öffnet jede Adresse die Anmeldung, ohne Navigationsleiste und ohne Pfeil Zurück', await p.stand());
   await p.zurueck();
   melde(await p.draussen(), 'Zurück aus der Anmeldung verlässt die App', await p.werte('location.href'));
+  p = await seite(t('#wartet'));
+  const gespeichert = () => p.werte(`(async () => { const { oeffneDatenbank, einstellung } = await import('/js/speicher.js'); const db = await oeffneDatenbank();
+    const r = { anmeldung: await einstellung(db, 'anmeldung'), geraet: await einstellung(db, 'geraet') }; db.schliesse(); return r; })()`);
+  await p.tippe('#anmelden-knopf');
+  melde(await p.werte('document.querySelectorAll("#anmelden-formular [aria-invalid=true]").length') === 2 && await p.hash() === '#anmelden'
+    && await p.werte('document.activeElement?.name') === 'repo' && (await gespeichert()).anmeldung === null,
+  'Anmelden ohne Repo und Token zeigt zwei Fehler am Feld, setzt den Fokus auf das erste und speichert nichts', `${await p.stand()}, Fehler ${await p.werte('document.querySelectorAll("#anmelden-formular [aria-invalid=true]").length')}`);
+  await p.schreibe('[name=repo]', REPO); await p.schreibe('[name=token]', TOKEN);
+  await p.schreibe('[name=geraet]', 'Pixel 8 Pro');
+  await p.tippe('#anmelden-knopf');
+  melde(await p.werte('document.querySelectorAll("#anmelden-formular [aria-invalid=true]").length') === 1 && (await gespeichert()).anmeldung === null
+    && await p.werte('[...document.querySelectorAll("#anmelden-formular button")].some((b) => b.textContent.trim() === "pixel-8-pro übernehmen")'),
+  'ein ungültiger Gerätename zeigt den Fehler und einen Vorschlag zum Übernehmen', await p.werte('document.getElementById("anmelden-formular").innerText'));
+  await p.tippe('#anmelden-formular button.text');
+  melde(await p.werte('document.querySelector("[name=geraet]").value') === 'pixel-8-pro' && await p.werte('document.querySelector("[name=repo]").value') === REPO,
+    'der Vorschlag ersetzt den Namen und die anderen Eingaben bleiben', await p.werte('document.getElementById("anmelden-formular").innerText'));
+  await p.schreibe('[name=token]', TOKEN);
+  await p.tippe('#anmelden-knopf');
+  const nachAnmeldung = await gespeichert();
+  melde(await p.warte('location.hash === "#wartet"', 4000) && nachAnmeldung.anmeldung?.repo === REPO && nachAnmeldung.anmeldung?.token === TOKEN && nachAnmeldung.geraet === 'pixel-8-pro',
+    'mit gültigen Eingaben speichert Anmelden Repo, Token und Gerätename und öffnet Wartet', `${await p.stand()}, ${JSON.stringify({ ...nachAnmeldung, anmeldung: nachAnmeldung.anmeldung && { repo: nachAnmeldung.anmeldung.repo } })}`);
+  melde(await p.warte(`document.querySelectorAll('main .karte').length > 3`, 15000)
+    && !await p.werte(`document.body.innerText.includes(${JSON.stringify(TOKEN)}) || location.href.includes(${JSON.stringify(TOKEN)})`),
+  'danach zeigt Wartet die Einträge, und das Token steht weder in der Adresse noch im Text der Seite', await p.stand());
   p = await seite(t('#gibtesnicht'));
   melde(await p.hash() === '#wartet', 'eine unbekannte Adresse zeigt Wartet', await p.stand());
-  p = await seite(t('#eintrag/9F3-K2A'));
+  p = await seite(t('#eintrag/R2D-4VN'));
   melde(await p.hash() === `#eintrag/${ID}`, 'eine ID in der Adresse wird ohne Strich und klein geschrieben', await p.stand());
 
   // 5. Fassung, Netzzeile, Statusleiste
@@ -286,6 +347,114 @@ try {
   p = await seite(t('#wartet'), 800, 700);
   const raender = await p.werte(`(() => { const l = document.getElementById('leiste').getBoundingClientRect(); const m = document.querySelector('main').getBoundingClientRect(); return [l.left, l.right, m.left]; })()`);
   melde(raender && raender[0] === 0 && raender[1] <= 96 && raender[2] >= raender[1], 'ab 600 px Breite steht die Navigationsleiste links und deckt den Inhalt nicht', JSON.stringify(raender));
+
+  // 6b. Alle Zurück-Wege der Tabelle (UNA-3): von jeder Adresse aus Schritt für Schritt zurück, bis die App endet.
+  //     Ein Blatt zählt als eigene Stufe über der Ansicht, ein tiefer Link baut den Stapel darunter.
+  const TABELLE = [
+    ['#wartet', []], ['#abnahmen', ['#wartet']], ['#erfassen', ['#wartet']], ['#mehr', ['#wartet']], ['#mehr/geraet', ['#mehr', '#wartet']],
+    ['#eingang', ['#wartet']], ['#ideen', ['#mehr', '#wartet']], ['#suche', ['#wartet']],
+    [`#eintrag/${ID}`, ['#wartet']], [`#eintrag/${ID}/antworten`, [`#eintrag/${ID}`, '#wartet']],
+    [`#eintrag/${EINGANG}`, ['#eingang', '#wartet']], [`#eintrag/${EINGANG}/einsortieren`, [`#eintrag/${EINGANG}`, '#eingang', '#wartet']],
+    ['#eintrag/b3cyxm', ['#ideen', '#mehr', '#wartet']],
+    [`#eintrag/${ABNAHME}`, ['#abnahmen', '#wartet']], [`#eintrag/${ABNAHME}/schritt/3`, [`#eintrag/${ABNAHME}`, '#abnahmen', '#wartet']],
+    [`#eintrag/${ABNAHME}/schritt/3/fail`, [`#eintrag/${ABNAHME}/schritt/3`, `#eintrag/${ABNAHME}`, '#abnahmen', '#wartet']],
+    ['#eintrag/p4m7bt/ergebnis', ['#eintrag/p4m7bt', '#abnahmen', '#wartet']],
+    ['#eintrag/q7w2de', ['#wartet']], ['#eintrag/zzzzzz', ['#wartet']],
+  ];
+  for (const [adr, kette] of TABELLE) {
+    p = await seite(t(adr));
+    const ist = [await p.hash()];
+    for (let i = 0; i <= kette.length; i++) { await p.zurueck(); ist.push(await p.draussen() ? 'außerhalb' : await p.hash()); if (ist.at(-1) === 'außerhalb') break; }
+    const soll = [adr, ...kette, 'außerhalb'];
+    melde(ist.join(' → ') === soll.join(' → '), `Zurück ab ${adr}: ${kette.length ? kette.join(' → ') : 'die App endet'}`, ist.join(' → '));
+  }
+
+  // 6c. E13: zu jeder Handlung eines Eintrags gibt es einen Knopf in der Aktionsleiste, zu jedem Knopf eine Handlung;
+  //     Freigaben tragen keinen Knopf, sondern den Satz, dass Freigeben erst in Phase 4 geht.
+  p = await seite(t('#wartet'));
+  const e13 = await p.werte(`(async () => {
+    const { oeffneDatenbank } = await import('/js/speicher.js');
+    const { ladeWelt, handlungenVon } = await import('/js/welt.js');
+    const db = await oeffneDatenbank(); const w = await ladeWelt(db); db.schliesse();
+    const fehler = []; let mitKnopf = 0;
+    for (const [id, e] of w.eintraege) {
+      location.hash = '#eintrag/' + id;
+      await new Promise((r) => setTimeout(r, 220));
+      const knoepfe = [...document.querySelectorAll('#aktion [data-handlung]')].map((b) => b.dataset.handlung);
+      const soll = handlungenVon(w, { e, st: w.buch.zustand(e) });
+      if (knoepfe.join() !== soll.join()) fehler.push(id + ': Knöpfe ' + (knoepfe.join() || 'keine') + ', Handlungen ' + (soll.join() || 'keine'));
+      if (soll.length) mitKnopf++;
+      if (e.head.get('Kind') === 'approval') {
+        const satz = /Freigeben und Ablehnen gehen erst in Phase 4/.test(document.getElementById('inhalt').innerText);
+        if (document.querySelectorAll('#inhalt button, #aktion button').length || !satz) fehler.push(id + ': Freigabe mit Knopf oder ohne Satz');
+      }
+    }
+    return { n: w.eintraege.size, mitKnopf, fehler };
+  })()`);
+  melde(e13 && e13.fehler.length === 0 && e13.n > 15 && e13.mitKnopf > 3, `E13: in allen ${e13?.n} Einträgen hat jede Handlung einen Knopf und jeder Knopf eine Handlung (${e13?.mitKnopf} Einträge mit Knöpfen)`, JSON.stringify(e13));
+
+  // 6d. Eine linke Kante je Ansicht (GAN-3): der Inhalt beginnt überall bei derselben x-Stelle, höchstens 1 px Streuung.
+  //     Hüllen ohne eigene Fläche (ul, li, form) zählen nicht; ihre Kinder schon.
+  const KANTE = `(() => {
+    // UL und FORM sind Hüllen; ein LI nur, wenn es weder Rand noch Innenabstand noch Fläche hat (sonst ist es die Karte)
+    const dient = (e) => {
+      if (e.tagName === 'UL' || e.tagName === 'FORM') return true;
+      if (e.tagName !== 'LI') return false;
+      const c = getComputedStyle(e);
+      return parseFloat(c.paddingLeft) === 0 && parseFloat(c.borderLeftWidth) === 0 && c.backgroundColor === 'rgba(0, 0, 0, 0)';
+    };
+    const sicht = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+    const liste = [];
+    const geh = (e) => {
+      if (!sicht(e)) return;
+      if (dient(e)) { for (const c of e.children) geh(c); return; }
+      liste.push([e.tagName.toLowerCase() + (e.classList[0] ? '.' + e.classList[0] : ''), Math.round(e.getBoundingClientRect().left * 10) / 10]);
+    };
+    for (const c of document.querySelector('main').children) geh(c);
+    const x = liste.map((l) => l[1]);
+    return { n: liste.length, min: Math.min(...x), max: Math.max(...x), ab: liste.filter((l) => l[1] !== Math.min(...x)).slice(0, 4).map((l) => l.join('@')) };
+  })()`;
+  const KANTE_ANSICHTEN = ['#wartet', '#abnahmen', '#erfassen', '#mehr', '#eingang', '#ideen', '#suche', '#anmelden', `#eintrag/${ID}`, '#eintrag/m7q2ke', '#eintrag/q7w2de',
+    '#eintrag/x9k3ft', `#eintrag/${ABNAHME}`, `#eintrag/${EINGANG}`, '#eintrag/b3cyxm', `#eintrag/${ABNAHME}/schritt/3`, '#eintrag/p4m7bt/ergebnis', '#eintrag/zzzzzz'];
+  const kanten = [];
+  p = await seite(t('#wartet'));
+  for (const a of KANTE_ANSICHTEN) {
+    await p.werte(`location.hash = ${JSON.stringify(a)}`); await pause(500);
+    const k = await p.werte(KANTE);
+    if (!k || k.n === 0 || k.max - k.min > 1) kanten.push(`${a}: ${k ? `${k.min}..${k.max} px (${k.ab.join(', ')})` : 'kein Inhalt'}`);
+  }
+  melde(kanten.length === 0, `eine linke Kante in allen ${KANTE_ANSICHTEN.length} Ansichten bei 360 px Breite, Streuung höchstens 1 px (GAN-3)`, kanten.join('; '));
+
+  // 6e. Entwürfe überstehen Zurück, Neuladen und den Wechsel der Ansicht (UEI-6); ein geleertes Feld löscht den Entwurf.
+  p = await seite(t('#erfassen'));
+  const entwurf = (key) => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const d = await db.lies('entwuerfe', ${JSON.stringify(key)}); db.schliesse(); return d; })()`);
+  await p.schreibe('[name=titel]', 'Wegetest: Eintrag in Arbeit');
+  melde((await entwurf('erfassen'))?.titel === 'Wegetest: Eintrag in Arbeit', 'Erfassen sichert den Titel beim Tippen als Entwurf auf dem Gerät', JSON.stringify(await entwurf('erfassen')));
+  await p.tippe('#leiste a[href="#mehr"]'); await p.tippe('#leiste a[href="#erfassen"]');
+  melde(await p.werte('document.querySelector("[name=titel]")?.value') === 'Wegetest: Eintrag in Arbeit', 'der Entwurf steht nach dem Wechsel in einen anderen Bereich und zurück wieder im Feld', await p.stand());
+  await p.werte('location.reload()'); await pause(900);
+  melde(await p.werte('document.querySelector("[name=titel]")?.value') === 'Wegetest: Eintrag in Arbeit', 'der Entwurf steht nach Neuladen wieder im Feld', await p.stand());
+  melde(await p.werte('document.querySelector("#aktion button[data-handlung=anlegen]")?.disabled') === true
+    && /Diese Fassung liest nur/.test(await p.werte('document.getElementById("aktion").innerText')), 'Eintrag anlegen ist gesperrt und ein Satz sagt warum: gesendet wird erst mit der Schreibschicht', await p.werte('document.getElementById("aktion").innerText'));
+  await p.werte('(() => { const i = document.querySelector("[name=titel]"); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); })()'); await pause(300);
+  melde(await entwurf('erfassen') == null, 'ein geleertes Formular löscht den Entwurf', JSON.stringify(await entwurf('erfassen')));
+  p = await seite(t(`#eintrag/${ID}/antworten`));
+  await p.schreibe('#blatt textarea', 'Mein Entwurf einer Antwort');
+  await p.werte('location.reload()'); await pause(900);
+  melde(await p.werte('document.querySelector("#blatt textarea")?.value') === 'Mein Entwurf einer Antwort', 'der Text im Antwortblatt steht nach Neuladen wieder da', await p.stand());
+  await p.werte('document.getElementById("blatt").close()'); await pause(300);
+  melde((await entwurf(`antwort/${ID}`))?.text === 'Mein Entwurf einer Antwort', 'der Entwurf bleibt auch nach dem Schließen des Blatts auf dem Gerät', JSON.stringify(await entwurf(`antwort/${ID}`)));
+  await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('entwuerfe', 'antwort/${ID}'); db.schliesse(); })()`);
+  p = await seite(t(`#eintrag/${ABNAHME}/schritt/4/fail`));
+  await p.schreibe('#blatt textarea', 'Die Ausgabe bricht in der Pipe um.');
+  await p.tippe('#blatt-knoepfe .gefuellt');
+  const urteil = await entwurf(`urteil/${ABNAHME}`);
+  melde(urteil?.schritte?.[4]?.wort === 'FAIL' && urteil.schritte[4].satz === 'Die Ausgabe bricht in der Pipe um.' && /schritt\/5$/.test(await p.hash()),
+    'Speichern im Satzblatt legt das Urteil als Entwurf ab und geht zum nächsten Schritt', `${await p.stand()}, ${JSON.stringify(urteil?.schritte?.[4])}`);
+  await p.werte('location.reload()'); await pause(900);
+  p = await seite(t(`#eintrag/${ABNAHME}/ergebnis`));
+  melde(/Die Ausgabe bricht in der Pipe um\./.test(await p.werte('document.getElementById("inhalt").innerText')), 'das Ergebnis zeigt nach Neuladen das gesicherte Urteil mit seinem Satz', await p.stand());
+  await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('entwuerfe', 'urteil/${ABNAHME}'); db.schliesse(); })()`);
 
   // 7. IndexedDB und Abgleich: das Schema in Chromium, die Bitte um dauerhaften Speicher, dann ein Abgleich gegen ein
   //    nachgebautes Repo mit allen Zuständen aus Mehr. Das Token ist ein Testwert; Chromium beantwortet die Anfragen.
@@ -309,11 +478,11 @@ try {
   melde([true, false, null].includes(gesichert?.dauerhaft) && typeof gesichert?.geprueft === 'number'
     && speicherText === { true: 'dauerhaft gewährt', false: 'vom Browser verwaltet', null: 'nicht geprüft' }[gesichert.dauerhaft],
   `die App bittet beim Start um dauerhaften Speicher, Mehr zeigt das Ergebnis (hier: „${speicherText}“)`, `${JSON.stringify(gesichert)}, Mehr: ${speicherText}`);
-  melde(await p.werte('document.getElementById("abgleich").textContent') === 'nicht angemeldet'
-    && await p.werte('!document.querySelector("#abgleich-stand button")'), 'ohne Anmeldung steht „nicht angemeldet“ in Mehr und es gibt keinen Knopf Jetzt abgleichen', await p.werte('document.getElementById("abgleich-stand").textContent'));
+  melde(await p.werte(`/^heute um \\d\\d:\\d\\d, \\d+ Dateien$/.test(document.getElementById("abgleich").textContent)`)
+    && await p.werte('document.querySelector("#abgleich-stand button")?.textContent') === 'Jetzt abgleichen', 'nach der Anmeldung steht der Stand des Abgleichs in Mehr und der Knopf Jetzt abgleichen da', await p.werte('document.getElementById("abgleich-stand").textContent'));
   melde(await p.werte('[...document.getElementById("takt").options].map((o) => o.textContent).join("|")') === 'jede Minute|alle 2 Minuten|alle 5 Minuten|alle 15 Minuten|nur mit dem Knopf'
     && await p.werte('document.getElementById("takt").selectedOptions[0].textContent') === 'alle 2 Minuten', 'der Takt im Vordergrund steht in Mehr und beginnt bei alle 2 Minuten', await p.werte('document.getElementById("takt").value'));
-  await p.bild('ohne-anmeldung');
+  await p.bild('mit-stand');
   await p.schliesse();
 
   // Ein Repo mit 150 Einträgen zu je zwei Dateien: 301 Dateien, also zwei GraphQL-Aufrufe (250 und 51)
@@ -329,6 +498,8 @@ try {
   p = await seite(t('#mehr'));
   await p.quelle(q);
   await p.werte(`(async () => { const { oeffneDatenbank, setzeEinstellung } = await import('/js/speicher.js'); const db = await oeffneDatenbank();
+    const { SPEICHER } = await import('/js/speicher.js');
+    for (const n of Object.keys(SPEICHER).filter((x) => x !== 'einstellungen')) for (const k of await db.schluessel(n)) await db.entferne(n, k);
     await setzeEinstellung(db, 'anmeldung', { repo: 'org/daten', token: 'TESTTOKEN' }); db.schliesse(); })()`);
   await p.werte('location.reload()');
   const text = () => p.werte('document.getElementById("abgleich-stand").textContent');
@@ -389,10 +560,11 @@ try {
     'ohne Netz fragt die App alle 10 s erneut und zeigt den Stand wieder, sobald das Netz zurück ist (UOF-4)', await text());
   await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('einstellungen', 'anmeldung'); db.schliesse(); })()`);
   await p.schliesse();
-  abgefangen = null;
+  abgefangen = fange(standardQuelle());
+  await vorbereiten();   // Anmeldung und Stand der Beispieldaten wiederherstellen
 
   // 8. Konsole: keine Verstöße gegen die CSP, keine Fehler im Skript, in keiner Ansicht
-  const ansichten = ['#wartet', '#abnahmen', '#erfassen', '#mehr', '#eingang', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`, `#eintrag/${ID}/einsortieren`, '#ideen', '#mehr/geraet', '#suche', '#anmelden'];
+  const ansichten = ['#wartet', '#abnahmen', '#erfassen', '#mehr', '#eingang', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`, `#eintrag/${ID}/einsortieren`, '#ideen', '#mehr/geraet', '#suche', '#anmelden', `#eintrag/${ID}/antworten`, `#eintrag/${EINGANG}/einsortieren`, `#eintrag/${ABNAHME}/schritt/3/fail`, `#eintrag/${ABNAHME}/ergebnis`];
   const meldungen = [];
   for (const a of ansichten) {
     p = await seite(t(a));

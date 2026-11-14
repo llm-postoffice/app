@@ -1,7 +1,8 @@
 // Navigation mit der History API (UNA-3, UNA-4, UNA-5). Jede Ebene ist ein Eintrag im Verlauf; der Eintrag
 // trägt seine Tiefe im state. Ein tiefer Link baut den Stapel darunter nach, ein Hauptbereich baut ihn ab
 // (wie popUpTo der Android-Navigation), und ein Blatt ist ein dialog mit eigener Adresse: Zurück schließt es
-// als Schließanforderung zuerst und nimmt dann seinen Eintrag aus dem Verlauf.
+// als Schließanforderung zuerst und nimmt dann seinen Eintrag aus dem Verlauf. `woher(id)` sagt für einen tiefen Link, wo
+// ein Eintrag herkommt (Eingang, Ideensammlung, Abnahmen); danach richtet sich der Stapel darunter.
 import { BEREICHE, parse, stapelUnter } from './adressen.js';
 
 const WARTET = parse('#wartet');
@@ -38,6 +39,20 @@ export function gehe(adresse) {
   anzeigen();
 }
 
+/** Ersetzt die aktuelle Ansicht durch eine andere auf derselben Ebene, ohne den Verlauf zu verlängern (Schritt zu Schritt). */
+export function ersetze(adresse) {
+  const ziel = parse(adresse);
+  if (!ziel) return;
+  history.replaceState({ tiefe: tiefe() }, '', ziel.adresse);
+  anzeigen();
+}
+
+/** Geht eine Ebene zurück und zeigt danach `adresse` anstelle der Ansicht darunter: das Blatt zu, der nächste Schritt auf. */
+export function schliesseUndGehe(adresse) {
+  addEventListener('popstate', () => ersetze(adresse), { once: true });
+  history.back();
+}
+
 /** Der Pfeil Zurück der oberen Leiste: eine Ebene hoch, auf der obersten Ebene zu Wartet. */
 export function zurueck() {
   if (tiefe() > 0) history.back();
@@ -54,12 +69,12 @@ export function blattGeschlossen() {
 }
 
 /** Startet die Navigation: baut bei einem frischen Start oder tiefen Link den Stapel auf und zeigt die Ansicht. */
-export function starten(anzeige) {
+export function starten(anzeige, { woher = () => null } = {}) {
   zeigen = anzeige;
   history.scrollRestoration = 'manual';
   const o = ort();
   if (history.state?.tiefe === undefined) {
-    const adressen = [...stapelUnter(o), o.adresse];
+    const adressen = [...stapelUnter(o, woher), o.adresse];
     history.replaceState({ tiefe: 0 }, '', adressen[0]);
     adressen.slice(1).forEach((a, i) => history.pushState({ tiefe: i + 1 }, '', a));
   } else if (location.hash !== o.adresse) {
