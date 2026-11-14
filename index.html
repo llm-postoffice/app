@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="text-scale" content="scale">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://api.github.com https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121316">
+<title>Postfach</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="symbole/symbol-192.png">
+<link rel="stylesheet" href="app.css">
+<script type="module" src="js/start.js"></script>
+</head>
+<body>
+<!-- Symbole: Material Symbols Rounded (Apache-2.0, Text in LICENSES/Apache-2.0.txt); "-f" ist die gefüllte Fassung. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+<symbol id="i-arrow_back" viewBox="0 -960 960 960"><path d="m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z"/></symbol>
+<symbol id="i-search" viewBox="0 -960 960 960"><path d="M380-320q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l224 224q11 11 11 28t-11 28q-11 11-28 11t-28-11L532-372q-30 24-69 38t-83 14Zm0-80q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></symbol>
+<symbol id="i-inbox" viewBox="0 -960 960 960"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-120H640q-30 38-71.5 59T480-240q-47 0-88.5-21T320-320H200v120Zm280-120q32 0 59-16.5t44-43.5q6-9 15-14.5t20-5.5h142v-360H200v360h142q11 0 20 5.5t15 14.5q17 27 44 43.5t59 16.5ZM200-200h560-560Z"/></symbol>
+<symbol id="i-inbox-f" viewBox="0 -960 960 960"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm280-200q32 0 59-16.5t44-43.5q6-9 15-14.5t20-5.5h142v-360H200v360h142q11 0 20 5.5t15 14.5q17 27 44 43.5t59 16.5Z"/></symbol>
+<symbol id="i-checklist" viewBox="0 -960 960 960"><path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/></symbol>
+<symbol id="i-checklist-f" viewBox="0 -960 960 960"><path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/></symbol>
+<symbol id="i-add" viewBox="0 -960 960 960"><path d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z"/></symbol>
+<symbol id="i-add-f" viewBox="0 -960 960 960"><path d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z"/></symbol>
+<symbol id="i-menu" viewBox="0 -960 960 960"><path d="M160-240q-17 0-28.5-11.5T120-280q0-17 11.5-28.5T160-320h640q17 0 28.5 11.5T840-280q0 17-11.5 28.5T800-240H160Zm0-200q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520h640q17 0 28.5 11.5T840-480q0 17-11.5 28.5T800-440H160Zm0-200q-17 0-28.5-11.5T120-680q0-17 11.5-28.5T160-720h640q17 0 28.5 11.5T840-680q0 17-11.5 28.5T800-640H160Z"/></symbol>
+<symbol id="i-menu-f" viewBox="0 -960 960 960"><path d="M160-240q-17 0-28.5-11.5T120-280q0-17 11.5-28.5T160-320h640q17 0 28.5 11.5T840-280q0 17-11.5 28.5T800-240H160Zm0-200q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520h640q17 0 28.5 11.5T840-480q0 17-11.5 28.5T800-440H160Zm0-200q-17 0-28.5-11.5T120-680q0-17 11.5-28.5T160-720h640q17 0 28.5 11.5T840-680q0 17-11.5 28.5T800-640H160Z"/></symbol>
+<symbol id="i-info-f" viewBox="0 -960 960 960"><path d="M480-280q17 0 28.5-11.5T520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280Zm0-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/></symbol>
+<symbol id="i-cloud_off-f" viewBox="0 -960 960 960"><path d="M260-160q-92 0-156-64T40-380q0-77 47.5-137T210-594q3-8 6-15.5t6-16.5L84-764q-11-11-11-28t11-28q11-11 28-11t28 11l680 680q11 11 11.5 27.5T820-84q-11 11-27.5 11.5T764-83l-78-77H260Zm604-50L322-751q35-24 74.5-36.5T480-800q117 0 198.5 81.5T760-520q69 8 114.5 59.5T920-340q0 39-15 72.5T864-210Z"/></symbol>
+</svg>
+<header class="kopf">
+  <button class="symbol" id="zurueck" type="button" aria-label="Zurück" hidden><svg class="ico" aria-hidden="true"><use href="#i-arrow_back"/></svg></button>
+  <h1 id="titel">Wartet auf dich</h1>
+  <a class="symbol" id="suchen" href="#suche" aria-label="Suchen" hidden><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg></a>
+</header>
+<p class="stand" id="stand" role="status" hidden><svg class="ico" aria-hidden="true"><use href="#i-cloud_off-f"/></svg><span>Ohne Netz: Neues kommt, sobald wieder Netz da ist.</span></p>
+<main id="inhalt"></main>
+<div class="unten">
+  <nav class="leiste" id="leiste" aria-label="Bereiche">
+    <a href="#wartet" data-bereich="wartet"><span class="sym"><svg class="ico aus" aria-hidden="true"><use href="#i-inbox"/></svg><svg class="ico an" aria-hidden="true"><use href="#i-inbox-f"/></svg></span>Wartet</a>
+    <a href="#abnahmen" data-bereich="abnahmen"><span class="sym"><svg class="ico aus" aria-hidden="true"><use href="#i-checklist"/></svg><svg class="ico an" aria-hidden="true"><use href="#i-checklist-f"/></svg></span>Abnahmen</a>
+    <a href="#erfassen" data-bereich="erfassen"><span class="sym"><svg class="ico aus" aria-hidden="true"><use href="#i-add"/></svg><svg class="ico an" aria-hidden="true"><use href="#i-add-f"/></svg></span>Erfassen</a>
+    <a href="#mehr" data-bereich="mehr"><span class="sym"><svg class="ico aus" aria-hidden="true"><use href="#i-menu"/></svg><svg class="ico an" aria-hidden="true"><use href="#i-menu-f"/></svg></span>Mehr</a>
+  </nav>
+</div>
+<dialog class="blatt" id="blatt" aria-labelledby="blatt-titel">
+  <div class="blatt-inhalt">
+    <div class="griff" aria-hidden="true"></div>
+    <h2 id="blatt-titel"></h2>
+    <p class="neben">Dieses Blatt ist noch nicht gebaut.</p>
+  </div>
+  <div class="knoepfe">
+    <button type="button" class="text" id="blatt-abbrechen">Abbrechen</button>
+  </div>
+</dialog>
+<template id="t-platz">
+  <section class="platz">
+    <div class="bild blau" aria-hidden="true"><div class="blob"></div><div class="mitte"><svg class="ico"><use href="#i-info-f"/></svg></div><i class="punkt p1"></i><i class="punkt p2"></i><i class="punkt p3"></i></div>
+    <h2></h2>
+    <p></p>
+  </section>
+</template>
+<template id="t-mehr">
+  <section>
+    <h2>Dieses Gerät</h2>
+    <dl class="werte"><div><dt>Fassung</dt><dd id="fassung"></dd></div></dl>
+  </section>
+</template>
+</body>
+</html>

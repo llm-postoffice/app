@@ -1,0 +1,157 @@
+/* Postfach: Werte nach dem Entwurf der App (Material 3, p94-hig mobile). Schrift in rem, damit sie mit
+   <meta name="text-scale" content="scale"> der Schriftgröße des Systems folgt (USC-1); Ziele in px (UZI-1).
+   Alle Farben stehen hier einmal als Werte für Hell und Dunkel; Text auf Fläche erreicht mindestens 4,5:1,
+   Symbole und Kanten mindestens 3:1 (nachgerechnet im Entwurf). */
+:root {
+  color-scheme: light dark;
+  --rand: 16px;
+  --grund: #ffffff; --flaeche: #f0f2f7; --text: #1b1c1f; --neben: #44474e;
+  --akzent: #0b57d0; --auf-akzent: #ffffff; --tonal: #d3e3fd; --auf-tonal: #041e49;
+  --linie: #c4c7cf; --umgekehrt: #2f3033; --auf-umgekehrt: #f2f0f4;
+  /* Arten: Akzent (Symbol, Kante), Fläche (Chip, Kopfkarte), Text auf der Fläche */
+  --frage-acc: #00696f; --frage-cont: #cdeff1; --frage-on: #00363a;
+  --freigabe-acc: #6750a4; --freigabe-cont: #e9ddff; --freigabe-on: #22005d;
+  --abnahme-acc: #9c2f73; --abnahme-cont: #ffd8ec; --abnahme-on: #3e0027;
+  --auftrag-acc: #5f6300; --auftrag-cont: #e4e98f; --auftrag-on: #1c1d00;
+  --nachricht-acc: #4f5b7d; --nachricht-cont: #dde3f9; --nachricht-on: #0e1b37;
+  /* Zustände: Fehler und Dringend, Warnung, ok */
+  --f-acc: #ba1a1a; --f-cont: #ffdad6; --f-on: #410002; --f-solid-on: #ffffff;
+  --w-acc: #7a5900; --w-cont: #ffefb8; --w-on: #3b2d00;
+  --ok-acc: #1b6d2f; --ok-cont: #c4efc8; --ok-on: #00210a;
+  /* Kennung: die ID eines Eintrags in Kupfer, keine andere Bedeutung (Nachtrag, N1) */
+  --id: #8f3b00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund: #121316; --flaeche: #1e2025; --text: #e3e3e6; --neben: #c4c6cf;
+    --akzent: #a8c7fa; --auf-akzent: #062e6f; --tonal: #0842a0; --auf-tonal: #d3e3fd;
+    --linie: #44474e; --umgekehrt: #e3e3e6; --auf-umgekehrt: #2f3033;
+    --frage-acc: #4fd8e3; --frage-cont: #004f54; --frage-on: #9cf0f8;
+    --freigabe-acc: #cfbcff; --freigabe-cont: #4f378b; --freigabe-on: #e9ddff;
+    --abnahme-acc: #ffafd8; --abnahme-cont: #7b1b59; --abnahme-on: #ffd8ec;
+    --auftrag-acc: #c8cc5c; --auftrag-cont: #454900; --auftrag-on: #e4e98f;
+    --nachricht-acc: #b5c2e8; --nachricht-cont: #3a4663; --nachricht-on: #dde3f9;
+    --f-acc: #ffb4ab; --f-cont: #93000a; --f-on: #ffdad6; --f-solid-on: #410002;
+    --w-acc: #f2c14e; --w-cont: #4a3a00; --w-on: #ffe9b0;
+    --ok-acc: #8bd793; --ok-cont: #0c5322; --ok-on: #c4efc8;
+    --id: #ffb68b;
+  }
+}
+* { box-sizing: border-box; }
+/* hidden gilt auch gegen eigene display-Regeln */
+[hidden] { display: none !important; }
+html { background: var(--grund); }
+body {
+  margin: 0; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto;
+  font: 1rem/1.5 system-ui, sans-serif; background: var(--grund); color: var(--text);
+  overscroll-behavior-y: contain;          /* kein Neuladen durch Ziehen nach unten (UGE-6) */
+  touch-action: manipulation;              /* kein Warten auf Doppeltippen (UZI-5) */
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ico { width: 24px; height: 24px; flex: none; fill: currentColor; }
+:focus-visible { outline: 3px solid var(--akzent); outline-offset: 2px; }
+
+/* Feste Zeilen: ist .stand ausgeblendet, rückt die Leiste sonst in die 1fr-Zeile */
+.kopf { grid-row: 1; } .stand { grid-row: 2; } main { grid-row: 3; } .unten { grid-row: 4; }
+
+/* Obere Leiste (UNA-2): Titel der Ansicht, Zurück nur unterhalb der obersten Ebene, höchstens zwei Symbole */
+.kopf {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 4px;
+  min-height: calc(64px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
+  background: var(--grund);
+}
+.kopf h1 { flex: 1; min-width: 0; margin: 0 0 0 12px; font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; overflow-wrap: anywhere; }
+.kopf button + h1 { margin-left: 4px; }
+.symbol { min-width: 48px; min-height: 48px; display: grid; place-items: center; border: 0; border-radius: 24px; background: none; color: inherit; text-decoration: none; }
+.symbol:active { background: var(--flaeche); }
+
+/* Ruhige Zeile unter der Leiste: ohne Netz (UOF-4) */
+.stand { margin: 0; padding: 8px max(var(--rand), env(safe-area-inset-right)) 8px max(var(--rand), env(safe-area-inset-left)); background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; display: flex; gap: 12px; align-items: flex-start; }
+
+/* Inhalt: eine Spalte mit 16 px Rand (UAN-1) */
+main { padding: 0 max(var(--rand), env(safe-area-inset-right)) 16px max(var(--rand), env(safe-area-inset-left)); overflow-wrap: anywhere; }
+h2 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; margin: 24px 0 4px; }
+p { margin: 0 0 12px; }
+.neben { color: var(--neben); font-size: 0.875rem; line-height: 1.25rem; }
+
+/* ID mit Strich, Monospace, in Kupfer; Sitzung in Monospace ohne Farbe (Nachtrag, Abschnitt e) */
+.id { font-family: ui-monospace, monospace; font-size: 0.8125rem; line-height: 1.25rem; font-weight: 600; color: var(--id); white-space: nowrap; }
+.sitzung { font-family: ui-monospace, monospace; font-size: 0.8125rem; line-height: 1.25rem; font-weight: 500; overflow-wrap: anywhere; }
+
+/* Werte als Liste, Wert unter der Beschriftung (GWE-7) */
+.werte { margin: 0 0 12px; }
+.werte div { padding: 8px 0; border-bottom: 1px solid var(--linie); }
+.werte dt { font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.werte dd { margin: 0; }
+
+/* Knöpfe: 48 px hoch (UZI-1), ein gefüllter je Ansicht (USE-1) */
+.gefuellt, .tonal, .text {
+  min-height: 48px; min-width: 48px; padding: 10px 24px; border: 0; border-radius: 24px;
+  font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; text-align: center;
+}
+.gefuellt { background: var(--akzent); color: var(--auf-akzent); }
+.tonal { background: var(--tonal); color: var(--auf-tonal); }
+.text { background: none; color: var(--akzent); }
+button:disabled { opacity: 0.38; }
+
+/* Zustandsgrafik für leer, lädt und Fehler: Fläche, Symbol, drei Punkte, ohne Bilddatei (UFA-10) */
+.platz { text-align: center; padding: 48px 8px 24px; }
+.platz h2 { font-size: 1.375rem; line-height: 1.75rem; font-weight: 600; margin: 0 0 8px; }
+.platz p { margin: 0 auto 16px; max-width: 28rem; }
+.bild { position: relative; width: 144px; height: 112px; margin: 0 auto 16px; --b-acc: var(--akzent); --b-cont: var(--tonal); }
+.bild .blob { position: absolute; inset: 8px 16px; border-radius: 48% 52% 50% 50% / 55% 50% 50% 45%; background: var(--b-cont); }
+.bild .mitte { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 64px; height: 64px; border-radius: 32px; background: var(--grund); color: var(--b-acc); box-shadow: 0 1px 3px rgb(0 0 0 / 0.18); }
+.bild .mitte .ico { width: 40px; height: 40px; }
+.bild .punkt { position: absolute; border-radius: 50%; background: var(--b-acc); opacity: 0.55; }
+.bild .p1 { width: 12px; height: 12px; left: 6px; top: 16px; }
+.bild .p2 { width: 8px; height: 8px; right: 6px; top: 6px; }
+.bild .p3 { width: 10px; height: 10px; right: 12px; bottom: 6px; }
+
+/* Untere Leiste: Navigation klebt unten und verdeckt nichts (UAN-4); bei Schrift 200 % bricht sie in zwei Zeilen um */
+.unten { position: sticky; bottom: 0; z-index: 2; }
+.leiste {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--flaeche);
+}
+.leiste a { min-height: 80px; display: grid; place-content: center; justify-items: center; gap: 4px; font-size: 0.75rem; line-height: 1rem; font-weight: 500; color: var(--neben); text-decoration: none; }
+.leiste .sym { position: relative; display: grid; place-items: center; width: 64px; height: 32px; border-radius: 16px; }
+.leiste .an { display: none; }
+.leiste a[aria-current="page"] { color: var(--text); }
+.leiste a[aria-current="page"] .sym { background: var(--tonal); color: var(--auf-tonal); }
+.leiste a[aria-current="page"] .an { display: block; }
+.leiste a[aria-current="page"] .aus { display: none; }
+
+/* Blatt von unten (UDI-3): ein dialog; Zurück schließt es als Schließanforderung (UNA-3) */
+.blatt {
+  margin: auto 0 0; width: 100%; max-width: 100%; max-height: 90dvh; border: 0; overflow: hidden;
+  border-radius: 28px 28px 0 0; padding: 8px var(--rand) 0;
+  background: var(--flaeche); color: var(--text);
+}
+/* Inhalt scrollt, die Knopfzeile bleibt bei Schrift 200 % unten sichtbar (UDI-6) */
+.blatt[open] { display: flex; flex-direction: column; }
+.blatt-inhalt { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.blatt::backdrop { background: rgb(0 0 0 / 0.4); }
+.griff { width: 32px; height: 4px; margin: 8px auto 16px; border-radius: 2px; background: var(--neben); }
+.blatt h2 { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; margin: 0 0 16px; }
+.knoepfe { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: none; padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: no-preference) {
+  .blatt[open] { animation: hoch 200ms ease-out; }
+  @keyframes hoch { from { transform: translateY(100%); } }
+}
+
+/* Ab 600 px Breite: Navigationsleiste an der Seite (UAN-5), eine Codebasis für schmal und breit (UEW-3) */
+@media (min-width: 600px) {
+  body { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto 1fr; }
+  .kopf, .stand, main { grid-column: 2; }
+  .unten { grid-column: 1; grid-row: 1 / 4; position: sticky; top: 0; height: 100dvh; }
+  .leiste { grid-template-columns: 1fr; align-content: start; padding-top: max(16px, env(safe-area-inset-top)); height: 100%; }
+  main { max-width: 840px; }
+  /* ohne Leiste (Anmeldung) bleibt keine leere Spalte */
+  body:has(#leiste[hidden]) { grid-template-columns: minmax(0, 1fr); }
+  body:has(#leiste[hidden]) :is(.kopf, .stand, main) { grid-column: 1; }
+}

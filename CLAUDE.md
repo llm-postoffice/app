@@ -8,7 +8,13 @@ arbeitet offline mit einer Warteschlange.
 - p94-hig: es gelten die Teile mobile, text und doku; vom Teil gui nichts.
 - Stack ohne Build: HTML, CSS, ES-Module, Tests mit `node --test` (Node ab 22). Keine npm-Pakete, keine Bibliothek,
   keine Fremdskripte. Die CSP steht als `<meta http-equiv>`, weil Pages keine Kopfzeilen setzt; darum kein Inline-Skript,
-  kein Inline-Stil und kein Host außer `api.github.com` und `ntfy.sh`.
+  kein Inline-Stil und kein Host außer `api.github.com` und `ntfy.sh`. Zu `default-src 'none'` gehört `manifest-src
+  'self'`: ohne es blockt Chromium das Manifest, und die App ließe sich nicht installieren. Der Renderer merkt das
+  nicht, `tools/wege.mjs` schon (Verstöße gegen die CSP werden aufgezeichnet).
+- Aufbau: `index.html` und `app.css` (Hülle, Farben, Maße), `js/` (Module; `adressen.js` ist rein und wird mit
+  `node --test` geprüft), `sw.js` (Hülle nach Fassung, neue Dateien gehören in `DATEIEN`), `tools/` (Wegetest,
+  Fremdhost-Prüfung), `tests/`. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0).
+  Feste Bausteine sind `<template>` in `index.html`; Daten kommen nur über `textContent` in den Baum.
 - Gates: `make check` (Tests, Prüfung auf Fremdhosts, gitleaks, Rendern aller Zustände mit `rendern-mobil.mjs` aus dem
   p94-hig-Klon, Wegetest). Pfad des Klons: `make check HIG=PFAD`.
 - Lizenz GPL-3.0-or-later. Version `YYYYMMDD.NN` steht gleich in `js/version.js`, `sw.js` und der obersten
@@ -18,5 +24,6 @@ arbeitet offline mit einer Warteschlange.
   Doku, Commits und PRs. Repo und Eigentümer trägt der Nutzer bei der Anmeldung ein.
 - PR-Fluss: Arbeit auf einem Zweig, ein PR gegen `main` mit dem Prüfergebnis in der Beschreibung. `main` verlangt einen
   PR; Claude öffnet ihn, der Nutzer mergt. Nie direkt auf `main` pushen (einzige Ausnahme war der erste Commit).
-- Browser-Tests nur headless mit frischem Profil, nie in Claude in Chrome.
+- Browser-Tests nur headless mit frischem Profil, nie in Claude in Chrome. Chromium legt einen Socket unter `$TMPDIR`
+  an und bricht bei einem Pfad über etwa 100 Zeichen ab (`Socket path too long`); dann ein kurzes `TMPDIR` setzen.
 - Pages liefert `main` aus der Wurzel aus; es wird mit Teil G eingeschaltet, nicht früher.
