@@ -1,0 +1,4 @@
+# Bilder von rendern-mobil.mjs (make check)
+bilder/
+node_modules/
+*.log
