@@ -1,5 +1,21 @@
 # Änderungen
 
+## 20261114.03 (2026-11-14)
+
+Teil D: Ansichten, Navigation und Suche. Die App zeigt jetzt, was auf dich wartet. Senden kommt mit einer späteren Fassung; Eingaben bleiben bis dahin als Entwurf auf dem Gerät.
+
+- **Wartet** zeigt zuerst das Ergebnis („5 für dich“), darunter die Einträge nach Rang, Dringendes zuerst. Der Eingang steht darunter, die Plakette in der Leiste zählt mit.
+- **Abnahmen** gruppiert nach Rechner und nennt die offenen Schritte. Jede Abnahme beurteilst du Schritt für Schritt mit PASS, FAIL, BLOCKED oder SKIP; bei FAIL, BLOCKED und SKIP schreibst du einen Satz dazu. Die Urteile bleiben nach Zurück, Neuladen und Beenden der App auf dem Gerät. Das Ergebnis zeigt das Gesamturteil und den Folgeauftrag, den die App beim Senden anlegen wird.
+- Ein Eintrag zeigt Art, Projekt, Absender, Text als Markdown, Möglichkeiten einer Frage, den Faden und die Quelle. Text von außen steht als Zitat; Links gibt es nur mit https und sie öffnen mit `rel="noopener noreferrer"`.
+- **Eingang** und **Ideensammlung** haben eigene Listen; **Suche** findet Titel und ID, auch erledigte und verworfene Einträge, eine ID mit und ohne Strich und mit den Verwechslungen o, i und l.
+- **Erfassen** legt einen Eintrag von Hand an. **Mehr** führt zu Eingang, Ideensammlung und Suche, zeigt die Anmeldung, die Mitteilungen über ntfy und den Abschnitt Dieses Gerät mit dem Namen des Geräts.
+- Die Anmeldung fragt Repo, Token, Name des Geräts und das Ablaufdatum des Tokens. **Neues Token eintragen** steht bei „Token abgelaufen oder widerrufen“.
+- Freigaben haben keine Knöpfe: Freigeben und Ablehnen gehen erst in Phase 4, und der Eintrag sagt es.
+- Die Knöpfe zum Antworten, Erledigen, Einsortieren, Erfassen und Senden sind da, aber gesperrt, solange diese Fassung nur liest. Ein Satz sagt es; nichts wird vorgetäuscht.
+- Jede Ansicht hat Zustände für leer, lädt, Fehler, ohne Netz und Token abgelaufen.
+- Blätter scrollen bei großer Schrift als Ganzes; die Knöpfe stehen am Ende und überdecken kein Feld. Der Titel der oberen Leiste steht auf derselben linken Kante wie der Inhalt.
+- Für Entwickler: `tools/vorschau.mjs` und `tools/rendern.mjs` zeigen und rendern jede Ansicht mit erfundenen Daten; der Wegetest prüft alle Zurück-Wege, die Blätter bei Schrift 200 %, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht und die Entwürfe.
+
 ## 20261114.02 (2026-11-14)
 
 Teil C: Abgleich und Zustand. Die App holt jetzt das Postsystem auf das Gerät und rechnet daraus den Zustand der Einträge; die Ansichten dafür folgen in späteren Teilen.

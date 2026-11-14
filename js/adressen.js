@@ -1,33 +1,39 @@
 // Adressen der App (UNA-4) und der Stapel darunter (UNA-3). Reine Funktionen ohne Browser, damit
 // node --test sie prüft. Jede Ansicht hat eine Adresse im Fragment; ein tiefer Link baut den Stapel
 // darunter nach. Die Tabellen stammen aus dem Entwurf und dem Nachtrag zur App.
+import { idMitStrich as gliedern, normId as normalisiere } from './format.js';
 
 /** Die vier Hauptbereiche der Navigationsleiste, in der Reihenfolge der Leiste. */
 export const BEREICHE = ['wartet', 'abnahmen', 'erfassen', 'mehr'];
 
 const TITEL = {
   wartet: 'Wartet auf dich', abnahmen: 'Abnahmen', erfassen: 'Erfassen', mehr: 'Mehr',
-  eingang: 'Eingang', eintrag: 'Eintrag', ideen: 'Ideensammlung', suche: 'Suche', anmelden: 'Anmelden',
+  eingang: 'Eingang', eintrag: 'Eintrag', ideen: 'Ideensammlung', suche: 'Suche', anmelden: 'Anmelden', ergebnis: 'Ergebnis',
 };
-const BLATT_TITEL = { einsortieren: 'Einsortieren', geraet: 'Gerätename' };
+const BLATT_TITEL = { einsortieren: 'Einsortieren', geraet: 'Gerätename', antworten: 'Deine Antwort' };
 
-// Welcher Hauptbereich in der Leiste gewählt ist. Eintrag, Abnahme-Schritt und Suche gehören bis Teil D
-// zu Wartet; die Daten entscheiden später, ob eine Abnahme unter Abnahmen steht.
+// Welcher Hauptbereich in der Leiste gewählt ist, solange die Daten nichts anderes sagen: Eintrag, Abnahme-Schritt
+// und Suche gehören zu Wartet. anzeigen.js wählt für eine Abnahme Abnahmen und für eine Idee Mehr, wenn es den
+// Eintrag kennt (bereichVonArt).
 const BEREICH_VON = {
   wartet: 'wartet', abnahmen: 'abnahmen', erfassen: 'erfassen', mehr: 'mehr',
-  eingang: 'wartet', eintrag: 'wartet', schritt: 'wartet', ideen: 'mehr', suche: 'wartet', anmelden: null,
+  eingang: 'wartet', eintrag: 'wartet', schritt: 'wartet', ergebnis: 'wartet', ideen: 'mehr', suche: 'wartet', anmelden: null,
 };
 
-/** Normalisiert eine ID aus einer Adresse: ohne Striche, klein. Aliase und Verwechslungen kommen mit Teil D. */
-export function normId(roh) {
-  return String(roh).replaceAll('-', '').toLowerCase();
-}
+/**
+ * Normalisiert eine ID aus einer Adresse oder einer Eingabe wie `norm_id` im Postsystem: Striche fallen weg (auch
+ * die kopierten), Großbuchstaben werden klein, `o` wird `0`, `i` und `l` werden `1`. Das ist eindeutig, weil
+ * das Alphabet der IDs kein `o`, `i` und `l` kennt.
+ */
+export const normId = (roh) => normalisiere(String(roh));
 
 /** Zeigt eine ID gegliedert: sechs Zeichen als `k7m-2qa`; andere Längen bleiben, wie sie sind. */
 export function idMitStrich(id) {
-  const s = normId(id);
-  return s.length === 6 ? `${s.slice(0, 3)}-${s.slice(3)}` : s;
+  return gliedern(normId(id));
 }
+
+/** Die Art eines Eintrags bestimmt den Bereich der Leiste: Abnahmen unter Abnahmen, Ideen unter Mehr. */
+export const bereichVonArt = (kind) => (kind === 'test' ? 'abnahmen' : kind === 'idea' ? 'mehr' : 'wartet');
 
 const ID = '([0-9A-Za-z-]{1,32})';
 const MUSTER = [
@@ -35,7 +41,12 @@ const MUSTER = [
   [/^#mehr\/geraet$/, () => ({ ansicht: 'mehr', blatt: 'geraet' })],
   [new RegExp(`^#eintrag/${ID}$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]) })],
   [new RegExp(`^#eintrag/${ID}/einsortieren$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]), blatt: 'einsortieren' })],
+  [new RegExp(`^#eintrag/${ID}/antworten$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]), blatt: 'antworten' })],
+  [new RegExp(`^#eintrag/${ID}/ergebnis$`), (m) => ({ ansicht: 'ergebnis', id: normId(m[1]) })],
   [new RegExp(`^#eintrag/${ID}/schritt/([1-9][0-9]{0,2})$`), (m) => ({ ansicht: 'schritt', id: normId(m[1]), schritt: Number(m[2]) })],
+  [new RegExp(`^#eintrag/${ID}/schritt/([1-9][0-9]{0,2})/(fail|blocked|skip)$`), (m) => ({
+    ansicht: 'schritt', id: normId(m[1]), schritt: Number(m[2]), blatt: 'satz', wort: m[3].toUpperCase(),
+  })],
 ];
 
 /**
@@ -56,7 +67,8 @@ export function parse(hash) {
 
 /** Baut die genormte Adresse einer Ansicht. */
 export function adresseVon(o) {
-  if (o.ansicht === 'schritt') return `#eintrag/${o.id}/schritt/${o.schritt}`;
+  if (o.ansicht === 'schritt') return `#eintrag/${o.id}/schritt/${o.schritt}${o.blatt ? `/${o.wort.toLowerCase()}` : ''}`;
+  if (o.ansicht === 'ergebnis') return `#eintrag/${o.id}/ergebnis`;
   if (o.ansicht === 'eintrag') return `#eintrag/${o.id}${o.blatt ? `/${o.blatt}` : ''}`;
   if (o.ansicht === 'mehr' && o.blatt) return `#mehr/${o.blatt}`;
   return `#${o.ansicht}`;
@@ -69,6 +81,7 @@ export function titelVon(o) {
 
 /** Titel des Blatts, das über der Ansicht offen ist, sonst null. */
 export function blattTitelVon(o) {
+  if (o.blatt === 'satz') return `${o.wort} für Schritt ${o.schritt}`;
   return o.blatt ? BLATT_TITEL[o.blatt] : null;
 }
 
@@ -79,15 +92,32 @@ export function hatZurueck(o) {
 
 /**
  * Adressen, die unter dieser Ansicht auf dem Stapel liegen, von unten nach oben (UNA-3). Das Blatt
- * einer Ansicht liegt als eigene Adresse obenauf; die Ansicht darunter steht hier mit.
+ * einer Ansicht liegt als eigene Adresse obenauf; die Ansicht darunter steht hier mit. `ort(id)` darf sagen,
+ * woher ein Eintrag kommt (eingang, ideen, abnahmen); ohne Auskunft liegt er unter Wartet.
  */
-export function stapelUnter(o) {
+export function stapelUnter(o, ort = () => null) {
+  const unterEintrag = (id, vorgabe = null) => {
+    switch (ort(id) ?? vorgabe) {
+      case 'eingang': return ['#wartet', '#eingang'];
+      case 'ideen': return ['#wartet', '#mehr', '#ideen'];
+      case 'abnahmen': return ['#wartet', '#abnahmen'];
+      default: return ['#wartet'];
+    }
+  };
   switch (o.ansicht) {
     case 'wartet': case 'anmelden': return [];
     case 'ideen': return ['#wartet', '#mehr'];
     case 'mehr': return o.blatt ? ['#wartet', '#mehr'] : ['#wartet'];
-    case 'eintrag': return o.blatt === 'einsortieren' ? ['#wartet', '#eingang', `#eintrag/${o.id}`] : ['#wartet'];
-    case 'schritt': return ['#wartet', `#eintrag/${o.id}`];
+    case 'eintrag': {
+      // Einsortieren gibt es nur im Eingang: das Blatt allein sagt es schon
+      const unten = unterEintrag(o.id, o.blatt === 'einsortieren' ? 'eingang' : null);
+      return o.blatt ? [...unten, `#eintrag/${o.id}`] : unten;
+    }
+    case 'schritt': {
+      const unten = [...unterEintrag(o.id), `#eintrag/${o.id}`];
+      return o.blatt ? [...unten, `#eintrag/${o.id}/schritt/${o.schritt}`] : unten;
+    }
+    case 'ergebnis': return [...unterEintrag(o.id), `#eintrag/${o.id}`];
     default: return ['#wartet'];   // abnahmen, erfassen, eingang, suche
   }
 }

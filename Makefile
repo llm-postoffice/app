@@ -6,9 +6,6 @@ SHELL := /bin/bash
 HIG ?= ../p94-hig
 BILDER ?= bilder
 NODE ?= node
-# Alle Ansichten des Gerüsts, je als Adresse im Fragment (UNA-4); ein Zustand je Eintrag
-ZUSTAENDE = wartet abnahmen erfassen mehr eingang eintrag/9f3k2a eintrag/9f3k2a/schritt/2 \
-  eintrag/9f3k2a/einsortieren ideen mehr/geraet suche anmelden
 
 .PHONY: check test fremdhost secrets render wege
 
@@ -24,15 +21,16 @@ fremdhost:
 secrets:
 	gitleaks dir --no-banner --redact .
 
-# Rendert jeden Zustand in beiden Größen, hell, dunkel, Schrift 200 % und ohne Netz und prüft Manifest und
-# Start ohne Netz (UEW-2). Verlangt PASS: auch ein WARN lässt die Stufe scheitern.
+# Rendert jede Ansicht in jedem Zustand (Szenarien mit erfundenen Daten: tests/hilfen/beispieldaten.mjs) in beiden Größen,
+# hell, dunkel, Schrift 200 % und ohne Netz und prüft Manifest und Start ohne Netz (UEW-2). Verlangt PASS: auch ein WARN
+# lässt die Stufe scheitern. Der Renderer ist rendern-mobil.mjs aus p94-hig; tools/rendern.mjs startet ihn je Szenario.
 render:
 	@test -f "$(HIG)/beispiele/rendern-mobil.mjs" || { \
 	  echo "make: Fehler: $(HIG)/beispiele/rendern-mobil.mjs fehlt" >&2; \
 	  echo "Gib den Klon von p94-hig an: make check HIG=PFAD" >&2; exit 1; }
 	@mkdir -p "$(BILDER)"
-	$(NODE) "$(HIG)/beispiele/rendern-mobil.mjs" -o "$(BILDER)" $(foreach z,$(ZUSTAENDE),'index.html#$(z)') | tee "$(BILDER)/lauf.txt"
-	@if grep -q '^WARN' "$(BILDER)/lauf.txt"; then echo "make: Fehler: das Rendern meldet WARN; verlangt ist PASS" >&2; exit 1; fi
+	$(NODE) tools/rendern.mjs --hig "$(HIG)" -o "$(BILDER)"
+	@if grep -q '^[a-z-]*: WARN' "$(BILDER)/lauf.txt"; then echo "make: Fehler: das Rendern meldet WARN; verlangt ist PASS" >&2; exit 1; fi
 
 wege:
 	$(NODE) tools/wege.mjs

@@ -72,9 +72,10 @@ test('jedes Symbol, das die Seite oder der Code ruft, steht im Sprite', async ()
   const sprite = new Set([...html.matchAll(/<symbol id="(i-[^"]+)"/g)].map((m) => m[1]));
   assert.ok(sprite.size > 0);
   const quellen = [html, ...await Promise.all((await dateien('js')).map(lies))].join('\n');
-  // Namen stehen als href="#i-NAME" oder in js/texte.js als symbol: 'NAME' (mehr.js setzt daraus href)
+  // Namen stehen als href="#i-NAME", als symbol: 'NAME' (texte.js, ansichtstexte.js, karten.js) oder als ico('NAME')
   const gerufen = new Set([...quellen.matchAll(/href="#(i-[^"]+)"/g)].map((m) => m[1]));
   for (const m of quellen.matchAll(/\bsymbol: '([a-z_-]+)'/g)) gerufen.add(`i-${m[1]}`);
+  for (const m of quellen.matchAll(/\bico\('([a-z_-]+)'/g)) gerufen.add(`i-${m[1]}`);
   for (const g of gerufen) assert.ok(sprite.has(g), `Symbol ${g} fehlt im Sprite`);
   for (const s of sprite) assert.ok(gerufen.has(s), `Symbol ${s} steht im Sprite, wird aber nicht gerufen`);
 });

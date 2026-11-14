@@ -16,8 +16,22 @@ arbeitet offline mit einer Warteschlange.
   `pytext.js`, `zustand.js`, `urteil.js`, `pruefen.js` und `texte.js` sind rein und laufen unter `node --test`;
   `speicher.js` (IndexedDB oder Arbeitsspeicher, dieselbe Schnittstelle), `abgleich.js` (GitHub lesen; `fetch` und
   Datenbank sind Parameter) und `steuerung.js` (wann der Abgleich läuft; auch Zeitgeber, Uhr und Sichtbarkeit sind
-  Parameter) kennen den Browser nicht selbst; `mehr.js`, `start.js` und `netz.js` verbinden sie mit der Seite. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0).
-  Feste Bausteine sind `<template>` in `index.html`; Daten kommen nur über `textContent` in den Baum.
+  Parameter) kennen den Browser nicht selbst. Die Ansichten (Teil D) bauen ihren Baum nur mit `el()` und `ico()` aus
+  `dom.js` (nie `innerHTML`, Daten nur über `textContent`; ein Test erzwingt es), lesen den Stand über `welt.js` (rein,
+  unter `node --test`) und laufen über `anzeigen.js`; `app.js` verbindet alles und ist für `start.js` und die Vorschau
+  derselbe Einstieg. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0); jedes benutzte
+  Symbol muss im Sprite stehen und jedes im Sprite benutzt sein (`tests/geruest.test.mjs`).
+- Schreiben ist Teil E: `js/schreiben.js` legt den Vertrag fest (`k.schreiben` mit `antworten`, `urteilSenden`,
+  `erledigen`, `einsortieren`, `anlegen`). Bis dahin sind die Knöpfe gesperrt und ein Satz sagt warum; nichts täuscht
+  einen Erfolg vor. Neue Handlungen bekommen in `welt.js` (`handlungenVon`) einen Eintrag und in der Ansicht einen Knopf
+  mit `data-handlung` (E13; Test und Wegetest prüfen beides).
+- Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten
+  (`tests/hilfen/beispieldaten.mjs`, neutral: alpha, beta, gamma, rechner-a) und ersetzt dort nur `js/start.js`;
+  `tools/rendern.mjs` lässt den Renderer aus p94-hig jedes Szenario prüfen. Ein neuer Zustand ist ein neues Szenario
+  und eine Zeile in `ADRESSEN`.
+- Der Renderer meldet in der Größe 448 × 923 (Ränder 0) „Ränder“ für jeden Text, der über den unteren Rand des Fensters
+  hinausreicht, also für jede Seite, die scrollt (die Prüfung zählt dort einen Streifen der Höhe 0, den keine Leiste
+  verdecken kann). Das ist ein Fehler des Renderers, nicht der App; die Meldung wird nicht umgedeutet.
 - Gates: `make check` (Tests, Prüfung auf Fremdhosts, gitleaks, Rendern aller Zustände mit `rendern-mobil.mjs` aus dem
   p94-hig-Klon, Wegetest). Pfad des Klons: `make check HIG=PFAD`.
 - Lizenz GPL-3.0-or-later. Version `YYYYMMDD.NN` steht gleich in `js/version.js`, `sw.js` und der obersten
