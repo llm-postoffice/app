@@ -13,7 +13,8 @@ Teil D: Ansichten, Navigation und Suche. Die App zeigt jetzt, was auf dich warte
 - Freigaben haben keine Knöpfe: Freigeben und Ablehnen gehen erst in Phase 4, und der Eintrag sagt es.
 - Die Knöpfe zum Antworten, Erledigen, Einsortieren, Erfassen und Senden sind da, aber gesperrt, solange diese Fassung nur liest. Ein Satz sagt es; nichts wird vorgetäuscht.
 - Jede Ansicht hat Zustände für leer, lädt, Fehler, ohne Netz und Token abgelaufen.
-- Für Entwickler: `tools/vorschau.mjs` und `tools/rendern.mjs` zeigen und rendern jede Ansicht mit erfundenen Daten; der Wegetest prüft alle Zurück-Wege, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht und die Entwürfe.
+- Blätter scrollen bei großer Schrift als Ganzes; die Knöpfe stehen am Ende und überdecken kein Feld. Der Titel der oberen Leiste steht auf derselben linken Kante wie der Inhalt.
+- Für Entwickler: `tools/vorschau.mjs` und `tools/rendern.mjs` zeigen und rendern jede Ansicht mit erfundenen Daten; der Wegetest prüft alle Zurück-Wege, die Blätter bei Schrift 200 %, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht und die Entwürfe.
 
 ## 20261114.02 (2026-11-14)
 

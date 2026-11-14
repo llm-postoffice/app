@@ -410,6 +410,9 @@ try {
       if (dient(e)) { for (const c of e.children) geh(c); return; }
       liste.push([e.tagName.toLowerCase() + (e.classList[0] ? '.' + e.classList[0] : ''), Math.round(e.getBoundingClientRect().left * 10) / 10]);
     };
+    // Der Titel der oberen Leiste gehört dazu, solange kein Zurück-Pfeil davor steht (dann beginnt er hinter dem Pfeil)
+    const h1 = document.getElementById('titel');
+    if (sicht(h1) && document.getElementById('zurueck').hidden) liste.push(['kopf-titel', Math.round(h1.getBoundingClientRect().left * 10) / 10]);
     for (const c of document.querySelector('main').children) geh(c);
     const x = liste.map((l) => l[1]);
     return { n: liste.length, min: Math.min(...x), max: Math.max(...x), ab: liste.filter((l) => l[1] !== Math.min(...x)).slice(0, 4).map((l) => l.join('@')) };
@@ -424,6 +427,39 @@ try {
     if (!k || k.n === 0 || k.max - k.min > 1) kanten.push(`${a}: ${k ? `${k.min}..${k.max} px (${k.ab.join(', ')})` : 'kein Inhalt'}`);
   }
   melde(kanten.length === 0, `eine linke Kante in allen ${KANTE_ANSICHTEN.length} Ansichten bei 360 px Breite, Streuung höchstens 1 px (GAN-3)`, kanten.join('; '));
+
+  // 6d2. Blätter bei Text 200 %: Feld und Knöpfe überlagern sich nie, das Blatt scrollt bis zum letzten Knopf, Felder bleiben
+  //      mindestens 48 px hoch (UPL-4, UPL-5, UAN-4)
+  const BLATT = `(async () => {
+    const b = document.getElementById('blatt'); const inh = b.querySelector('.blatt-inhalt'); const kn = document.getElementById('blatt-knoepfe');
+    const r = (e) => e.getBoundingClientRect(); const fehler = [];
+    if (!b.open) return ['Blatt nicht offen'];
+    const kr = r(kn); const ir = r(inh); const br = r(b);
+    if (ir.bottom > kr.top + 0.5) fehler.push('Inhalt reicht ' + Math.round(ir.bottom - kr.top) + ' px unter die Knöpfe');
+    if (br.top < -0.5 || br.bottom > innerHeight + 0.5) fehler.push('Blatt ragt aus dem Fenster');
+    for (const f of inh.querySelectorAll('input:not([type=radio]):not([type=checkbox]), select, textarea')) if (r(f).height < 47.5) fehler.push(f.name + ' nur ' + Math.round(r(f).height) + ' px hoch');
+    const knoepfe = [...kn.querySelectorAll('button')].map(r);
+    for (let i = 0; i < knoepfe.length; i++) for (let j = i + 1; j < knoepfe.length; j++) {
+      const a = knoepfe[i]; const c = knoepfe[j];
+      if (a.left < c.right - 0.5 && c.left < a.right - 0.5 && a.top < c.bottom - 0.5 && c.top < a.bottom - 0.5) fehler.push('Knöpfe überlagern sich');
+    }
+    // Das Blatt scrollt als Ganzes: am Ende ist der letzte Knopf ganz zu sehen
+    b.scrollTop = b.scrollHeight;
+    await new Promise((x) => setTimeout(x, 100));
+    const letzter = knoepfe.length ? [...kn.querySelectorAll('button')].map(r).at(-1) : null;
+    if (letzter && letzter.bottom > r(b).bottom + 1) fehler.push('der letzte Knopf ist nicht erreichbar');
+    return fehler;
+  })()`;
+  const BLAETTER = [[`#eintrag/${ID}/antworten`, 'Antwortblatt'], [`#eintrag/${EINGANG}/einsortieren`, 'Einsortieren'], [`#eintrag/${ABNAHME}/schritt/3/fail`, 'Satz zu FAIL'], ['#mehr/geraet', 'Gerätename']];
+  const ueberlagert = [];
+  for (const [a, name] of BLAETTER) {
+    p = await seite(t(a));
+    await p.warte('document.getElementById("blatt").open');
+    await p.werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`); await pause(400);
+    const f = await p.werte(BLATT);
+    if (!f || f.length) ueberlagert.push(`${name}: ${f ? f.join(', ') : 'keine Messung'}`);
+  }
+  melde(ueberlagert.length === 0, `kein Blatt überlagert Felder und Knöpfe bei Text 200 % (${BLAETTER.length} Blätter)`, ueberlagert.join('; '));
 
   // 6e. Entwürfe überstehen Zurück, Neuladen und den Wechsel der Ansicht (UEI-6); ein geleertes Feld löscht den Entwurf.
   p = await seite(t('#erfassen'));
