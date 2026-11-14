@@ -4,7 +4,7 @@
 const FASSUNG = 'postfach-20261114.01';
 const DATEIEN = [
   './', './index.html', './app.css', './manifest.webmanifest',
-  './js/adressen.js', './js/anzeigen.js', './js/dom.js', './js/format.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/start.js', './js/statusleiste.js', './js/urteil.js', './js/version.js', './js/zustand.js',
+  './js/abgleich.js', './js/adressen.js', './js/anzeigen.js', './js/dom.js', './js/format.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/speicher.js', './js/start.js', './js/statusleiste.js', './js/steuerung.js', './js/urteil.js', './js/version.js', './js/zustand.js',
   './symbole/symbol-192.png', './symbole/symbol-512.png', './symbole/maskierbar-512.png',
 ];
 
