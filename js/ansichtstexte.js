@@ -75,13 +75,16 @@ export function sendungText(s) {
     case 'urteil': return `Antwort ${s.verdict ?? ''}`.trim();
     case 'erledigt': return 'Erledigt';
     case 'einsortieren': return `Einsortieren ${s.ziel === 'user' ? 'an dich' : `an ${s.ziel}`}`;
+    case 'anlegen': return 'Neuer Eintrag';
     default: return '';
   }
 }
 
+const KONFLIKT_KURZ = { 'Schon beantwortet': 'schon beantwortet', 'Schon einsortiert': 'schon einsortiert', 'Schon erledigt': 'schon erledigt' };
+
 /**
  * Der Satz zur Sendung in der Karte: Symbol, Rolle der Farbe und Text. `ohneNetz` ergänzt „wartet auf Netz“.
- * Zustände: liegt, sendet, gesendet, token, konflikt; wer sie setzt, ist die Schreibschicht (Teil E).
+ * Zustände: liegt, sendet, gesendet, token, verboten, fehler, konflikt; wer sie setzt, ist die Schreibschicht (schreiben.js).
  */
 export function schlangeZeile(s, { ohneNetz = false, jetzt = Date.now() } = {}) {
   const wer = sendungText(s);
@@ -93,8 +96,12 @@ export function schlangeZeile(s, { ohneNetz = false, jetzt = Date.now() } = {}) 
       return { symbol: 'check_circle-f', rolle: 's-ok', text: `gesendet ${uhrzeit(s.zeit ?? jetzt)}` };
     case 'token':
       return { symbol: 'error-f', rolle: 's-fehler', text: mit('nicht gesendet: GitHub lehnt das Token ab') };
+    case 'verboten':
+      return { symbol: 'error-f', rolle: 's-fehler', text: mit('nicht gesendet: dem Token fehlt das Recht zum Schreiben') };
+    case 'fehler':
+      return { symbol: 'error-f', rolle: 's-fehler', text: mit('nicht gesendet: GitHub nimmt die Sendung nicht an') };
     case 'konflikt':
-      return { symbol: 'warning-f', rolle: 's-warn', text: `nicht gesendet: ${s.grund ?? 'schon bearbeitet'}` };
+      return { symbol: 'warning-f', rolle: 's-warn', text: `nicht gesendet: ${KONFLIKT_KURZ[s.titel] ?? 'schon bearbeitet'}` };
     default:
       return { symbol: 'cloud_upload-f', rolle: 's-warn', text: mit(`noch nicht gesendet${ohneNetz ? ', wartet auf Netz' : ''}`) };
   }

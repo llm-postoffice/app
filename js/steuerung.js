@@ -6,6 +6,7 @@
 // Alles Äußere kommt als Parameter (fetch, Uhr, Zeitgeber, Sichtbarkeit), damit node --test es ohne Browser prüft.
 import { AbgleichFehler, abgleichen, leseStand } from './abgleich.js';
 import { einstellung } from './speicher.js';
+import { merkeUhr } from './erzeugen.js';
 
 export const TAKT_VORGABE_S = 120;
 export const OFFLINE_FRAGE_MS = 10_000;
@@ -74,6 +75,7 @@ export class Abgleichsteuerung {
     this.setze({ phase: 'laeuft', fortschritt: { phase: 'baum' }, fehler: null });
     try {
       const r = await abgleichen({ fetch: this.fetch, db: this.db, quelle, jetzt: this.jetzt, bei: (f) => this.setze({ fortschritt: f }) });
+      await merkeUhr(this.db, r.serverzeit, this.jetzt());   // Uhr des Geräts gegen den Date-Kopf (Teil E ordnet Dateien nach ihr)
       const geprueft = (await this.db.lies('baum', 'stand'))?.geprueft ?? this.jetzt();
       this.setze({ phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: { geprueft, dateien: r.dateien } });
       await this.plane();

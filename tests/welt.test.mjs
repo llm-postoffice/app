@@ -62,7 +62,7 @@ test('Sendungen und Entwürfe auf dem Gerät gehen den Zustandswörtern vor (UOF
   assert.equal(z('r2d4vn', { ohneNetz: true }), 'Antwort „A“ noch nicht gesendet, wartet auf Netz');
   assert.equal(z('p4m7bt'), 'Antwort FAIL nicht gesendet: GitHub lehnt das Token ab');
   assert.equal(z('8k3m1x'), 'Entwurf: 9 von 9 Schritten beurteilt, noch nicht gesendet');
-  assert.match(z('w2tn4c'), /^nicht gesendet: Ein anderes Gerät hat den Eintrag um 14:09 an alpha adressiert/);
+  assert.equal(z('w2tn4c'), 'nicht gesendet: schon einsortiert');   // der lange Grund steht im Band des Eintrags
 });
 
 test('Suche: Titel und ID, auch erledigt und verworfen; die ID mit und ohne Strich, groß und mit o, i, l (norm_id)', () => {
