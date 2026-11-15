@@ -2,11 +2,19 @@
 
 Postfach ist eine installierbare Web-App für das Handy, die zeigt, was auf dich wartet, und deine Antworten, Urteile und neuen Einträge an ein Postsystem auf GitHub sendet.
 
-Stand: im Aufbau, Teil E (Schreiben). Die App holt das Postsystem mit einem Token auf das Gerät, rechnet daraus den Zustand der Einträge und zeigt **Wartet**, **Abnahmen**, **Erfassen**, **Mehr**, den Eingang, die Ideensammlung, die Suche und jeden Eintrag. Sie schreibt auch: Du beantwortest Fragen, beurteilst Abnahmen Schritt für Schritt, erledigst Einträge, sortierst den Eingang ein und erfasst neue Einträge. Jede Eingabe wartet zehn Sekunden auf **Rückgängig**, geht dann als ein Commit je Sendung über die Git-Data-API von GitHub raus und steht bis dahin in Worten als „noch nicht gesendet“ am Eintrag. Ohne Netz bleibt sie in der Warteschlange auf dem Gerät. Noch nicht veröffentlicht und noch nicht nutzbar: Offline-Start, Installation und Mitteilungen folgen in Teil F, die Veröffentlichung in Teil G.
+Stand: im Aufbau, Teil F (Offline, Installation, Mitteilungen, Update). Die App holt das Postsystem mit einem Token auf das Gerät, rechnet daraus den Zustand der Einträge und zeigt **Wartet**, **Abnahmen**, **Erfassen**, **Mehr**, den Eingang, die Ideensammlung, die Suche und jeden Eintrag. Sie schreibt auch: Du beantwortest Fragen, beurteilst Abnahmen Schritt für Schritt, erledigst Einträge, sortierst den Eingang ein und erfasst neue Einträge. Jede Eingabe wartet zehn Sekunden auf **Rückgängig**, geht dann als ein Commit je Sendung über die Git-Data-API von GitHub raus und steht bis dahin in Worten als „noch nicht gesendet“ am Eintrag. Ohne Netz bleibt sie in der Warteschlange auf dem Gerät. Teil F ist dazu gekommen: Die App startet ohne Netz, erklärt in **Mehr** die Installation und die Mitteilungen über ntfy und wartet mit einer neuen Fassung, bis du **Neu starten** tippst. Noch nicht veröffentlicht und noch nicht nutzbar: die Veröffentlichung folgt in Teil G.
 
 ## Installation
 
-Noch nicht möglich. Die App erscheint auf GitHub Pages, sobald Teil G sie veröffentlicht.
+Noch nicht möglich. Die App erscheint auf GitHub Pages, sobald Teil G sie veröffentlicht. Dann installierst du sie auf dem Handy (Vanadium oder Chrome auf Android) so:
+
+1. Öffne die Adresse der App im Browser.
+2. Öffne im Browser das Menü ⋮.
+3. Tippe im Menü auf **Install and create shortcut**. Bei deutscher Oberfläche heißt der Eintrag vermutlich **App installieren** (nicht geprüft).
+4. Bestätige die Frage des Browsers.
+5. Öffne das Postfach danach vom Startbildschirm.
+
+Nach der Installation gilt die Anmeldung der App, nicht die eines Browsertabs. Links aus anderen Apps öffnen das Postfach in einem Tab ohne diese Anmeldung; öffne es zum Arbeiten vom Startbildschirm. Eine neue Fassung wartet, bis du in der Zeile unten oder in **Mehr** auf **Neu starten** tippst.
 
 ## Entwickeln
 
@@ -42,8 +50,8 @@ Die Stufen laufen auch einzeln:
 | `make test` | Fassung, Adressen, Stapel für Zurück, Manifest, CSP, Hülle des Service Workers, Abgleich und Senden gegen eine nachgebaute GitHub-API (Commit je Sendung, Schreibabstand, Neubau bei 409 und 422, Konflikt, Token abgelehnt, Rückgängig, Uhrabweichung), Zustand, Urteile, Prüfmuster und die Dateien einer Sendung gegen die gemeinsamen Testfälle; dazu die Listen, Sätze, den Markdown-Renderer und jede Ansicht gegen ein Wegwerf-DOM |
 | `make fremdhost` | dass im Code nur `api.github.com` und `ntfy.sh` vorkommen |
 | `make secrets` | dass keine Geheimnisse im Arbeitsbaum stehen (gitleaks) |
-| `make render` | jede Ansicht in jedem Zustand (leer, lädt, Fehler, offline, Token abgelaufen, Anmeldung, Hinweis mit Rückgängig, noch nicht gesendet, abgelehnte Eingabe, Sendefehler) in zwei Größen, hell, dunkel, Schrift 200 % und ohne Netz |
-| `make wege` | Anmeldung, alle Zurück-Wege der Tabelle, Blätter, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht, Entwürfe über Neuladen, Statusleiste, Netzzeile, IndexedDB, den Abgleich mit allen Zuständen aus **Mehr**, das Schreiben in Echtzeit (Antwort mit Rückgängig, Einsortieren, Erfassen, Abnahme mit FAIL, Geheimnis im Text, ohne Netz, Token abgelehnt) und eine fehlerfreie Konsole in Chromium |
+| `make render` | jede Ansicht in jedem Zustand (leer, lädt, Fehler, offline, Token abgelaufen, neue Fassung wartet, installiert, Anmeldung, Hinweis mit Rückgängig, noch nicht gesendet, abgelehnte Eingabe, Sendefehler) in zwei Größen, hell, dunkel, Schrift 200 % und ohne Netz |
+| `make wege` | Anmeldung, alle Zurück-Wege der Tabelle, Blätter, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht, Entwürfe über Neuladen, Statusleiste, Netzzeile, den Start ohne Netz aus dem Cache, den Update-Weg mit einer zweiten Fassung des Service Workers (Update wartet, **Neu starten**, Entwurf und Schlange bleiben), Installation und Mitteilungen in **Mehr**, IndexedDB, den Abgleich mit allen Zuständen aus **Mehr**, das Schreiben in Echtzeit (Antwort mit Rückgängig, Einsortieren, Erfassen, Abnahme mit FAIL, Geheimnis im Text, ohne Netz, Token abgelehnt) und eine fehlerfreie Konsole in Chromium |
 
 Wenn Chromium nicht startet und `make wege` mit `BLOCKED` endet: Chromium legt einen Socket unter `$TMPDIR` an, und ein Pfad über etwa 100 Zeichen bricht ab. Setze dann ein kurzes `TMPDIR`, etwa `TMPDIR=/tmp make wege`.
 
@@ -63,7 +71,7 @@ Der Abgleich läuft dabei gegen den Datenklon als Mock-Quelle; die Zustände der
 
 ### Vorschau mit erfundenen Daten
 
-`tools/vorschau.mjs` startet die App mit erfundenen Einträgen (`tests/hilfen/beispieldaten.mjs`), ohne Token und ohne Netz. Jedes Szenario hat eine eigene Adresse, etwa `/normal/`, `/leer/`, `/fehler/`, `/offline/`, `/anmeldung/` und für das Schreiben `/antworten/`, `/eingang-senden/` und `/erfassen-pruefung/`; `node tools/rendern.mjs --liste` nennt sie samt den Ansichten, die jedes zeigt. `make render` rendert alle Szenarien; ein einzelnes rendert dieser Aufruf:
+`tools/vorschau.mjs` startet die App mit erfundenen Einträgen (`tests/hilfen/beispieldaten.mjs`), ohne Token und ohne Netz. Jedes Szenario hat eine eigene Adresse, etwa `/normal/`, `/leer/`, `/fehler/`, `/offline/`, `/neue-fassung/`, `/installiert/`, `/anmeldung/` und für das Schreiben `/antworten/`, `/eingang-senden/` und `/erfassen-pruefung/`; `node tools/rendern.mjs --liste` nennt sie samt den Ansichten, die jedes zeigt. `make render` rendert alle Szenarien; ein einzelnes rendert dieser Aufruf:
 
 ```bash
 node tools/rendern.mjs --hig PFAD -o bilder leer fehler
@@ -82,8 +90,8 @@ node tools/wege.mjs --bilder bilder/abgleich
 | Pfad | Inhalt |
 | --- | --- |
 | `index.html`, `app.css` | Hülle mit Symbol-Sprite, Leisten und Blatt; Farben und Maße |
-| `js/` | ES-Module: Adressen, Navigation mit der History API, Statusleiste, Netzzeile; Speicher (`speicher.js`, IndexedDB), Abgleich (`abgleich.js`), Steuerung (`steuerung.js`); Zustand der Einträge (`zustand.js`, `urteil.js`, `pruefen.js`, `format.js`, `pytext.js`); Ansichten: `welt.js` (Listen und Sätze aus dem Stand auf dem Gerät), `anzeigen.js` (wählt die Ansicht), `ansichten.js` (Wartet, Abnahmen, Eingang, Ideensammlung, Suche), `eintrag.js`, `ablauf.js` (Abnahme Schritt für Schritt), `erfassen.js`, `anmelden.js`, `mehr.js`, `markdown.js` (eigener Renderer ohne HTML), `karten.js` (Bausteine), `entwuerfe.js`; Schreiben (Teil E): `schreiben.js` (Warteschlange mit Zuständen, Rückgängig, Konflikte), `senden.js` (ein Commit je Sendung über die Git-Data-API, Schreibabstand, Neubau), `dateien.js` (die Dateien einer Sendung wie das Postwerkzeug sie schreibt, Prüfung auf Geheimnisse und Personendaten), `erzeugen.js` (ULIDs, neue IDs, Stempel, Uhrabweichung), `hinweis.js` (Hinweis mit Rückgängig), `absenden.js` (gemeinsamer Weg der Ansichten zur Schreibschicht) |
-| `sw.js`, `manifest.webmanifest`, `symbole/` | Start ohne Netz und Installation |
+| `js/` | ES-Module: Adressen, Navigation mit der History API, Statusleiste, Netzzeile; Speicher (`speicher.js`, IndexedDB), Abgleich (`abgleich.js`), Steuerung (`steuerung.js`); Zustand der Einträge (`zustand.js`, `urteil.js`, `pruefen.js`, `format.js`, `pytext.js`); Ansichten: `welt.js` (Listen und Sätze aus dem Stand auf dem Gerät), `anzeigen.js` (wählt die Ansicht), `ansichten.js` (Wartet, Abnahmen, Eingang, Ideensammlung, Suche), `eintrag.js`, `ablauf.js` (Abnahme Schritt für Schritt), `erfassen.js`, `anmelden.js`, `mehr.js` (mit Installation und Mitteilungen), `markdown.js` (eigener Renderer ohne HTML), `karten.js` (Bausteine), `entwuerfe.js`; Schreiben (Teil E): `schreiben.js` (Warteschlange mit Zuständen, Rückgängig, Konflikte), `senden.js` (ein Commit je Sendung über die Git-Data-API, Schreibabstand, Neubau), `dateien.js` (die Dateien einer Sendung wie das Postwerkzeug sie schreibt, Prüfung auf Geheimnisse und Personendaten), `erzeugen.js` (ULIDs, neue IDs, Stempel, Uhrabweichung), `hinweis.js` (Hinweis mit Rückgängig), `absenden.js` (gemeinsamer Weg der Ansichten zur Schreibschicht); Update (Teil F): `aktualisieren.js` (neue Fassung wartet, Neu starten, Prüfung beim Öffnen) und `swlogik.js` (Entscheidungen des Service Workers, rein) |
+| `sw.js`, `manifest.webmanifest`, `symbole/` | Start ohne Netz (der Service Worker ist ein Modul) und Installation |
 | `tests/`, `tools/`, `Makefile` | Prüfkette; `tools/vorschau.mjs` und `tools/rendern.mjs` für die Vorschau mit erfundenen Daten |
 
 ## Fehlerberichte

@@ -6,7 +6,7 @@ import { el } from './dom.js';
 import { TAKTE } from './steuerung.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
 import { UHR_WARNUNG_MS, abweichungText } from './erzeugen.js';
-import { WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, speicherAnzeige } from './texte.js';
+import { MITTEILUNGEN, NEUE_FASSUNG, NEU_STARTET, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
 import { VERSION } from './version.js';
 import { band, feld, knopf, linkKnopf, ruhigeKarte } from './karten.js';
 import { zaehler } from './welt.js';
@@ -42,11 +42,8 @@ function stand(z, k) {
   return [jetzt];
 }
 
-const NTFY = [
-  'Öffne die App ntfy.', 'Tippe auf +.',
-  'Gib das Thema ein, das das Postsystem auf deinem Rechner verwendet. Das Thema steht in keiner Datei dieser App.',
-  'Bestätige das Abo in ntfy.',
-];
+/** Text mit **fett** als Knoten: die Beschriftungen der Oberfläche stehen fett (DOB-1). */
+const mitFett = (text) => text.split('**').map((teil, i) => (i % 2 ? el('strong', {}, teil) : teil));
 
 /** Die Ansicht Mehr. */
 export async function mehrAnsicht(welt, z, k) {
@@ -70,7 +67,13 @@ export async function mehrAnsicht(welt, z, k) {
   const uhrBand = uhr && Math.abs(uhr.abweichung) >= UHR_WARNUNG_MS
     ? band({ ton: 'warn', symbol: 'schedule', titel: 'Die Uhr dieses Geräts geht falsch', satz: `Sie geht ${abweichungText(uhr.abweichung)}. Neue Einträge tragen die Zeit von GitHub, damit sie richtig geordnet sind. Stelle die Uhr in den Einstellungen des Geräts auf automatisch.` })
     : null;
-  const installiert = globalThis.matchMedia?.('(display-mode: standalone)').matches;
+  const installiert = k.installiert ?? globalThis.matchMedia?.('(display-mode: standalone)').matches ?? false;
+  const inst = installationAnzeige(installiert);
+  // Wartet eine neue Fassung, steht das Band bei Fassung; es lädt nie von selbst neu (UOF-5)
+  const neu = k.aktualisierung?.wartet
+    ? band({ ton: 'info', symbol: 'info-f', titel: NEUE_FASSUNG.mehr.titel, satz: k.aktualisierung.startet ? NEU_STARTET : NEUE_FASSUNG.mehr.satz,
+      knoepfe: k.aktualisierung.startet ? [] : [knopf(NEUE_FASSUNG.knopf, { klasse: 'gefuellt', an: () => k.aktualisierung.neustart() })] })
+    : null;
   const werte = el('dl', { class: 'werte' },
     el('div', { class: 'mit-knopf' }, el('dt', {}, 'Gerät'), el('dd', {}, a.geraet ?? 'noch ohne Namen'), linkKnopf('Ändern …', '#mehr/geraet', { klasse: 'text' })),
     el('div', {}, el('dt', {}, 'Speicher'), el('dd', { id: 'speicher' }, speicher.zeile)),
@@ -86,13 +89,14 @@ export async function mehrAnsicht(welt, z, k) {
       ruhigeKarte({ symbol: 'search', titel: 'Suche und Archiv', zeile: 'auch erledigte und verworfene Einträge', href: '#suche' })),
     ...abschnitt('Anmeldung', ...anmeldung),
     ...abschnitt('Mitteilungen',
-      el('p', {}, 'Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet ntfy, nicht diese App. Tippe im Hinweis auf ', el('strong', {}, 'ID kopieren'), ' und füge die ID in der Suche ein.'),
-      el('details', {}, el('summary', {}, 'Abo in ntfy anlegen'), el('ol', { class: 'ablauf-schritte' }, NTFY.map((s) => el('li', {}, s)))),
-      el('p', { class: 'neben' }, 'Ein Abo über einen Link empfängt nichts. Fehlt der Knopf ', el('strong', {}, 'ID kopieren'), ' im Hinweis, ist ntfy älter als Fassung 1.23.0; die ID steht dann im Text des Hinweises.')),
-    ...abschnitt('App installieren', el('p', {}, installiert
-      ? 'Das Postfach läuft als installierte App.'
-      : 'Das Postfach läuft im Browser. Öffne das Menü des Browsers und wähle App installieren, damit es ohne Browserleiste startet.')),
-    ...abschnitt('Dieses Gerät', werte, el('div', { id: 'abgleich-stand' }, stand(z, k))),
+      ...MITTEILUNGEN.absaetze.map((a) => el('p', {}, mitFett(a))),
+      el('details', {}, el('summary', {}, MITTEILUNGEN.abo.titel), el('ol', { class: 'ablauf-schritte' }, MITTEILUNGEN.abo.schritte.map((t) => el('li', {}, mitFett(t))))),
+      ...MITTEILUNGEN.neben.map((a) => el('p', { class: 'neben' }, mitFett(a)))),
+    ...abschnitt('App installieren',
+      el('p', {}, inst.satz),
+      inst.schritte.length ? el('ol', { class: 'ablauf-schritte' }, inst.schritte.map((t) => el('li', {}, mitFett(t)))) : null,
+      ...inst.hinweise.map((h) => el('p', { class: 'neben' }, mitFett(h)))),
+    ...abschnitt('Dieses Gerät', werte, neu, el('div', { id: 'abgleich-stand' }, stand(z, k))),
     welt.hatStand ? el('p', { class: 'neben' }, `Auf diesem Gerät liegen ${eintraegeText(welt.eintraege.size)}.`) : null,
   ];
 }

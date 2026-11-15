@@ -1,5 +1,15 @@
 # Änderungen
 
+## 20261115.02 (2026-11-15)
+
+Teil F: Offline, Installation, Mitteilungen und Update. Die App startet ohne Netz, sagt, wie du sie installierst und was die Hinweise tun, und wartet mit einer neuen Fassung, bis du sie übernimmst.
+
+- **Neue Fassung:** Wartet eine neue Fassung der App, zeigt eine Zeile unten „Neue Fassung geladen.“ mit **Neu starten**; in **Mehr** steht dasselbe als Band bei **Fassung**. Die App lädt nie von selbst neu, auch nicht, wenn eine andere Seite der App die Fassung wechselt. **Neu starten** übernimmt die Fassung und lädt die Seite einmal neu; Entwürfe und noch nicht gesendete Sendungen bleiben auf dem Gerät. Während du tippst, weicht die Zeile. Die App fragt beim Öffnen und bei jeder Rückkehr in den Vordergrund nach einer neuen Fassung, ohne Netz still.
+- **App installieren** in **Mehr** nennt die Schritte nummeriert, mit dem Menüeintrag „Install and create shortcut“ aus Vanadium; für deutsche Oberflächen nennt der Text „App installieren“ als vermutlichen Wortlaut (nicht geprüft). Läuft die App schon installiert, sagt **Mehr** das. Beide Fälle erklären, dass nach der Installation die Anmeldung der App gilt, nicht die eines Browsertabs: Links aus anderen Apps öffnen das Postfach in einem Tab ohne Anmeldung.
+- **Mitteilungen** in **Mehr** sagen in Worten, was **ID kopieren** im Hinweis tut (die ID in die Zwischenablage legen und den Hinweis schließen), dass ein Tipp auf den Hinweis die App ntfy öffnet und nicht das Postfach, und dass du das Abo in ntfy über **+** anlegst, nicht über einen Link.
+- Der Service Worker ist jetzt ein Modul und löscht beim Wechsel nur frühere Fassungen der App (`postfach-…`), keine fremden Caches. Die Entscheidungen dazu stehen in `js/swlogik.js` und laufen unter `node --test`.
+- Für Entwickler: Der Wegetest belegt in Chromium, dass der erste Besuch die Hülle in den Cache legt und die App danach bei gesperrtem Netz startet, ohne etwas vom Server zu holen, und spielt den Update-Weg mit einer zweiten Fassung des Service Workers nach (Update wartet, **Neu starten**, Entwurf und Schlange bleiben, die alte Hülle fällt weg). Neue Szenarien der Vorschau: `neue-fassung`, `neue-fassung-schlange`, `installiert`; `mehr-fassung`, `mehr-installieren`, `mehr-installiert` und `mehr-mitteilungen` scrollen **Mehr** zu einem Abschnitt und gehören nur auf Namen zum Rendern, weil der Renderer beim Scrollen Text unter der Statusleiste als Randfehler meldet.
+
 ## 20261115.01 (2026-11-15)
 
 Teil E: Schreiben. Die App sendet jetzt: Antworten, Urteile, Erledigt, Einsortieren und neue Einträge gehen als Commit ins Datenrepo. Die gesperrten Knöpfe aus Teil D sind angeschlossen.

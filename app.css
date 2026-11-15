@@ -368,6 +368,8 @@ fieldset.feld legend { padding: 0; margin-bottom: 4px; font-weight: 500; }
 /* Hinweis unten (Snackbar, URM-2) */
 .hinweis { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; margin: 0 8px 8px; padding: 4px 8px 4px 16px; border-radius: 4px; background: var(--umgekehrt); color: var(--auf-umgekehrt); font-size: 0.875rem; line-height: 1.25rem; }
 .hinweis span { flex: 1 1 12rem; min-width: 0; padding: 10px 0; }
+/* Die Zeile zur neuen Fassung weicht, solange jemand tippt: sie zieht nie den Boden unter den Händen weg (UOF-5) */
+body:has(:is(main, #blatt) :is(input, textarea, select):focus) #neu { display: none; }
 .hinweis button { min-height: 48px; padding: 0 12px; border: 0; background: none; color: var(--tonal); font-weight: 500; }
 @media (prefers-color-scheme: dark) { .hinweis button { color: #0b57d0; } }
 

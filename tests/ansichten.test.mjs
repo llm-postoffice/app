@@ -230,6 +230,47 @@ test('Mehr: Ziele, Anmeldung, Mitteilungen und Dieses Gerät; Fehler des Abgleic
   assert.match(t(fehler), /Einzelheiten/);
 });
 
+test('Mehr: eine wartende neue Fassung steht als Band bei Fassung mit Neu starten (UOF-5)', async () => {
+  const k = await kontext();
+  const aufrufe = [];
+  k.aktualisierung = { wartet: true, startet: false, neustart: () => aufrufe.push('neustart') };
+  const knoten = await M.mehr.mehrAnsicht(welt(), z(), k);
+  assert.match(t(knoten), /Neue Fassung geladen\s*Die neue Fassung läuft erst nach dem Neustart/);
+  const knopf = finde(knoten, 'button').find((b) => t(b) === 'Neu starten');
+  assert.ok(knopf, 'Knopf Neu starten');
+  await knopf.klick();
+  assert.deepEqual(aufrufe, ['neustart']);
+  k.aktualisierung = { wartet: true, startet: true, neustart() {} };
+  const startet = t(await M.mehr.mehrAnsicht(welt(), z(), k));
+  assert.match(startet, /Neue Fassung startet/);
+  assert.doesNotMatch(startet, /Neu starten/, 'nach dem Tipp kein zweiter Knopf');
+  k.aktualisierung = { wartet: false, startet: false, neustart() {} };
+  assert.doesNotMatch(t(await M.mehr.mehrAnsicht(welt(), z(), k)), /Neue Fassung geladen/, 'ohne wartende Fassung kein Band');
+});
+
+test('Mehr: App installieren als nummerierte Liste im Browser, ein Satz in der installierten App', async () => {
+  const k = await kontext();
+  k.installiert = false;
+  const browser = await M.mehr.mehrAnsicht(welt(), z(), k);
+  const liste = finde(browser, 'ol').find((o) => finde(o, 'li').some((l) => /Install and create shortcut/.test(t(l))));
+  assert.ok(liste, 'nummerierte Liste der Installation');
+  assert.equal(finde(liste, 'li').length, 5);
+  assert.equal(finde(liste, 'strong')[0].textContent, 'Install and create shortcut', 'der Wortlaut steht fett');
+  assert.doesNotMatch(t(browser), /läuft als installierte App/);
+  k.installiert = true;
+  const app = t(await M.mehr.mehrAnsicht(welt(), z(), k));
+  assert.match(app, /Das Postfach läuft als installierte App\./);
+  assert.doesNotMatch(app, /Install and create shortcut/);
+  assert.match(app, /Anmeldung der App, nicht die eines Browsertabs/);
+});
+
+test('Mehr: Mitteilungen sagen in Worten, was ID kopieren tut und was ein Tipp öffnet', async () => {
+  const text = t(await M.mehr.mehrAnsicht(welt(), z(), await kontext()));
+  assert.match(text, /ID kopieren im Hinweis legt die ID des Eintrags in die Zwischenablage und schließt den Hinweis/);
+  assert.match(text, /Ein Tipp auf den Hinweis öffnet ntfy, nicht diese App/);
+  assert.match(text, /Tippe auf \+, nicht auf einen Link/);
+});
+
 test('Der Code ruft nie innerHTML auf (USI-1)', async () => {
   const { readdir, readFile } = await import('node:fs/promises');
   for (const f of await readdir(new URL('../js/', import.meta.url))) {

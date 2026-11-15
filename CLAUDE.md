@@ -34,6 +34,22 @@ arbeitet offline mit einer Warteschlange.
   bleiben die Knöpfe gesperrt und ein Satz sagt warum. Eine neue Handlung bekommt in `welt.js` (`handlungenVon`) einen
   Eintrag und in der Ansicht einen Knopf mit `data-handlung` (E13; Test und Wegetest prüfen beides). Die Vorschau lässt die
   Zeitgeber der Schreibschicht still stehen; ein Szenario tippt mit `klick` einen Knopf an.
+- Offline, Installation und Update (Teil F): `sw.js` ist ein Modul (`register('./sw.js', { type: 'module' })`) und hält die Hülle
+  nach Fassung; seine Entscheidungen (welche Caches fallen weg, wann wartet ein Update, was gibt ihn frei) stehen in
+  `js/swlogik.js`, rein unter `node --test`. `js/aktualisieren.js` (`Aktualisierung`, Container und Neuladen sind Parameter)
+  beobachtet die Registrierung: wartet ein Worker und steuert schon eine ältere Fassung die Seite, zeigt `#neu` in
+  `index.html` die Zeile „Neue Fassung geladen.“ mit **Neu starten**, in Mehr steht dasselbe als Band bei Fassung (dort fehlt
+  die Zeile). Der Knopf schickt `wechseln` an den wartenden Worker; geladen wird einmal nach `controllerchange`, nie von
+  selbst und nie, weil eine andere Seite wechselte (UOF-5; der Knopf heißt **Neu starten**, nicht **Neu laden** wie in der
+  Regel: Abweichung, weil die App wirklich neu startet). Geprüft wird beim Öffnen und bei jeder Rückkehr in den
+  Vordergrund, ohne Netz still. Wortlaut von Installation und Mitteilungen steht in `texte.js` (`installationAnzeige`,
+  `MITTEILUNGEN`, mit **fett** für Beschriftungen); „Install and create shortcut“ ist der Eintrag in Vanadium (Probe),
+  der deutsche Wortlaut ist nicht geprüft und steht so da. Mitteilungen weichen von UMI-3 ab (ein Tipp öffnet ntfy) und
+  versprechen kein Öffnen der App (UMI-4), Grund im Kopf der Texte. Die Vorschau setzt `aktualisierung` und `installiert`
+  für die Szenarien `neue-fassung`, `installiert` ein, die ein Renderer nicht herstellen kann; Szenarien mit `scroll`
+  (Bilder von unteren Abschnitten in Mehr) laufen nicht im Standardlauf von `tools/rendern.mjs`, weil der Renderer beim
+  Scrollen „unter der Statusleiste“ meldet. Der Wegetest ändert den Cache-Namen des Service Workers über den Server und
+  belegt Start ohne Netz und Update-Weg in Chromium.
 - Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe README) und überspringt
   sich ohne sie; mit ihnen endet die Prüfung des Postwerkzeugs auf der Sandbox mit Exit 0.
 - Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten
