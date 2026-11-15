@@ -1,6 +1,8 @@
-// Eine Mock-Quelle für den Abgleich: ein fetch, das die Endpunkte von GitHub nachbildet, die der Abgleich braucht
-// (Baum, GraphQL object(oid:), Blob). Dateien sind ein Map von Pfad zu Text; die Prüfsummen sind echte Git-Blob-
-// Prüfsummen. Ein Test kann Ausfälle einschleusen (vorher) und liest das Protokoll der Anfragen. Die Datei läuft in Node
+// Eine Mock-Quelle für Abgleich und Senden: ein fetch, das die Endpunkte von GitHub nachbildet, die die App braucht.
+// Lesen: Baum, GraphQL object(oid:), Blob. Schreiben (Teil E, Git Data API): Kopf des Zweigs, Commit lesen, Blob, Baum mit
+// base_tree, Commit und das Verschieben des Zweigs (ohne force nur vorwärts, sonst 422 wie GitHub). Dateien sind ein Map
+// von Pfad zu Text; ein angenommener Commit ersetzt den Inhalt des Map, ein Test, der das Map selbst ändert, spielt
+// einen fremden Push (der Kopf rückt dann von allein weiter). Die Prüfsummen sind echte Git-Blob-Prüfsummen. Ein Test kann Ausfälle einschleusen (vorher) und liest das Protokoll der Anfragen. Die Datei läuft in Node
 // und im Browser (die Vorschau und der Wegetest nutzen sie dort): sie braucht kein node:-Modul, nur SHA-1 und Base64
 // aus eigenem Code.
 const kodiere = (text) => new TextEncoder().encode(text);
@@ -56,19 +58,23 @@ const json = (obj, status = 200, kopf = {}) => new Response(JSON.stringify(obj),
  * @param {(anfrage:object)=>(Response|undefined)} [o.vorher]  darf eine Antwort vorgeben oder werfen
  * @param {number} [o.verzoegerung]        Wartezeit je Anfrage in ms (für Prüfungen der Gleichzeitigkeit)
  * @param {()=>boolean} [o.amNetz]         sagt false, dann scheitert jede Anfrage wie ohne Netz (TypeError, wie fetch)
+ * @param {()=>number} [o.serverzeit]      Uhr des Servers für den Date-Kopf (ms)
+ * @param {boolean} [o.darfSchreiben]      false: schreibende Anfragen antworten 403 wie bei einem Token ohne Schreibrecht
+ * @param {(c:object)=>void} [o.beiCommit] wird gerufen, sobald ein Commit den Zweig verschoben hat ({ sha, message, dateien })
+ * @param {string} [o.zweig]               Name des Zweigs
  */
-export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', vorher, verzoegerung = 0, amNetz = () => true }) {
+export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', vorher, verzoegerung = 0, amNetz = () => true, serverzeit = () => 1700000000000, darfSchreiben = true, beiCommit = null, zweig = 'main' }) {
   const protokoll = [];
   const zaehler = { baum: 0, graphql: 0, blob: 0 };
   let gleichzeitig = 0;
-  const q = { dateien, protokoll, zaehler, verzoegerung, hoechstensGleichzeitig: 0, limit: { verbleibend: 4990, reset: 1900000000 } };
+  const q = { dateien, protokoll, zaehler, verzoegerung, hoechstensGleichzeitig: 0, limit: { verbleibend: 4990, reset: 1900000000 }, commits: [], blobs: new Map(), baeume: new Map(), objekte: new Map() };
 
   const kopfLimit = () => ({
     'x-ratelimit-limit': '5000', 'x-ratelimit-remaining': String(q.limit.verbleibend), 'x-ratelimit-reset': String(q.limit.reset),
-    date: new Date(1700000000000).toUTCString(),
+    date: new Date(serverzeit()).toUTCString(),
   });
 
-  function baum() {
+  function baumVon(dateien) {
     const eintraege = [...dateien].map(([path, text]) => ({ path, mode: '100644', type: 'blob', sha: blobSha(text), size: byteLaenge(text) }));
     const ordner = new Set();
     for (const [path] of dateien) for (let i = path.indexOf('/'); i > 0; i = path.indexOf('/', i + 1)) ordner.add(path.slice(0, i));
@@ -77,13 +83,77 @@ export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', v
     const sha = sha1Hex(kodiere(alle.map((e) => `${e.path}:${e.sha}`).join('\n')));
     return { sha, tree: alle, truncated: false };
   }
+  const baum = () => baumVon(dateien);
+
+  // Der Kopf des Zweigs. Ändert ein Test das Map `dateien` selbst, gilt das als fremder Push: es entsteht ein Commit darauf.
+  let kopf = null;
+  function aktuellerKopf() {
+    const b = baumVon(dateien).sha;
+    if (!kopf || kopf.baum !== b) {
+      const sha = sha1Hex(kodiere(`commit ${b} ${kopf?.sha ?? 'wurzel'} ${q.commits.length}`));
+      const fremd = Boolean(kopf);
+      kopf = { sha, baum: b, eltern: kopf ? [kopf.sha] : [], message: fremd ? 'fremder Push' : 'Ausgangslage', dateien: new Map(dateien) };
+      q.objekte.set(sha, kopf);
+      q.baeume.set(b, new Map(dateien));
+      if (fremd) q.commits.push({ sha, message: kopf.message, fremd: true });
+    }
+    return kopf;
+  }
+
+  /** Schreibende Endpunkte der Git Data API; gibt eine Antwort oder undefined zurück (dann ist der Pfad unbekannt). */
+  function schreibe(art, init, prefix) {
+    const body = init.body ? JSON.parse(init.body) : {};
+    const lim = kopfLimit();
+    if (art === 'blobNeu') {
+      if (typeof body.content !== 'string' || (body.encoding ?? 'utf-8') !== 'utf-8') return json({ message: 'Invalid blob' }, 422, lim);
+      const sha = blobSha(body.content);
+      q.blobs.set(sha, body.content);
+      return json({ sha, url: `https://api.github.com${prefix}/git/blobs/${sha}` }, 201, lim);
+    }
+    if (art === 'baumNeu') {
+      const basis = q.baeume.get(body.base_tree);
+      if (!basis) return json({ message: 'The tree base_tree does not exist' }, 422, lim);
+      const neu = new Map(basis);
+      for (const t of body.tree ?? []) {
+        if (t.type !== 'blob' || t.mode !== '100644' || !q.blobs.has(t.sha) || typeof t.path !== 'string' || t.path.startsWith('/') || t.path.includes('..')) return json({ message: 'Invalid tree entry' }, 422, lim);
+        neu.set(t.path, q.blobs.get(t.sha));
+      }
+      const sha = baumVon(neu).sha;
+      q.baeume.set(sha, neu);
+      return json({ sha, tree: [] }, 201, lim);
+    }
+    if (art === 'commitNeu') {
+      const baum = q.baeume.get(body.tree);
+      if (!baum || !Array.isArray(body.parents) || body.parents.some((p) => !q.objekte.has(p))) return json({ message: 'Invalid commit' }, 422, lim);
+      const sha = sha1Hex(kodiere(`commit ${body.tree} ${body.parents.join(',')} ${body.message} ${q.objekte.size}`));
+      q.objekte.set(sha, { sha, baum: body.tree, eltern: body.parents, message: String(body.message), dateien: baum });
+      return json({ sha, tree: { sha: body.tree }, parents: body.parents.map((p) => ({ sha: p })), message: body.message }, 201, lim);
+    }
+    if (art === 'refNeu') {
+      const c = q.objekte.get(body.sha);
+      if (!c) return json({ message: 'Object does not exist' }, 422, lim);
+      const jetzt = aktuellerKopf();
+      if (!body.force && body.sha !== jetzt.sha && !c.eltern.includes(jetzt.sha)) return json({ message: 'Update is not a fast forward' }, 422, lim);
+      kopf = c;
+      dateien.clear();
+      for (const [p, t] of c.dateien) dateien.set(p, t);
+      q.commits.push({ sha: c.sha, message: c.message, eltern: c.eltern, dateien: new Map(c.dateien) });
+      beiCommit?.(q.commits.at(-1));
+      return json({ ref: `refs/heads/${zweig}`, object: { sha: c.sha, type: 'commit' } }, 200, lim);
+    }
+    return undefined;
+  }
 
   async function bearbeite(url, init = {}) {
     const u = new URL(url);
     const k = new Headers(init.headers);
-    const art = u.pathname === '/graphql' ? 'graphql' : u.pathname.includes('/git/trees/') ? 'baum' : u.pathname.includes('/git/blobs/') ? 'blob' : 'sonst';
+    const methode = (init.method ?? 'GET').toUpperCase();
+    const git = u.pathname.replace(/^\/repos\/[^/]+\/[^/]+\/git\//, '');
+    const art = u.pathname === '/graphql' ? 'graphql' : u.pathname.includes('/git/trees/') ? 'baum' : u.pathname.includes('/git/blobs/') ? 'blob'
+      : methode === 'POST' && git === 'blobs' ? 'blobNeu' : methode === 'POST' && git === 'trees' ? 'baumNeu' : methode === 'POST' && git === 'commits' ? 'commitNeu'
+        : methode === 'PATCH' && git === `refs/heads/${zweig}` ? 'refNeu' : methode === 'GET' && git === `ref/heads/${zweig}` ? 'ref' : methode === 'GET' && /^commits\/[0-9a-f]{40}$/.test(git) ? 'commit' : 'sonst';
     zaehler[art] = (zaehler[art] ?? 0) + 1;
-    const eintrag = { art, n: zaehler[art], url: u.href, methode: init.method ?? 'GET', cache: init.cache, kopf: k, body: init.body };
+    const eintrag = { art, n: zaehler[art], url: u.href, methode, cache: init.cache, kopf: k, body: init.body };
     protokoll.push(eintrag);
     const vor = vorher?.(eintrag);
     if (vor) return vor;
@@ -101,6 +171,16 @@ export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', v
       const treffer = [...dateien.values()].find((t) => blobSha(t) === sha);
       if (treffer === undefined) return json({ message: 'Not Found' }, 404, kopfLimit());
       return json({ sha, size: byteLaenge(treffer), encoding: 'base64', content: base64(kodiere(treffer)).replace(/(.{60})/g, '$1\n') }, 200, kopfLimit());
+    }
+    if (art === 'ref') return json({ ref: `refs/heads/${zweig}`, object: { sha: aktuellerKopf().sha, type: 'commit' } }, 200, kopfLimit());
+    if (art === 'commit') {
+      const c = q.objekte.get(git.slice(8)) ?? (git.slice(8) === aktuellerKopf().sha ? kopf : null);
+      return c ? json({ sha: c.sha, tree: { sha: c.baum }, parents: c.eltern.map((p) => ({ sha: p })), message: c.message }, 200, kopfLimit()) : json({ message: 'Not Found' }, 404, kopfLimit());
+    }
+    if (['blobNeu', 'baumNeu', 'commitNeu', 'refNeu'].includes(art) && u.pathname.startsWith(prefix)) {
+      if (!darfSchreiben) return json({ message: 'Resource not accessible by personal access token' }, 403, kopfLimit());
+      aktuellerKopf();
+      return schreibe(art, init, prefix) ?? json({ message: 'Not Found' }, 404);
     }
     if (art === 'graphql') {
       const { query, variables } = JSON.parse(init.body);

@@ -140,6 +140,9 @@ export function dateien(liste = eintraege()) {
   return d;
 }
 
+/** Ein erfundenes Token von GitHub für die Prüfung vor dem Senden; zur Laufzeit verkettet, damit kein Scanner es im Quelltext findet. */
+export const ERFUNDENES_TOKEN = ['gh', 'p_', 'A1b2C3d4'.repeat(4)].join('');
+
 /** Sendungen der Warteschlange, wie die Schreibschicht (Teil E) sie anlegt: eine je Zustand. */
 export function schlange() {
   const z = JETZT - 3 * 60000;
@@ -152,6 +155,18 @@ export function schlange() {
     { id: 's5', eintrag: 'm7q2ke', art: 'antwort', zustand: 'konflikt', zeit: z, titel: 'Schon beantwortet',
       grund: 'Ein anderes Gerät hat um 14:09 geantwortet. Deine Antwort wurde nicht gesendet.' },
   ];
+}
+
+/** Weitere Sendungen für die Bilder der Zustände: wird gesendet, schon gesendet (der Abgleich bringt die Datei noch), Fehler. */
+export function schlangeZustaende() {
+  const z = JETZT - 3 * 60000;
+  return {
+    sendet: { id: 's6', eintrag: 'w2tn4c', art: 'einsortieren', ziel: 'beta', zustand: 'sendet', zeit: JETZT - 20000 },
+    gesendet: { id: 's7', eintrag: 'k7m2qa', art: 'einsortieren', ziel: 'alpha', satz: 'Zu den Hinweisen.', von: 'handy', zustand: 'gesendet', zeit: JETZT - 2 * 60000 },
+    urteil: { id: 's8', eintrag: '8k3m1x', art: 'urteil', verdict: 'FAIL', zustand: 'liegt', zeit: z },
+    verboten: { id: 's9', eintrag: 'p4m7bt', art: 'urteil', verdict: 'FAIL', zustand: 'verboten', zeit: z },
+    fehler: { id: 's10', eintrag: 'm7q2ke', art: 'antwort', zustand: 'fehler', zeit: z, grund: 'GitHub lehnt die Sendung ab (Validation Failed).' },
+  };
 }
 
 /** Entwürfe auf dem Gerät: Urteile einer Abnahme und ein Text. */
@@ -179,6 +194,24 @@ export const SZENARIEN = {
   offline: { daten: dateien(), seed: true, live: 'netz', schlange: [schlange()[0], schlange()[2]] },
   anmeldung: { daten: dateien(), anmelden: false },
   'anmeldung-fehler': { daten: dateien(), anmelden: false, formular: { repo: 'kein-repo', token: 'ab cd', geraet: 'Pixel 8 Pro' } },
+  // Teil E: Schreiben. Die Vorschau sendet nie von allein; `klick` tippt nach dem Start auf einen Knopf wie ein Nutzer.
+  antworten: { daten: dateien(), seed: true, live: 'ok', klick: '#blatt [data-wahl="A"]' },
+  erledigen: { daten: dateien(), seed: true, live: 'ok', klick: '#aktion [data-handlung=erledigt]' },
+  'eingang-senden': { daten: dateien(), seed: true, live: 'ok', schlange: [schlange()[2], schlangeZustaende().sendet] },
+  einsortiert: { daten: dateien(), seed: true, live: 'ok', schlange: [schlangeZustaende().gesendet] },
+  'einsortieren-gewaehlt': { daten: dateien(), seed: true, live: 'ok', entwuerfe: [{ schluessel: 'einsortieren/k7m2qa', ziel: 'alpha', satz: 'Zu den Hinweisen.', zeit: JETZT }] },
+  'einsortieren-pruefung': { daten: dateien(), seed: true, live: 'ok', klick: '#blatt-knoepfe .gefuellt',
+    entwuerfe: [{ schluessel: 'einsortieren/k7m2qa', ziel: 'alpha', satz: `Zugang: ${ERFUNDENES_TOKEN}`, zeit: JETZT }] },
+  'erfassen-entwurf': { daten: dateien(), seed: true, live: 'ok', entwuerfe: [{ schluessel: 'erfassen', art: 'idea', titel: 'Wischgesten erst nach der Probe auf dem Handy', an: 'user', text: '', rang: '2', dringend: false, zeit: JETZT }] },
+  'erfassen-pruefung': { daten: dateien(), seed: true, live: 'ok', klick: '[data-handlung=anlegen]',
+    entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: 'Zugang prüfen', an: 'alpha', text: `Das Token ist ${ERFUNDENES_TOKEN}.`, rang: '2', dringend: false, zeit: JETZT }] },
+  'erfassen-senden': { daten: dateien(), seed: true, live: 'ok', klick: '[data-handlung=anlegen]',
+    entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: 'Datei prüfen', an: 'alpha', text: 'Bitte bis Freitag.', rang: '1', dringend: true, zeit: JETZT }] },
+  'abnahme-gesendet': { daten: dateien(), seed: true, live: 'ok', schlange: [schlangeZustaende().urteil] },
+  'abnahme-pruefung': { daten: dateien(), seed: true, live: 'ok', klick: '[data-handlung=abnahme]',
+    entwuerfe: [{ ...entwuerfe()[0], anmerkung: `Zugang: ${ERFUNDENES_TOKEN}` }] },
+  'sendung-fehler': { daten: dateien(), seed: true, live: 'ok', schlange: [schlangeZustaende().verboten, schlangeZustaende().fehler] },
+  uhr: { daten: dateien(), seed: true, live: 'ok', uhr: 3 * 60000 },
   'suche-treffer': { daten: dateien(), seed: true, live: 'ok', suche: 'tpc-0e0' },
   'suche-nichts': { daten: dateien(), seed: true, live: 'ok', suche: 'zzz-999' },
 };
@@ -199,4 +232,17 @@ export const ADRESSEN = {
   'anmeldung-fehler': ['anmelden'],
   'suche-treffer': ['suche'],
   'suche-nichts': ['suche'],
+  antworten: ['eintrag/r2d4vn/antworten'],
+  erledigen: ['eintrag/m7q2ke'],
+  'eingang-senden': ['eingang', 'eintrag/k7m2qa'],
+  einsortiert: ['eintrag/k7m2qa'],
+  'einsortieren-gewaehlt': ['eintrag/k7m2qa/einsortieren'],
+  'einsortieren-pruefung': ['eintrag/k7m2qa/einsortieren'],
+  'erfassen-entwurf': ['erfassen'],
+  'erfassen-pruefung': ['erfassen'],
+  'erfassen-senden': ['erfassen', 'wartet'],
+  'abnahme-gesendet': ['abnahmen', 'eintrag/8k3m1x'],
+  'abnahme-pruefung': ['eintrag/8k3m1x/ergebnis'],
+  'sendung-fehler': ['eintrag/p4m7bt', 'eintrag/m7q2ke'],
+  uhr: ['mehr'],
 };

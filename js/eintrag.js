@@ -1,7 +1,8 @@
 // Die Ansicht eines Eintrags: Kopfkarte, Hinweise, Text, Möglichkeiten, Faden, Quelle und die Aktionsleiste; dazu die Blätter
 // Deine Antwort und Einsortieren. Jede Handlung, die welt.js (handlungenVon) nennt, hat hier einen Knopf (UGE-2, E13).
-// Senden gehört zur Schreibschicht (Teil E): ohne sie bleiben die Knöpfe gesperrt, ein Satz sagt warum, und was der Nutzer
-// eintippt, bleibt als Entwurf auf dem Gerät. Nichts davon täuscht einen Erfolg vor.
+// Senden geht über die Schreibschicht (schreiben.js, `k.schreiben`): jede Handlung reiht eine Sendung ein, der Hinweis unten
+// bietet zehn Sekunden Rückgängig an, danach geht sie raus. Fehlt die Schreibschicht (Tests), bleiben die Knöpfe gesperrt und
+// ein Satz sagt warum. Nichts täuscht einen Erfolg vor: gesendet heißt nur, was GitHub angenommen hat.
 import { el, ico } from './dom.js';
 import { annahmeVon, fadenVon, handlungenVon, karteVon, moeglichkeiten, offenSatz, ortVon, abnahmeSchritte, sendungZu } from './welt.js';
 import { idMitStrich } from './format.js';
@@ -11,8 +12,9 @@ import { sichtbar } from './urteil.js';
 import { auswahl, band, feld, idSpan, knopf, kopfkarte, linkKnopf, platz } from './karten.js';
 import { ohneStand, fehlerBand } from './ansichten.js';
 import { kannSenden, SENDEN_FEHLT } from './schreiben.js';
+import { absender } from './absenden.js';
 import { URTEILE, zeitpunkt } from './ansichtstexte.js';
-import { liesEntwurf, loescheEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
+import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 import { naechsterOffen } from './abnahme.js';
 
 /** Die ID im Wortlaut der Ansicht: „Abnahme k7m-2qa“. */
@@ -53,18 +55,25 @@ function fadenListe(welt, e) {
   }))];
 }
 
-/** Band zu einer Sendung dieses Geräts, die nicht durchging: Konflikt oder Token (UOF-3); der Wortlaut kommt aus der Sendung. */
+/** Band zu einer Sendung dieses Geräts, die nicht durchging: Konflikt, Token, Recht oder Fehler (UOF-3); der Wortlaut kommt aus der Sendung. */
 function sendungBand(welt, e, k) {
   const s = sendungZu(welt, e.id);
-  if (!s || (s.zustand !== 'konflikt' && s.zustand !== 'token')) return null;
-  const verwerfen = knopf('Verwerfen', { klasse: 'text', an: async () => { await k.db.entferne('schlange', s.id); k.neuZeichnen(); } });
+  if (!s || !['konflikt', 'token', 'verboten', 'fehler'].includes(s.zustand)) return null;
+  const verwerfen = knopf('Verwerfen', { klasse: 'text', gesperrt: !kannSenden(k), an: async () => { await k.schreiben.verwerfen(s.id); k.neuZeichnen(); } });
   if (s.zustand === 'token') {
-    return band({ ton: 'warn', symbol: 'key-f', titel: 'Token abgelaufen oder widerrufen', satz: 'GitHub lehnt das Token ab. Deine Eingabe bleibt auf diesem Gerät in der Schlange.', knoepfe: [linkKnopf('Neues Token eintragen', '#anmelden')] });
+    return band({ ton: 'warn', symbol: 'key-f', titel: 'Token abgelaufen oder widerrufen', satz: 'GitHub lehnt das Token ab. Deine Eingabe bleibt auf diesem Gerät in der Schlange und geht mit einem neuen Token raus.', knoepfe: [linkKnopf('Neues Token eintragen', '#anmelden')] });
+  }
+  if (s.zustand === 'verboten') {
+    return band({ ton: 'warn', symbol: 'key-f', titel: 'Token darf nicht schreiben', satz: 'GitHub erlaubt diesem Token nur das Lesen. Trage ein Token mit dem Recht Contents mit Lesen und Schreiben ein. Deine Eingabe bleibt in der Schlange.', knoepfe: [linkKnopf('Neues Token eintragen', '#anmelden'), verwerfen] });
+  }
+  if (s.zustand === 'fehler') {
+    return band({ ton: 'fehler', symbol: 'error-f', titel: 'Nicht gesendet', satz: `${s.grund ?? 'GitHub hat die Sendung nicht angenommen.'} Deine Eingabe bleibt auf diesem Gerät.`,
+      knoepfe: [knopf('Erneut senden', { gesperrt: !kannSenden(k), an: async () => { await k.schreiben.erneut(s.id); k.neuZeichnen(); } }), verwerfen] });
   }
   const text = s.art === 'einsortieren' ? `Trotzdem an ${s.ziel === 'user' ? 'dich' : s.ziel} senden` : 'Als Nachtrag senden';
   return band({
     ton: 'warn', symbol: 'warning-f', titel: s.titel ?? 'Schon bearbeitet', satz: s.grund ?? 'Ein anderes Gerät war schneller. Deine Eingabe wurde nicht gesendet.',
-    knoepfe: [knopf(text, { gesperrt: !kannSenden(k), an: () => k.schreiben.senden(s.id) }), verwerfen],
+    knoepfe: [knopf(text, { gesperrt: !kannSenden(k), an: async () => { await k.schreiben.senden(s.id); k.neuZeichnen(); } }), verwerfen],
   });
 }
 
@@ -73,15 +82,15 @@ const HANDLUNG = {
   einsortieren: (id) => linkKnopf('Einsortieren', `#eintrag/${id}/einsortieren`, { klasse: 'gefuellt' }),
 };
 
-/** Ein Knopf je Handlung der Art; Senden gesperrt, solange es keine Schreibschicht gibt. */
-function aktionsLeiste(welt, eintrag, k, extra = []) {
+/** Ein Knopf je Handlung der Art; Senden gesperrt, solange es keine Schreibschicht gibt. Erledigt geht über `erledigen` (absenden.js). */
+function aktionsLeiste(welt, eintrag, k, extra = [], erledigen = null) {
   const id = eintrag.e.id;
   const liste = handlungenVon(welt, eintrag);
   const knoepfe = [];
   for (const h of liste) {
     let b;
     if (h === 'antworten' || h === 'einsortieren') b = HANDLUNG[h](id);
-    else if (h === 'erledigt') b = knopf('Erledigt', { klasse: 'tonal', gesperrt: !kannSenden(k), an: () => k.schreiben.erledigen(id) });
+    else if (h === 'erledigt') b = knopf('Erledigt', { klasse: 'tonal', gesperrt: !kannSenden(k), an: (ev) => erledigen?.los(false, ev.currentTarget) });
     else if (h === 'abnahme') { b = extra[0]; }
     if (b) { b.dataset.handlung = h; knoepfe.push(b); }
   }
@@ -113,6 +122,8 @@ export function eintragAnsicht(welt, z, k, o) {
   const extern = vertrauen(e.head) === 'external';
   const teile = [fehlerBand(welt, z, k), kopfkarte(m, { rangText: `Rang ${st.priority}` })];
   teile.push(sendungBand(welt, e, k));
+  const erledigen = handlungenVon(welt, eintrag).includes('erledigt') ? absender(() => k.schreiben.erledigen(e.id), () => k.ersetze('#wartet')) : null;
+  if (erledigen) teile.push(erledigen.platz);
   const wartetFrage = kind === 'question' && handlungenVon(welt, eintrag).includes('antworten');
   const annahme = wartetFrage ? annahmeVon(e) : null;
   if (annahme) teile.push(el('p', {}, `Ohne deine Antwort arbeitet die Sitzung mit Annahme ${annahme} weiter.`));
@@ -136,7 +147,7 @@ export function eintragAnsicht(welt, z, k, o) {
   teile.push(...fadenListe(welt, e));
   const quelle = e.head.get('Source');
   if (quelle) teile.push(el('h2', {}, 'Quelle'), el('p', { class: 'quelle' }, el('code', {}, sichtbar(quelle, true))));
-  return { inhalt: teile, aktion: aktionsLeiste(welt, eintrag, k, extra), titel: m.art.wort };
+  return { inhalt: teile, aktion: aktionsLeiste(welt, eintrag, k, extra, erledigen), titel: m.art.wort };
 }
 
 /** Eine Zeile der Schrittliste: Nummer, Aktion, Urteil als Wort mit Symbol; frühere Runden zählen mit. */
@@ -169,27 +180,33 @@ export async function antwortBlatt(welt, k, o, schliessen) {
   const liste = moeglichkeiten(e);
   const koerper = [eintragsZeile(karteVon(welt, { e, st: welt.buch.zustand(e) }).art.wort, e.id)];
   if (gesperrt) koerper.push(band({ ton: 'info', symbol: 'info-f', satz: SENDEN_FEHLT }));
+  let wahl = null;
+  let textSchluessel = null;
+  const { platz: ablehnung, los } = absender(
+    (opt) => (wahl
+      ? k.schreiben.antworten(e.id, { wahl, ...opt })
+      : k.schreiben.antworten(e.id, { text: textSchluessel.t.value.trim(), entwurf: { schluessel: schluessel.antwort(e.id), wert: { text: textSchluessel.t.value } }, ...opt })),
+    () => schliessen());
   if (liste.length) {
     koerper.push(el('div', { class: 'antworten' }, liste.map((m) => {
       const b = el('button', { type: 'button', class: 'tonal', disabled: gesperrt, 'data-wahl': m.schluessel },
         el('span', { class: 'buchstabe' }, m.schluessel),
         el('span', { class: 'was' }, m.text, m.empfehlung ? el('span', { class: 'chip-rat' }, ico('check_circle-f'), 'Empfehlung') : null));
-      b.addEventListener('click', async () => { await k.schreiben.antworten(e.id, { wahl: m.schluessel }); await loescheEntwurf(k.db, schluessel.antwort(e.id)); schliessen(); });
+      b.addEventListener('click', () => { wahl = m.schluessel; return los(false, b); });
       return b;
     })));
   }
-  const { feld: f, t } = await textFeld(k, schluessel.antwort(e.id), 'antwort', liste.length ? 'Eigene Antwort' : 'Deine Antwort');
-  koerper.push(f);
-  const senden = knopf('Senden', { klasse: 'gefuellt', gesperrt: gesperrt, an: async () => {
-    if (!t.value.trim()) return;
-    await k.schreiben.antworten(e.id, { text: t.value.trim() });
-    await loescheEntwurf(k.db, schluessel.antwort(e.id));
-    schliessen();
+  textSchluessel = await textFeld(k, schluessel.antwort(e.id), 'antwort', liste.length ? 'Eigene Antwort' : 'Deine Antwort');
+  koerper.push(textSchluessel.feld, ablehnung);
+  const senden = knopf('Senden', { klasse: 'gefuellt', gesperrt, an: async (ev) => {
+    if (!textSchluessel.t.value.trim()) { textSchluessel.t.focus(); return; }
+    wahl = null;
+    await los(false, ev.currentTarget);
   } });
   return { koerper, knoepfe: [knopf('Abbrechen', { klasse: 'text', an: schliessen }), senden] };
 }
 
-/** Blatt Einsortieren: Ziel (An dich oder ein Projekt) und ein freiwilliger Satz. */
+/** Blatt Einsortieren: Ziel (An dich oder ein Projekt) und ein freiwilliger Satz; Senden wartet auf ein Ziel. */
 export async function einsortierenBlatt(welt, k, o, schliessen) {
   const e = welt.eintraege.get(o.id);
   if (!e) return { koerper: [el('p', {}, 'Der Eintrag liegt nicht auf diesem Gerät.')], knoepfe: [knopf('Schließen', { klasse: 'text', an: schliessen })] };
@@ -204,18 +221,16 @@ export async function einsortierenBlatt(welt, k, o, schliessen) {
   const satz = el('textarea', { name: 'satz', rows: 1, autocapitalize: 'sentences' });
   satz.value = entwurf?.satz ?? '';
   const sichern = () => speichereEntwurf(k.db, schluessel.einsortieren(e.id), { ziel: ziel.value, satz: satz.value }, !ziel.value && !satz.value.trim(), k.jetzt());
-  ziel.addEventListener('change', sichern);
+  const { platz: ablehnung, los } = absender(
+    (opt) => k.schreiben.einsortieren(e.id, { ziel: ziel.value, satz: satz.value.trim(), entwurf: { schluessel: schluessel.einsortieren(e.id), wert: { ziel: ziel.value, satz: satz.value } }, ...opt }),
+    () => schliessen());
+  const senden = knopf('Senden', { klasse: 'gefuellt', gesperrt: gesperrt || !ziel.value, an: (ev) => (ziel.value ? los(false, ev.currentTarget) : undefined) });
+  ziel.addEventListener('change', () => { senden.disabled = gesperrt || !ziel.value; sichern(); });
   satz.addEventListener('input', sichern);
   const koerper = [eintragsZeile(art.wort, e.id)];
   if (gesperrt) koerper.push(band({ ton: 'info', symbol: 'info-f', satz: SENDEN_FEHLT }));
   koerper.push(feld({ beschriftung: 'Wohin gehört der Eintrag?', steuerung: ziel }));
   if (!welt.projektNamen.length) koerper.push(el('p', { class: 'neben' }, 'Projekte fehlen noch. Gleiche in Mehr ab.'));
-  koerper.push(feld({ beschriftung: 'Satz dazu (freiwillig)', steuerung: satz }));
-  const senden = knopf('Senden', { klasse: 'gefuellt', gesperrt, an: async () => {
-    if (!ziel.value) { ziel.focus(); return; }
-    await k.schreiben.einsortieren(e.id, { ziel: ziel.value, satz: satz.value.trim() });
-    await loescheEntwurf(k.db, schluessel.einsortieren(e.id));
-    schliessen();
-  } });
+  koerper.push(feld({ beschriftung: 'Satz dazu (freiwillig)', steuerung: satz }), ablehnung);
   return { koerper, knoepfe: [knopf('Abbrechen', { klasse: 'text', an: schliessen }), senden], klasse: art.klasse };
 }

@@ -2,7 +2,7 @@
 
 Postfach ist eine installierbare Web-App für das Handy, die zeigt, was auf dich wartet, und deine Antworten, Urteile und neuen Einträge an ein Postsystem auf GitHub sendet.
 
-Stand: im Aufbau, Teil D (Ansichten, Navigation, Suche). Die App holt das Postsystem mit einem Token auf das Gerät, rechnet daraus den Zustand der Einträge und zeigt **Wartet**, **Abnahmen**, **Erfassen**, **Mehr**, den Eingang, die Ideensammlung, die Suche und jeden Eintrag; eine Abnahme beurteilst du Schritt für Schritt. Sie liest nur: Antworten, Erledigen, Einsortieren und Anlegen sind als gesperrte Knöpfe da, deine Eingaben bleiben als Entwurf auf dem Gerät, und gesendet wird erst in Teil E. Noch nicht veröffentlicht und noch nicht nutzbar.
+Stand: im Aufbau, Teil E (Schreiben). Die App holt das Postsystem mit einem Token auf das Gerät, rechnet daraus den Zustand der Einträge und zeigt **Wartet**, **Abnahmen**, **Erfassen**, **Mehr**, den Eingang, die Ideensammlung, die Suche und jeden Eintrag. Sie schreibt auch: Du beantwortest Fragen, beurteilst Abnahmen Schritt für Schritt, erledigst Einträge, sortierst den Eingang ein und erfasst neue Einträge. Jede Eingabe wartet zehn Sekunden auf **Rückgängig**, geht dann als ein Commit je Sendung über die Git-Data-API von GitHub raus und steht bis dahin in Worten als „noch nicht gesendet“ am Eintrag. Ohne Netz bleibt sie in der Warteschlange auf dem Gerät. Noch nicht veröffentlicht und noch nicht nutzbar: Offline-Start, Installation und Mitteilungen folgen in Teil F, die Veröffentlichung in Teil G.
 
 ## Installation
 
@@ -23,11 +23,11 @@ make check HIG=PFAD
 Ausgabe, gekürzt (`make render` schreibt je Szenario ein Protokoll nach `bilder/lauf.txt`):
 
 ```text
-ℹ tests 199
-ℹ pass 196
+ℹ tests 265
+ℹ pass 262
 ℹ fail 0
 ℹ skipped 3
-PASS  68 Dateien geprüft, kein Fremdhost
+PASS  78 Dateien geprüft, kein Fremdhost
 INF no leaks found
 leer: PASS     Manifest       installierbar, Manifest vollständig (UPL-2)
 leer: PASS     Offline        5 von 5 Zuständen starten ohne Netz (UOF-1)
@@ -39,17 +39,17 @@ Die Stufen laufen auch einzeln:
 
 | Befehl | Prüft |
 | --- | --- |
-| `make test` | Fassung, Adressen, Stapel für Zurück, Manifest, CSP, Hülle des Service Workers, Abgleich gegen eine nachgebaute GitHub-API, Zustand, Urteile und Prüfmuster gegen die gemeinsamen Testfälle; dazu die Listen, Sätze, den Markdown-Renderer und jede Ansicht gegen ein Wegwerf-DOM |
+| `make test` | Fassung, Adressen, Stapel für Zurück, Manifest, CSP, Hülle des Service Workers, Abgleich und Senden gegen eine nachgebaute GitHub-API (Commit je Sendung, Schreibabstand, Neubau bei 409 und 422, Konflikt, Token abgelehnt, Rückgängig, Uhrabweichung), Zustand, Urteile, Prüfmuster und die Dateien einer Sendung gegen die gemeinsamen Testfälle; dazu die Listen, Sätze, den Markdown-Renderer und jede Ansicht gegen ein Wegwerf-DOM |
 | `make fremdhost` | dass im Code nur `api.github.com` und `ntfy.sh` vorkommen |
 | `make secrets` | dass keine Geheimnisse im Arbeitsbaum stehen (gitleaks) |
-| `make render` | jede Ansicht in jedem Zustand (leer, lädt, Fehler, offline, Token abgelaufen, Anmeldung) in zwei Größen, hell, dunkel, Schrift 200 % und ohne Netz |
-| `make wege` | Anmeldung, alle Zurück-Wege der Tabelle, Blätter, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht, Entwürfe über Neuladen, Statusleiste, Netzzeile, IndexedDB, den Abgleich mit allen Zuständen aus **Mehr** und eine fehlerfreie Konsole in Chromium |
+| `make render` | jede Ansicht in jedem Zustand (leer, lädt, Fehler, offline, Token abgelaufen, Anmeldung, Hinweis mit Rückgängig, noch nicht gesendet, abgelehnte Eingabe, Sendefehler) in zwei Größen, hell, dunkel, Schrift 200 % und ohne Netz |
+| `make wege` | Anmeldung, alle Zurück-Wege der Tabelle, Blätter, einen Knopf zu jeder Handlung, eine linke Kante je Ansicht, Entwürfe über Neuladen, Statusleiste, Netzzeile, IndexedDB, den Abgleich mit allen Zuständen aus **Mehr**, das Schreiben in Echtzeit (Antwort mit Rückgängig, Einsortieren, Erfassen, Abnahme mit FAIL, Geheimnis im Text, ohne Netz, Token abgelehnt) und eine fehlerfreie Konsole in Chromium |
 
 Wenn Chromium nicht startet und `make wege` mit `BLOCKED` endet: Chromium legt einen Socket unter `$TMPDIR` an, und ein Pfad über etwa 100 Zeichen bricht ab. Setze dann ein kurzes `TMPDIR`, etwa `TMPDIR=/tmp make wege`.
 
 ### Prüfung gegen den echten Datenbestand
 
-Zwei Tests rechnen gegen die Daten und das Werkzeug des Postsystems und überspringen sich ohne diese Angaben (Ausgabe `SKIP`). Setze die Umgebung, wenn du das Postsystem lokal hast:
+Drei Tests rechnen gegen die Daten und das Werkzeug des Postsystems und überspringen sich ohne diese Angaben (Ausgabe `SKIP`). Setze die Umgebung, wenn du das Postsystem lokal hast:
 
 | Variable | Inhalt |
 | --- | --- |
@@ -57,18 +57,19 @@ Zwei Tests rechnen gegen die Daten und das Werkzeug des Postsystems und überspr
 | `POST_DATEN` | Ordner des Datenklons, wird nur gelesen |
 | `POST_BEFEHL` | Befehlszeile, die alle Einträge als JSON druckt; `{JETZT}` steht für die Zeit, auf die das Werkzeug rechnet |
 | `POST_WERKZEUG` | Pfad der Python-Datei des Werkzeugs, für den Vergleich der Prüfmuster |
+| `POST_PRUEFBEFEHL` | Befehlszeile, die die Prüfung des Werkzeugs auf einem Datenordner ausführt; `{DATEN}` steht für den Ordner, und der Befehl setzt die Umgebungsvariable des Werkzeugs für den Datenordner selbst, etwa `env VARIABLE={DATEN} WERKZEUG check` |
 
-Der Abgleich läuft dabei gegen den Datenklon als Mock-Quelle; die Zustände der App müssen Feld für Feld gleich der Ausgabe des Werkzeugs sein. `tests/testfaelle/QUELLE.json` nennt Fassung und Commit der Kopie der Testfälle und wie du sie neu übernimmst.
+Der Abgleich läuft dabei gegen den Datenklon als Mock-Quelle; die Zustände der App müssen Feld für Feld gleich der Ausgabe des Werkzeugs sein. Der dritte Test (`tests/mockgithub.test.mjs`) lässt die App alle Arten von Sendung an eine Mock-Quelle schicken, die die Git-Data-API nachbaut, legt die angenommenen Dateien in eine Kopie des Datenklons (mit `POST_DATEN` als Vorlage, nur gelesen) und verlangt, dass `POST_PRUEFBEFEHL` auf dieser Kopie mit Exit 0 endet. Kein Test schreibt nach GitHub. `tests/testfaelle/QUELLE.json` nennt Fassung und Commit der Kopie der Testfälle und wie du sie neu übernimmst.
 
 ### Vorschau mit erfundenen Daten
 
-`tools/vorschau.mjs` startet die App mit erfundenen Einträgen (`tests/hilfen/beispieldaten.mjs`), ohne Token und ohne Netz. Jedes Szenario hat eine eigene Adresse, etwa `/normal/`, `/leer/`, `/fehler/`, `/offline/` und `/anmeldung/`; `node tools/rendern.mjs --liste` nennt sie samt den Ansichten, die jedes zeigt. `make render` rendert alle Szenarien; ein einzelnes rendert dieser Aufruf:
+`tools/vorschau.mjs` startet die App mit erfundenen Einträgen (`tests/hilfen/beispieldaten.mjs`), ohne Token und ohne Netz. Jedes Szenario hat eine eigene Adresse, etwa `/normal/`, `/leer/`, `/fehler/`, `/offline/`, `/anmeldung/` und für das Schreiben `/antworten/`, `/eingang-senden/` und `/erfassen-pruefung/`; `node tools/rendern.mjs --liste` nennt sie samt den Ansichten, die jedes zeigt. `make render` rendert alle Szenarien; ein einzelnes rendert dieser Aufruf:
 
 ```bash
 node tools/rendern.mjs --hig PFAD -o bilder leer fehler
 ```
 
-Die erfundenen Daten bleiben neutral (Projekte `alpha`, `beta`, `gamma`, Rechner `rechner-a`). Die App selbst enthält keinen Hook für Attrappen: die Vorschau ersetzt nur `js/start.js` und tauscht `fetch` gegen die Mock-Quelle.
+Die erfundenen Daten bleiben neutral (Projekte `alpha`, `beta`, `gamma`, Rechner `rechner-a`). Die App selbst enthält keinen Hook für Attrappen: die Vorschau ersetzt nur `js/start.js`, tauscht `fetch` gegen die Mock-Quelle und hält die Zeitgeber der Schreibschicht an, damit nichts von allein sendet und jeder Zustand für das Bild stehen bleibt. Ein Szenario kann nach dem Start einen Knopf antippen (`klick`), um etwa den Hinweis mit **Rückgängig** zu zeigen.
 
 Der Wegetest kann die Zustände von **Mehr** als Bilder schreiben (hell, dunkel, Text 200 %):
 
@@ -81,7 +82,7 @@ node tools/wege.mjs --bilder bilder/abgleich
 | Pfad | Inhalt |
 | --- | --- |
 | `index.html`, `app.css` | Hülle mit Symbol-Sprite, Leisten und Blatt; Farben und Maße |
-| `js/` | ES-Module: Adressen, Navigation mit der History API, Statusleiste, Netzzeile; Speicher (`speicher.js`, IndexedDB), Abgleich (`abgleich.js`), Steuerung (`steuerung.js`); Zustand der Einträge (`zustand.js`, `urteil.js`, `pruefen.js`, `format.js`, `pytext.js`); Ansichten: `welt.js` (Listen und Sätze aus dem Stand auf dem Gerät), `anzeigen.js` (wählt die Ansicht), `ansichten.js` (Wartet, Abnahmen, Eingang, Ideensammlung, Suche), `eintrag.js`, `ablauf.js` (Abnahme Schritt für Schritt), `erfassen.js`, `anmelden.js`, `mehr.js`, `markdown.js` (eigener Renderer ohne HTML), `karten.js` (Bausteine), `entwuerfe.js`, `schreiben.js` (Schnittstelle der Schreibschicht aus Teil E) |
+| `js/` | ES-Module: Adressen, Navigation mit der History API, Statusleiste, Netzzeile; Speicher (`speicher.js`, IndexedDB), Abgleich (`abgleich.js`), Steuerung (`steuerung.js`); Zustand der Einträge (`zustand.js`, `urteil.js`, `pruefen.js`, `format.js`, `pytext.js`); Ansichten: `welt.js` (Listen und Sätze aus dem Stand auf dem Gerät), `anzeigen.js` (wählt die Ansicht), `ansichten.js` (Wartet, Abnahmen, Eingang, Ideensammlung, Suche), `eintrag.js`, `ablauf.js` (Abnahme Schritt für Schritt), `erfassen.js`, `anmelden.js`, `mehr.js`, `markdown.js` (eigener Renderer ohne HTML), `karten.js` (Bausteine), `entwuerfe.js`; Schreiben (Teil E): `schreiben.js` (Warteschlange mit Zuständen, Rückgängig, Konflikte), `senden.js` (ein Commit je Sendung über die Git-Data-API, Schreibabstand, Neubau), `dateien.js` (die Dateien einer Sendung wie das Postwerkzeug sie schreibt, Prüfung auf Geheimnisse und Personendaten), `erzeugen.js` (ULIDs, neue IDs, Stempel, Uhrabweichung), `hinweis.js` (Hinweis mit Rückgängig), `absenden.js` (gemeinsamer Weg der Ansichten zur Schreibschicht) |
 | `sw.js`, `manifest.webmanifest`, `symbole/` | Start ohne Netz und Installation |
 | `tests/`, `tools/`, `Makefile` | Prüfkette; `tools/vorschau.mjs` und `tools/rendern.mjs` für die Vorschau mit erfundenen Daten |
 

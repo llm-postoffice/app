@@ -32,7 +32,7 @@ export class AbgleichFehler extends Error {
   }
 }
 
-async function antwortFehler(res, jetzt) {
+export async function antwortFehler(res, jetzt) {
   const status = res.status;
   if (status === 401) return new AbgleichFehler('token', 'Token abgelehnt', { status });
   if (status === 403 || status === 429) {

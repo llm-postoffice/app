@@ -5,6 +5,7 @@
 import { el } from './dom.js';
 import { TAKTE } from './steuerung.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
+import { UHR_WARNUNG_MS, abweichungText } from './erzeugen.js';
 import { WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, speicherAnzeige } from './texte.js';
 import { VERSION } from './version.js';
 import { band, feld, knopf, linkKnopf, ruhigeKarte } from './karten.js';
@@ -64,6 +65,11 @@ export async function mehrAnsicht(welt, z, k) {
       ablauf?.warnung ? band({ ton: 'warn', symbol: 'key-f', titel: ablauf.abgelaufen ? 'Token abgelaufen' : 'Token läuft bald ab', satz: 'Erstelle ein neues Token und trage es ein, ehe GitHub das alte ablehnt.' }) : null,
       linkKnopf('Token ersetzen …', '#anmelden', { klasse: 'tonal' })]
     : [el('p', {}, 'Dieses Gerät ist nicht angemeldet.'), linkKnopf('Anmelden', '#anmelden', { klasse: 'gefuellt' })];
+  // Die Uhr des Geräts ordnet neue Dateien; weicht sie von der Zeit von GitHub ab, nimmt die App die Zeit von GitHub (E, Uhrabweichung)
+  const uhr = await einstellung(k.db, 'uhr');
+  const uhrBand = uhr && Math.abs(uhr.abweichung) >= UHR_WARNUNG_MS
+    ? band({ ton: 'warn', symbol: 'schedule', titel: 'Die Uhr dieses Geräts geht falsch', satz: `Sie geht ${abweichungText(uhr.abweichung)}. Neue Einträge tragen die Zeit von GitHub, damit sie richtig geordnet sind. Stelle die Uhr in den Einstellungen des Geräts auf automatisch.` })
+    : null;
   const installiert = globalThis.matchMedia?.('(display-mode: standalone)').matches;
   const werte = el('dl', { class: 'werte' },
     el('div', { class: 'mit-knopf' }, el('dt', {}, 'Gerät'), el('dd', {}, a.geraet ?? 'noch ohne Namen'), linkKnopf('Ändern …', '#mehr/geraet', { klasse: 'text' })),
@@ -73,6 +79,7 @@ export async function mehrAnsicht(welt, z, k) {
     el('div', {}, el('dt', {}, 'Takt im Vordergrund'), el('dd', {}, taktWahl)));
   return [
     speicher.warnung ? band({ ton: 'warn', symbol: 'warning-f', satz: speicher.warnung }) : null,
+    uhrBand,
     el('ul', { class: 'mehr-liste' },
       ruhigeKarte({ symbol: 'inbox-f', titel: 'Eingang', zeile: c.eingang ? `${c.eingang} ${c.eingang === 1 ? 'Eintrag' : 'Einträge'} zum Einsortieren` : 'nichts zum Einsortieren', href: '#eingang' }),
       ruhigeKarte({ symbol: 'lightbulb', titel: 'Ideensammlung', weich: true, zeile: `${c.ideen ? ideenText(c.ideen) : 'keine Ideen'}, sie warten nicht auf dich`, href: '#ideen' }),

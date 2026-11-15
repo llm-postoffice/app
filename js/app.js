@@ -1,16 +1,19 @@
 // Verbindet Datenbank, Abgleich, Navigation, Anzeige, Statusleiste, Netzzeile und Service Worker zur App. Die Teile kommen
 // als Parameter: start.js setzt die echten, eine Vorschau oder ein Test setzt eigene (Datenbank, fetch, Uhr). Eine
-// Schreibschicht (Teil E) kommt als `schreiben`; ohne sie liest die App nur und sagt es.
+// Die Schreibschicht (schreiben.js) baut die App selbst, wenn ein `fetch` kommt; ein Test kann einen fertigen `schreiben`
+// geben. Ohne beides liest die App nur und sagt es.
 import { anzeigen, setzeKontext, setzeSuchText, suchText } from './anzeigen.js';
 import { blattGeschlossen, ersetze, gehe, ort as navigationOrt, schliesseUndGehe, starten, zurueck } from './navigation.js';
 import { netzZeile } from './netz.js';
+import { baueHinweis } from './hinweis.js';
+import { Schreiber } from './schreiben.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
 import { ladeWelt, ortVon } from './welt.js';
 
 const $ = (id) => document.getElementById(id);
 
-export async function starteApp({ db, steuerung, schreiben = null, jetzt = () => Date.now() }) {
+export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined }) {
   statusleiste();
   $('zurueck').addEventListener('click', zurueck);
 
@@ -19,10 +22,20 @@ export async function starteApp({ db, steuerung, schreiben = null, jetzt = () =>
   blatt.addEventListener('close', blattGeschlossen);
   blatt.addEventListener('click', (e) => { if (e.target === blatt) blatt.close(); });
 
+  const hinweis = baueHinweis({ zeitgeber });
+  const abgleich = async () => {
+    await steuerung.lauf('senden');
+    const fehler = steuerung.zustand.fehler;
+    return fehler ? { ok: false, fehler } : { ok: true };
+  };
+  if (!schreiben && fetch) {
+    schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), hinweis: hinweis.zeige, zeitgeber, beiAenderung: () => k.neuZeichnen() });
+  }
   const k = {
     db, steuerung, schreiben, jetzt, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
-    nachAnmeldung: () => ((history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet')),
+    // Ein neues Token: was am alten scheiterte, geht jetzt los
+    nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },
   };
   const ortJetzt = () => navigationOrt();
   setzeKontext(k);
@@ -52,6 +65,19 @@ export async function starteApp({ db, steuerung, schreiben = null, jetzt = () =>
     if (z.phase === 'laeuft' && !gedrosselt) gedrosselt = setTimeout(() => { gedrosselt = null; k.neuZeichnen(); }, 400);
   });
   verbinde(steuerung);
+
+  // Schreiben: Liegengebliebenes geht beim Start los; mit Netz und nach jedem Abgleich räumt die Schlange auf
+  if (schreiben) {
+    let netzWar = steuerung.zustand.ohneNetz;
+    steuerung.beiAenderung((z) => {
+      if (z.phase === 'bereit' || z.phase === 'fehler') {
+        if (netzWar && !z.ohneNetz) schreiben.weckeNetz();
+        netzWar = z.ohneNetz;
+        if (z.phase === 'bereit') schreiben.raeume();
+      }
+    });
+    schreiben.aufraeumenBeimStart();
+  }
 
   // Start ohne Netz (UOF-1): der Service Worker hält die Hülle der App.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');

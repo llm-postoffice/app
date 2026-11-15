@@ -12,7 +12,7 @@ import { extname, join, normalize } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { VERSION } from '../js/version.js';
 import { mockQuelle } from '../tests/hilfen/mockquelle.mjs';
-import { REPO, SZENARIEN, TOKEN, eintraege } from '../tests/hilfen/beispieldaten.mjs';
+import { ERFUNDENES_TOKEN, REPO, SZENARIEN, TOKEN, eintraege, entwuerfe } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'wege';
 const HILFE = `Aufruf: node tools/wege.mjs [OPTIONEN]
@@ -120,7 +120,7 @@ const fange = (q) => async (m) => {
   const kopf = (o) => Object.entries(o).map(([name, value]) => ({ name, value: String(value) }));
   if (request.method === 'OPTIONS') {
     await senden('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: kopf({ ...CORS,
-      'access-control-allow-headers': 'authorization, content-type, if-none-match', 'access-control-allow-methods': 'GET, POST', 'access-control-max-age': '600' }) }, m.sessionId);
+      'access-control-allow-headers': 'authorization, content-type, if-none-match', 'access-control-allow-methods': 'GET, POST, PATCH', 'access-control-max-age': '600' }) }, m.sessionId);
     return;
   }
   const eigene = Object.fromEntries(Object.entries(request.headers).map(([k, v]) => [k.toLowerCase(), v]));
@@ -133,7 +133,7 @@ const fange = (q) => async (m) => {
   await senden('Fetch.fulfillRequest', { requestId, responseCode: antwort.status, responseHeaders: kopf({ ...Object.fromEntries(antwort.headers), ...CORS }), ...(koerper ? { body: koerper } : {}) }, m.sessionId);
 };
 // Die Standardquelle: die erfundenen Einträge des Szenarios „normal“ (tests/hilfen/beispieldaten.mjs)
-const standardQuelle = () => mockQuelle({ dateien: SZENARIEN.normal.daten, repo: REPO, token: TOKEN });
+const standardQuelle = () => mockQuelle({ dateien: SZENARIEN.normal.daten, repo: REPO, token: TOKEN, serverzeit: () => Date.now() });
 let aktuell = null;   // die zuletzt geöffnete Seite; die nächste schließt sie, damit alte Seiten nicht weiter abgleichen
 
 /**
@@ -470,8 +470,8 @@ try {
   melde(await p.werte('document.querySelector("[name=titel]")?.value') === 'Wegetest: Eintrag in Arbeit', 'der Entwurf steht nach dem Wechsel in einen anderen Bereich und zurück wieder im Feld', await p.stand());
   await p.werte('location.reload()'); await pause(900);
   melde(await p.werte('document.querySelector("[name=titel]")?.value') === 'Wegetest: Eintrag in Arbeit', 'der Entwurf steht nach Neuladen wieder im Feld', await p.stand());
-  melde(await p.werte('document.querySelector("#aktion button[data-handlung=anlegen]")?.disabled') === true
-    && /Diese Fassung liest nur/.test(await p.werte('document.getElementById("aktion").innerText')), 'Eintrag anlegen ist gesperrt und ein Satz sagt warum: gesendet wird erst mit der Schreibschicht', await p.werte('document.getElementById("aktion").innerText'));
+  melde(await p.werte('document.querySelector("#aktion button[data-handlung=anlegen]")?.disabled') === false
+    && !/nicht eingerichtet/.test(await p.werte('document.getElementById("aktion").innerText')), 'Eintrag anlegen ist bedienbar, die Schreibschicht ist angeschlossen', await p.werte('document.getElementById("aktion").innerText'));
   await p.werte('(() => { const i = document.querySelector("[name=titel]"); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); })()'); await pause(300);
   melde(await entwurf('erfassen') == null, 'ein geleertes Formular löscht den Entwurf', JSON.stringify(await entwurf('erfassen')));
   p = await seite(t(`#eintrag/${ID}/antworten`));
@@ -491,6 +491,120 @@ try {
   p = await seite(t(`#eintrag/${ABNAHME}/ergebnis`));
   melde(/Die Ausgabe bricht in der Pipe um\./.test(await p.werte('document.getElementById("inhalt").innerText')), 'das Ergebnis zeigt nach Neuladen das gesicherte Urteil mit seinem Satz', await p.stand());
   await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('entwuerfe', 'urteil/${ABNAHME}'); db.schliesse(); })()`);
+
+  // 6f. Teil E, Schreiben: ein Mock-GitHub nimmt die Commits an (Kopf, Blob, Baum, Commit, Zweig). Die Wege laufen in Echtzeit:
+  //     zehn Sekunden Rückgängig, mindestens eine Sekunde zwischen schreibenden Anfragen. Es geht nichts nach GitHub.
+  const geheim = ERFUNDENES_TOKEN;
+  let netzAn = true; let ausfallE = null;
+  const qs = mockQuelle({ dateien: new Map(SZENARIEN.normal.daten), repo: REPO, token: TOKEN, serverzeit: () => Date.now(), amNetz: () => netzAn, vorher: (a) => ausfallE?.(a) });
+  abgefangen = fange(qs);
+  melde(await vorbereiten(), 'Teil E: der Start mit dem schreibenden Mock-Repo gleicht ab', 'keine Karten nach 15 s');
+  const db = (f) => `(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); try { return await (${f})(db); } finally { db.schliesse(); } })()`;
+  const schlangeJetzt = (pp) => pp.werte(db('(db) => db.alle("schlange")'));
+  const eigeneCommits = () => qs.commits.filter((c) => !c.fremd);
+  const schreibend = () => qs.protokoll.filter((a) => ['blobNeu', 'baumNeu', 'commitNeu', 'refNeu'].includes(a.art)).length;
+  const hinweis = (pp) => pp.werte('document.getElementById("hinweis").hidden ? null : document.getElementById("hinweis-text").textContent');
+  const waehle = (pp, sel, wert) => pp.werte(`(() => { const s = document.querySelector(${JSON.stringify(sel)}); s.value = ${JSON.stringify(wert)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+
+  // Antwort: ein Tipp, Hinweis mit Rückgängig, Rückgängig nimmt zurück, nichts geht raus
+  p = await seite(t(`#eintrag/${ID}/antworten`));
+  await p.warte('document.getElementById("blatt").open');
+  await p.tippe('#blatt [data-wahl="A"]');
+  melde(await p.warte('!document.getElementById("blatt").open') && await p.hash() === `#eintrag/${ID}`
+    && /^Antwort „A“ gespeichert$/.test(await hinweis(p) ?? '') && await p.werte('!document.getElementById("hinweis-knopf").hidden && document.getElementById("hinweis-knopf").textContent') === 'Rückgängig',
+  'ein Tipp auf eine Möglichkeit schließt das Blatt und zeigt „Antwort „A“ gespeichert“ mit Rückgängig', `${await p.stand()}, Hinweis ${await hinweis(p)}`);
+  melde(await p.warte('/noch nicht gesendet/.test(document.querySelector("main .kopfkarte").innerText)', 3000), 'der Eintrag sagt in Worten „noch nicht gesendet“', await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
+  const zahlVor = schreibend();
+  await p.tippe('#hinweis-knopf');
+  await pause(500);
+  melde((await schlangeJetzt(p)).length === 0 && /Zurückgenommen/.test(await hinweis(p) ?? '') && schreibend() === zahlVor,
+    'Rückgängig nimmt die Antwort aus der Schlange, der Hinweis sagt es, und es geht keine schreibende Anfrage raus', `${JSON.stringify(await schlangeJetzt(p))}, ${await hinweis(p)}`);
+  await pause(11000);
+  melde(schreibend() === zahlVor && eigeneCommits().length === 0, 'auch nach Ablauf der zehn Sekunden bleibt das Zurückgenommene zurückgenommen', `${schreibend() - zahlVor} Anfragen, ${eigeneCommits().length} Commits`);
+
+  // Senden: Antwort, Einsortieren und neuer Eintrag in einer Sitzung; je ein Commit, mindestens eine Sekunde Abstand
+  p = await seite(t(`#eintrag/${ID}/antworten`));
+  await p.warte('document.getElementById("blatt").open');
+  await p.tippe('#blatt [data-wahl="A"]');
+  p = await seite(t(`#eintrag/${EINGANG}/einsortieren`));
+  await p.warte('document.getElementById("blatt").open');
+  melde(await p.werte('document.querySelector("#blatt-knoepfe .gefuellt").disabled') === true, 'Einsortieren: Senden bleibt gesperrt, bis ein Ziel gewählt ist', 'Senden frei');
+  await waehle(p, '#blatt select[name=ziel]', 'alpha'); await pause(200);
+  await p.schreibe('#blatt textarea', 'Zu den Hinweisen.');
+  await p.tippe('#blatt-knoepfe .gefuellt');
+  melde(await p.warte('!document.getElementById("blatt").open') && /^Eintrag k7m-2qa an alpha einsortiert\.$/.test(await hinweis(p) ?? ''), 'Einsortieren schließt das Blatt und zeigt den Hinweis „an alpha einsortiert“', `${await p.stand()}, ${await hinweis(p)}`);
+  await p.werte('location.hash = "#eingang"'); await pause(600);
+  melde(await p.werte('[...document.querySelectorAll("main .karte")].some((k) => /k7m-2qa/.test(k.innerText) && /Einsortieren an alpha noch nicht gesendet/.test(k.innerText))'),
+    'die Karte bleibt im Eingang und sagt „Einsortieren an alpha noch nicht gesendet“, bis die Sendung angekommen ist', await p.werte('document.querySelector("main").innerText'));
+  p = await seite(t('#erfassen'));
+  await p.schreibe('[name=titel]', 'Wegetest: neuer Auftrag');
+  await p.tippe('#aktion button[data-handlung=anlegen]');
+  melde(await p.warte('/^Eintrag [a-z0-9]{3}-[a-z0-9]{3} gespeichert$/.test(document.getElementById("hinweis").hidden ? "" : document.getElementById("hinweis-text").textContent)', 3000) && await p.warte('document.querySelector("[name=titel]")?.value === ""', 3000)
+    && await p.werte(db('(db) => db.lies("entwuerfe", "erfassen")')) == null, 'Eintrag anlegen zeigt den Hinweis, leert das Formular und löscht den Entwurf', `${await hinweis(p)}, Titel „${await p.werte('document.querySelector("[name=titel]")?.value')}“`);
+  melde(await p.werte(db('async (db) => (await db.alle("schlange")).map((s) => s.zustand).join()')) !== '', 'die Sendung liegt in der Schlange', 'Schlange leer');
+  // Alle drei Sendungen sind in der Schlange; die Seite bleibt offen, bis sie angekommen sind
+  const angekommen = async () => p.warte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const n = await db.zaehle('schlange'); db.schliesse(); return n === 0; })()`, 70000);
+  const raus = await angekommen();
+  melde(raus && eigeneCommits().length === 3, 'nach den zehn Sekunden gehen alle drei Sendungen raus, je ein Commit, und die Schlange ist leer', `${eigeneCommits().length} Commits, Schlange ${JSON.stringify((await schlangeJetzt(p)).map((s) => s.zustand))}`);
+  const msgs = eigeneCommits().map((c) => c.message);
+  melde(msgs.some((m) => m === `post: answer ${ID}: A`) || msgs.some((m) => m.startsWith(`post: answer ${ID}`)), 'der Commit der Antwort trägt die Nachricht des Postwerkzeugs', msgs.join(' | '));
+  melde(msgs.some((m) => m.startsWith(`post: route ${EINGANG}`)) && msgs.some((m) => /^post: new [a-z][a-z0-9]{5}: Wegetest: neuer Auftrag$/.test(m)), 'Einsortieren und neuer Eintrag tragen die Nachrichten des Postwerkzeugs', msgs.join(' | '));
+  const neuePfade = [...qs.dateien.keys()].filter((x) => !SZENARIEN.normal.daten.has(x));
+  melde(neuePfade.length >= 4 && neuePfade.every((x) => x.startsWith('entries/')), 'die Dateien liegen unter entries/, nirgends sonst', neuePfade.join(', '));
+  melde(qs.protokoll.filter((a) => a.methode === 'PATCH' || a.url.includes('/git/refs/')).every((a) => !String(a.body ?? '').includes('"force":true')), 'der Zweig wird nie mit force verschoben', 'force gefunden');
+  await p.werte('location.hash = "#eingang"'); await pause(800);
+  melde(!(await p.werte('[...document.querySelectorAll("main .karte")].some((k) => /k7m-2qa/.test(k.innerText))')), 'nach dem Abgleich ist der Eintrag aus dem Eingang verschwunden', await p.werte('document.querySelector("main").innerText'));
+
+  // Abnahme: alle Urteile liegen als Entwurf da; Antwort senden bringt Nachtrag, Status und Folgeauftrag in einem Commit
+  await p.werte(db('(db) => db.schreibe("entwuerfe", ' + JSON.stringify(entwuerfe()[0]) + ')'));
+  const vorAbnahme = eigeneCommits().length;
+  p = await seite(t(`#eintrag/${ABNAHME}/ergebnis`));
+  await p.warte('document.querySelector("#aktion [data-handlung=abnahme]")');
+  await p.tippe('#aktion [data-handlung=abnahme]');
+  melde(await p.warte('location.hash === "#wartet"') && /^Antwort zur Abnahme 8k3-m1x gespeichert$/.test(await hinweis(p) ?? '')
+    && await p.werte(db('async (db) => (await db.lies("entwuerfe", "urteil/' + ABNAHME + '")) == null')), 'Antwort senden geht zu Wartet, zeigt den Hinweis und räumt den Entwurf der Urteile auf', `${await p.stand()}, ${await hinweis(p)}`);
+  melde(await p.warte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const n = await db.zaehle('schlange'); db.schliesse(); return n === 0; })()`, 40000)
+    && eigeneCommits().length === vorAbnahme + 1 && new RegExp(`^post: answer ${ABNAHME}: FAIL, new [a-z0-9]{6}$`).test(eigeneCommits().at(-1).message),
+  'die Abnahme mit FAIL geht in einem Commit raus: Antwort und Folgeauftrag', `${eigeneCommits().length - vorAbnahme} Commits, ${eigeneCommits().at(-1)?.message}`);
+
+  // Prüfung vor dem Senden: ein Geheimnis kommt nie in die Schlange, das Band steht im Blickfeld
+  p = await seite(t('#erfassen'));
+  await p.schreibe('[name=titel]', 'Zugang prüfen');
+  await p.schreibe('[name=text]', `Das Token ist ${geheim}.`);
+  const vorPruefung = schreibend();
+  await p.tippe('#aktion button[data-handlung=anlegen]');
+  melde(await p.warte('document.querySelector(".ablehnung .band strong")?.textContent === "Geheimnis gefunden"', 3000)
+    && !(await p.werte('document.getElementById("hinweis-knopf").offsetParent !== null')) && (await schlangeJetzt(p)).length === 0 && schreibend() === vorPruefung,
+  'ein Geheimnis im Text zeigt „Geheimnis gefunden“, nichts kommt in die Schlange und nichts geht raus', `${await p.werte('document.querySelector(".ablehnung")?.innerText')}`);
+  melde(await p.werte(`(() => { const r = document.querySelector('.ablehnung .band').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()`), 'das Band steht im Blickfeld, ohne dass du suchen musst', 'Band außerhalb');
+  melde(!(await p.werte(`document.body.innerText.includes(${JSON.stringify(geheim)}) && document.querySelector('.ablehnung').innerText.includes(${JSON.stringify(geheim)})`)), 'das Band nennt Ort und Art, nie den Wert', await p.werte('document.querySelector(".ablehnung")?.innerText'));
+  await p.werte(db('(db) => db.entferne("entwuerfe", "erfassen")'));
+
+  // Ohne Netz: die Antwort bleibt in der Schlange und sagt „wartet auf Netz“; mit Netz geht sie von allein raus
+  const vorOffline = eigeneCommits().length;
+  p = await seite(t('#eintrag/m7q2ke/antworten'));
+  await p.warte('document.getElementById("blatt").open');
+  netzAn = false; await p.netz(false);
+  await p.schreibe('#blatt textarea', 'Danke, ich kümmere mich darum.');
+  await p.tippe('#blatt-knoepfe .gefuellt');
+  melde(await p.warte('!document.getElementById("blatt").open') && /gespeichert/.test(await hinweis(p) ?? ''), 'ohne Netz speichert die Antwort und zeigt den Hinweis', `${await p.stand()}, ${await hinweis(p)}`);
+  melde(await p.warte('/noch nicht gesendet, wartet auf Netz/.test(document.querySelector("main .kopfkarte")?.innerText ?? "")', 30000),
+    'ohne Netz steht am Eintrag „noch nicht gesendet, wartet auf Netz“', await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
+  melde(eigeneCommits().length === vorOffline, 'ohne Netz geht nichts raus', `${eigeneCommits().length - vorOffline} Commits`);
+  netzAn = true; await p.netz(true);
+  melde(await p.warte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const n = await db.zaehle('schlange'); db.schliesse(); return n === 0; })()`, 50000)
+    && eigeneCommits().length === vorOffline + 1, 'mit Netz geht die Antwort von allein raus und die Schlange leert sich', `${eigeneCommits().length - vorOffline} Commits, ${JSON.stringify((await schlangeJetzt(p)).map((s) => s.zustand))}`);
+
+  // Token abgelehnt: die Eingabe bleibt in der Schlange, der Eintrag zeigt das Band mit dem Weg zum neuen Token
+  p = await seite(t('#eintrag/x9k3ft'));
+  ausfallE = () => new Response(JSON.stringify({ message: 'Bad credentials' }), { status: 401, headers: { 'content-type': 'application/json' } });
+  await p.tippe('#aktion [data-handlung=erledigt]');
+  melde(await p.warte('/Token abgelaufen oder widerrufen/.test(document.querySelector("main .band")?.innerText ?? "")', 40000)
+    && (await schlangeJetzt(p)).length === 1 && (await schlangeJetzt(p))[0].zustand === 'token',
+  'ein abgelehntes Token lässt die Eingabe in der Schlange und zeigt das Band „Token abgelaufen oder widerrufen“', `${JSON.stringify((await schlangeJetzt(p)).map((s) => s.zustand))}, ${await p.werte('document.querySelector("main")?.innerText.slice(0, 300)')}`);
+  ausfallE = null;
+  abgefangen = fange(standardQuelle());
+  await vorbereiten();   // Anmeldung und Stand der Beispieldaten wiederherstellen, Schlange und Entwürfe leer
 
   // 7. IndexedDB und Abgleich: das Schema in Chromium, die Bitte um dauerhaften Speicher, dann ein Abgleich gegen ein
   //    nachgebautes Repo mit allen Zuständen aus Mehr. Das Token ist ein Testwert; Chromium beantwortet die Anfragen.

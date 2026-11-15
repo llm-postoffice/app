@@ -1,22 +1,25 @@
 // Erfassen: ein Eintrag von Hand (Auftrag, Idee, Notiz, Nachricht). Das Formular merkt sich jede Eingabe als Entwurf auf
-// dem Gerät (UEI-6). Angelegt wird erst mit der Schreibschicht (Teil E); bis dahin ist der Knopf gesperrt und ein Satz sagt
-// warum. Nichts davon täuscht einen Erfolg vor.
+// dem Gerät (UEI-6). **Eintrag anlegen** reiht den Eintrag über die Schreibschicht ein (schreiben.js): Titel und Text gehen
+// vorher durch die Prüfung auf Geheimnisse und Personendaten, der Hinweis bietet zehn Sekunden Rückgängig an, danach geht er
+// raus. Fehlt die Schreibschicht (Tests), ist der Knopf gesperrt und ein Satz sagt warum.
 import { el } from './dom.js';
 import { artVon } from './ansichtstexte.js';
 import { auswahl, chipAuswahl, feld, knopf } from './karten.js';
-import { liesEntwurf, loescheEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
+import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 import { kannSenden, SENDEN_FEHLT } from './schreiben.js';
+import { absender } from './absenden.js';
 
 const ARTEN = ['task', 'idea', 'note', 'message'];
 const VORGABE = { art: 'task', titel: '', an: '', text: '', rang: '2', dringend: false };
 
-/** Prüft die Eingaben; Ergebnis { ok } oder { fehler: { feld: Satz } }. Der Titel hat 1 bis 120 Zeichen in einer Zeile. */
+/** Prüft die Eingaben; Ergebnis { ok } oder { fehler: { feld: Satz } }. Der Titel hat 1 bis 120 Zeichen in einer Zeile, eine Nachricht braucht einen Text. */
 export function pruefeEintrag(w) {
   const fehler = {};
   const titel = String(w.titel ?? '').trim();
   if (!titel) fehler.titel = 'Gib einen Titel ein.';
   else if (titel.length > 120) fehler.titel = `Der Titel hat ${titel.length} Zeichen; erlaubt sind höchstens 120.`;
   else if (/[\r\n]/.test(titel)) fehler.titel = 'Der Titel steht in einer Zeile.';
+  if (w.art === 'message' && !String(w.text ?? '').trim()) fehler.text = 'Eine Nachricht braucht einen Text.';
   return Object.keys(fehler).length ? { fehler } : { ok: true };
 }
 
@@ -38,45 +41,60 @@ export async function erfassenAnsicht(welt, _z, k) {
   const an = auswahl({
     name: 'an', wert: w.an,
     gruppen: [{ titel: 'Eingang', optionen: [{ wert: '', text: 'Eingang, ich sortiere später' }] },
+      { titel: 'An dich', optionen: [{ wert: 'user', text: 'An dich (Ideensammlung)' }] },
       ...(welt.projektNamen.length ? [{ titel: `Projekte (${welt.projektNamen.length})`, optionen: welt.projektNamen.map((p) => ({ wert: p, text: p })) }] : [])],
   });
   an.addEventListener('change', () => { w.an = an.value; sichern(); });
-  const text = el('textarea', { name: 'text', rows: 3, autocapitalize: 'sentences' });
-  text.value = w.text;
-  text.addEventListener('input', () => { w.text = text.value; sichern(); });
+  const textFeld = (fehler) => {
+    const t = el('textarea', { name: 'text', rows: 3, autocapitalize: 'sentences', 'aria-invalid': fehler ? 'true' : false });
+    t.value = w.text;
+    t.addEventListener('input', () => { w.text = t.value; sichern(); });
+    return feld({ beschriftung: w.art === 'message' ? 'Text' : 'Text (freiwillig)', steuerung: t, fehler });
+  };
+  let text = textFeld(null);
   const arten = chipAuswahl({
     name: 'art', arten: true, wert: w.art,
     optionen: ARTEN.map((a) => ({ wert: a, klasse: artVon(a).klasse, symbol: artVon(a).symbol, text: artVon(a).wort })),
   });
-  arten.addEventListener('change', (e) => { w.art = e.target.value; sichern(); });
+  arten.addEventListener('change', (e) => {
+    w.art = e.target.value;
+    // Eine Idee ohne Adresse läge im Eingang statt in der Ideensammlung (N3): bei Idee ist An dich vorbelegt
+    if (w.art === 'idea' && !w.an) { w.an = 'user'; an.value = 'user'; } else if (w.art !== 'idea' && w.an === 'user') { w.an = ''; an.value = ''; }
+    const neu = textFeld(null); text.replaceWith(neu); text = neu;   // die Beschriftung sagt, ob der Text Pflicht ist
+    sichern();
+  });
   const rang = chipAuswahl({ name: 'rang', wert: w.rang, optionen: ['1', '2', '3'].map((r) => ({ wert: r, text: r })) });
   rang.addEventListener('change', (e) => { w.rang = e.target.value; sichern(); });
   const dringend = el('input', { type: 'checkbox', name: 'dringend' });
   dringend.checked = w.dringend;
   dringend.addEventListener('change', () => { w.dringend = dringend.checked; sichern(); });
 
+  // Eine Ablehnung steht oben im Formular, damit sie ohne Suchen im Blick ist
+  const { platz: ablehnung, los } = absender(
+    (opt) => k.schreiben.anlegen({ art: w.art, titel: w.titel.trim(), an: w.an || null, text: w.text.trim(), rang: Number(w.rang), dringend: w.dringend,
+      entwurf: { schluessel: schluessel.erfassen, wert: { ...w } }, ...opt }),
+    () => k.neuZeichnen());
   const inhalt = el('form', { id: 'erfassen-formular' },
-    el('p', {}, 'Halte fest, was Claude tun oder wissen soll. Der Eintrag geht beim nächsten Abgleich mit.'),
+    el('p', {}, 'Halte fest, was Claude tun oder wissen soll. Nach dem Anlegen kannst du den Eintrag zehn Sekunden lang zurücknehmen, danach geht er raus.'),
+    ablehnung,
     el('fieldset', { class: 'feld' }, el('legend', {}, 'Art'), arten),
     titel,
     feld({ beschriftung: 'An', steuerung: an, hinweis: welt.projektNamen.length ? null : 'Projekte fehlen noch. Gleiche in Mehr ab.' }),
-    feld({ beschriftung: 'Text (freiwillig)', steuerung: text }),
+    text,
     el('fieldset', { class: 'feld' }, el('legend', {}, 'Rang (1 ist am wichtigsten)'), rang),
     el('label', { class: 'haken' }, dringend, 'Dringend: meldet auch zwischen 22 und 7 Uhr'));
   inhalt.addEventListener('submit', (e) => e.preventDefault());
 
   const gesperrt = !kannSenden(k);
-  const anlegen = knopf('Eintrag anlegen', { klasse: 'gefuellt', gesperrt, an: async () => {
+  const anlegen = knopf('Eintrag anlegen', { klasse: 'gefuellt', gesperrt, an: async (ev) => {
     const p = pruefeEintrag(w);
     if (!p.ok) {
-      const neu = titelFeld(p.fehler.titel);
-      titel.replaceWith(neu); titel = neu;
-      neu.querySelector('input').focus();
+      ablehnung.replaceChildren();
+      if (p.fehler.titel) { const neu = titelFeld(p.fehler.titel); titel.replaceWith(neu); titel = neu; neu.querySelector('input').focus(); }
+      if (p.fehler.text) { const neu = textFeld(p.fehler.text); text.replaceWith(neu); text = neu; if (!p.fehler.titel) neu.querySelector('textarea').focus(); }
       return;
     }
-    await k.schreiben.anlegen({ art: w.art, titel: w.titel.trim(), an: w.an || null, text: w.text.trim(), rang: Number(w.rang), dringend: w.dringend });
-    await loescheEntwurf(k.db, schluessel.erfassen);
-    k.neuZeichnen();
+    await los(false, ev.currentTarget);
   } });
   anlegen.dataset.handlung = 'anlegen';
   return { inhalt: [inhalt], aktion: gesperrt ? [anlegen, el('p', { class: 'neben satz' }, SENDEN_FEHLT)] : [anlegen] };
