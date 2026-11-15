@@ -1,5 +1,20 @@
 # Änderungen
 
+## 20261115.01 (2026-11-15)
+
+Teil E: Schreiben. Die App sendet jetzt: Antworten, Urteile, Erledigt, Einsortieren und neue Einträge gehen als Commit ins Datenrepo. Die gesperrten Knöpfe aus Teil D sind angeschlossen.
+
+- Jede Eingabe wartet zehn Sekunden auf **Rückgängig**. Der Hinweis unten sagt, was gespeichert ist; **Rückgängig** legt die Eingabe als Entwurf zurück. Danach geht die Sendung raus: ein Commit je Sendung über die Git-Data-API, mindestens eine Sekunde zwischen zwei schreibenden Anfragen, ohne force. Hat inzwischen jemand anderes gepusht, baut die App den Commit auf dem neuen Stand neu.
+- Der Zustand steht in Worten am Eintrag: „noch nicht gesendet“, „noch nicht gesendet, wartet auf Netz“, „wird gesendet“, „gesendet 14:02“. Ohne Netz bleibt die Sendung in der Warteschlange und geht von allein raus, sobald das Netz zurück ist.
+- **Antworten** auf Fragen: eine Möglichkeit mit einem Tipp oder freier Text. Ist die Frage inzwischen beantwortet, sendet die App nichts und zeigt das Band „Schon beantwortet“ mit **Als Nachtrag senden** oder **Verwerfen**.
+- **Abnahmen**: **Antwort senden** schickt Urteile, Gesamturteil und bei FAIL den Folgeauftrag in einem Commit. Der Entwurf der Urteile liegt bis dahin auf dem Gerät.
+- **Erfassen** legt Einträge mit Titel, Art, An, Rang und Dringend an. Bei einer Idee ist **An dich** vorbelegt, damit sie in der Ideensammlung landet statt im Eingang. Eine Nachricht braucht einen Text.
+- **Einsortieren** im Eingang: Ziel wählen (**An dich** oder ein Projekt), auf Wunsch ein Satz dazu, **Senden** wartet auf ein Ziel. Der Eintrag bleibt im Eingang, bis die Sendung angekommen ist, und trägt bis dahin „noch nicht gesendet“. Hat inzwischen ein anderes Gerät den Eintrag adressiert, zeigt die App „Schon einsortiert“ mit **Trotzdem senden**.
+- Vor dem Senden prüft die App Titel, Text und Sätze auf Geheimnisse und persönliche Angaben. Ein Geheimnis geht nie raus; bei persönlichen Angaben kannst du mit **Trotzdem senden** freigeben. Das Band nennt Ort und Art, nie den Wert.
+- Lehnt GitHub das Token ab oder fehlt ihm das Recht zum Schreiben, bleibt die Eingabe in der Warteschlange und der Eintrag zeigt ein Band mit **Neues Token eintragen**; nach einem neuen Token gehen die Sendungen von allein raus. Bei anderen Fehlern bietet das Band **Erneut senden** und **Verwerfen**.
+- Neue Einträge tragen die Zeit von GitHub, nicht die des Geräts. **Mehr** warnt, wenn die Uhr des Geräts mehr als eine Minute abweicht.
+- Für Entwickler: `tests/mockgithub.test.mjs` schickt alle Arten von Sendung an eine nachgebaute Git-Data-API und verlangt, dass die Prüfung des Postwerkzeugs auf einer Kopie des Datenklons mit Exit 0 endet (Umgebung `POST_DATEN` und `POST_PRUEFBEFEHL`, sonst SKIP). Der Wegetest spielt das Schreiben in Echtzeit nach, die Vorschau hat Szenarien für Hinweis, abgelehnte Eingabe, Sendefehler und Uhr.
+
 ## 20261114.03 (2026-11-14)
 
 Teil D: Ansichten, Navigation und Suche. Die App zeigt jetzt, was auf dich wartet. Senden kommt mit einer späteren Fassung; Eingaben bleiben bis dahin als Entwurf auf dem Gerät.

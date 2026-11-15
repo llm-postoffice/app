@@ -102,12 +102,12 @@ test('Ohne Schreibschicht sind Erledigt und Senden gesperrt und ein Satz sagt wa
   const { r, knoepfe } = await aktion('m7q2ke');
   const erledigt = knoepfe.find((b) => b.dataset.handlung === 'erledigt');
   assert.equal(erledigt.disabled, true);
-  assert.match(t(r.aktion), /Diese Fassung liest nur/);
+  assert.match(t(r.aktion), /Senden ist hier nicht eingerichtet/);
   const antworten = knoepfe.find((b) => b.dataset.handlung === 'antworten');
   assert.equal(antworten.getAttribute('href'), '#eintrag/m7q2ke/antworten');
   const mit = await aktion('m7q2ke', { erledigen: async () => {} });
   assert.equal(mit.knoepfe.find((b) => b.dataset.handlung === 'erledigt').disabled, false);
-  assert.doesNotMatch(t(mit.r.aktion), /liest nur/);
+  assert.doesNotMatch(t(mit.r.aktion), /nicht eingerichtet/);
 });
 
 test('Freigabe: keine Knöpfe, aber der Satz, dass Freigeben erst in Phase 4 geht (E5)', async () => {

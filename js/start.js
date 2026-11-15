@@ -10,4 +10,4 @@ speicherSichern(db);
 const steuerung = new Abgleichsteuerung({
   db, fetch: (...a) => fetch(...a), sichtbar: () => document.visibilityState === 'visible', amNetz: () => navigator.onLine,
 });
-await starteApp({ db, steuerung });
+await starteApp({ db, steuerung, fetch: (...a) => fetch(...a) });

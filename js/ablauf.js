@@ -1,6 +1,7 @@
 // Abnahme Schritt für Schritt: ein Schritt je Bildschirm mit Aktion, Befehl, Erwartetem und vier Urteilen, ein Blatt für den
 // Satz bei FAIL, BLOCKED und SKIP, und das Ergebnis vor dem Senden. Die Urteile liegen als Entwurf auf dem Gerät
-// (entwuerfe.js) und überstehen Zurück, Neuladen und das Ende der App; gesendet wird erst mit der Schreibschicht (Teil E).
+// (entwuerfe.js) und überstehen Zurück, Neuladen und das Ende der App; gesendet wird mit **Antwort senden** über die
+// Schreibschicht (schreiben.js), zehn Sekunden Rückgängig, bei FAIL mit dem Folgeauftrag im selben Commit.
 import { el, ico } from './dom.js';
 import { abnahmeSchritte, hostsVon } from './welt.js';
 import { projektDes } from './zustand.js';
@@ -10,9 +11,10 @@ import { ergebnisVon, naechsterOffen, einzeilig } from './abnahme.js';
 import { band, feld, knopf, linkKnopf, platz } from './karten.js';
 import { ohneStand } from './ansichten.js';
 import { eintragsZeile } from './eintrag.js';
-import { liesEntwurf, loescheEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
+import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 import { idMitStrich } from './format.js';
 import { kannSenden, SENDEN_FEHLT } from './schreiben.js';
+import { absender } from './absenden.js';
 
 const WOERTER = ['PASS', 'FAIL', 'BLOCKED', 'SKIP'];
 const SATZ_FRAGE = { FAIL: 'Was hast du gesehen?', BLOCKED: 'Was hat dich gehindert?', SKIP: 'Warum lässt du den Schritt aus?' };
@@ -161,11 +163,11 @@ export async function ergebnisAnsicht(welt, z, k, o) {
   an.addEventListener('input', async () => { u.anmerkung = an.value; await speichereUrteile(k, e.id, u); });
   teile.push(feld({ beschriftung: 'Anmerkung (freiwillig)', steuerung: an }));
   const gesperrt = !kannSenden(k);
-  const senden = knopf('Antwort senden', { klasse: 'gefuellt', gesperrt, an: async () => {
-    await k.schreiben.urteilSenden(e.id, { text: r.text });
-    await loescheEntwurf(k.db, schluessel.urteil(e.id));
-    k.ersetze('#wartet');
-  } });
+  const { platz: ablehnung, los } = absender(
+    (opt) => k.schreiben.urteilSenden(e.id, { text: r.text, entwurf: { schluessel: schluessel.urteil(e.id), wert: { schritte: u.schritte, anmerkung: u.anmerkung ?? '' } }, ...opt }),
+    () => k.ersetze('#wartet'));
+  teile.splice(1, 0, ablehnung);   // oben, damit eine Ablehnung ohne Suchen im Blick ist
+  const senden = knopf('Antwort senden', { klasse: 'gefuellt', gesperrt, an: (ev) => los(false, ev.currentTarget) });
   senden.dataset.handlung = 'abnahme';
   return { inhalt: teile, aktion: gesperrt ? [senden, el('p', { class: 'neben satz' }, SENDEN_FEHLT)] : [senden], titel: 'Ergebnis' };
 }

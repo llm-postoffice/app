@@ -1,0 +1,284 @@
+// Die Ansichten an der Schreibschicht (Teil E): jeder Knopf, der sendet, ruft die Schreibschicht mit den richtigen Angaben;
+// eine abgelehnte Eingabe zeigt ein Band und schließt nichts; der Hinweis bietet Rückgängig an. Ein winziges DOM (hilfen/fakedom.mjs)
+// und ein Schreiber, der nur aufschreibt, was man ihn fragt.
+import assert from 'node:assert/strict';
+import { after, before, test } from 'node:test';
+import { installiereFakeDom, suche as finde, textVon, Knoten } from './hilfen/fakedom.mjs';
+import { JETZT, dateien, entwuerfe, schlangeZustaende } from './hilfen/beispieldaten.mjs';
+
+let aufraeumen;
+let M;
+before(async () => {
+  aufraeumen = installiereFakeDom();
+  M = {
+    welt: await import('../js/welt.js'), eintrag: await import('../js/eintrag.js'), ablauf: await import('../js/ablauf.js'),
+    erfassen: await import('../js/erfassen.js'), hinweis: await import('../js/hinweis.js'), speicher: await import('../js/speicher.js'),
+    steuerung: await import('../js/steuerung.js'), absenden: await import('../js/absenden.js'),
+  };
+});
+after(() => aufraeumen());
+
+const t = (x) => textVon(x).replaceAll('­', '');
+const welt = (extra = {}) => M.welt.baueWelt({ pfade: dateien(), jetzt: JETZT, ...extra });
+const z = () => ({ phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: { geprueft: JETZT - 5 * 60000, dateien: 60 }, naechster: null });
+
+/** Ein Schreiber, der Aufrufe aufschreibt und die vorgegebene Antwort gibt. */
+function attrappe(antwort = { ok: true, id: 's1' }) {
+  const aufrufe = [];
+  const f = (name) => async (...a) => { aufrufe.push([name, ...a]); return typeof antwort === 'function' ? antwort(name, ...a) : antwort; };
+  return { aufrufe, antworten: f('antworten'), urteilSenden: f('urteilSenden'), erledigen: f('erledigen'), einsortieren: f('einsortieren'), anlegen: f('anlegen'),
+    senden: f('senden'), erneut: f('erneut'), verwerfen: f('verwerfen') };
+}
+async function kontext(schreiben) {
+  const db = M.speicher.speicherDatenbank();
+  const steuerung = new M.steuerung.Abgleichsteuerung({ db, fetch: () => { throw new Error('kein Netz im Test'); }, jetzt: () => JETZT });
+  const wege = [];
+  return { db, steuerung, schreiben, jetzt: () => JETZT, gehe: (a) => wege.push(['gehe', a]), ersetze: (a) => wege.push(['ersetze', a]), neuZeichnen() {}, wege };
+}
+const schliessen = () => { schliessen.n++; };
+schliessen.n = 0;
+const knopfMit = (liste, text) => finde(liste, 'button').find((b) => t(b).trim() === text);
+
+test('Antwortblatt: ein Tipp auf eine Möglichkeit sendet genau diese, schließt das Blatt und fasst den freien Text nicht an', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  const b = finde(r.koerper, 'button[data-wahl]');
+  assert.deepEqual(b.map((x) => x.getAttribute('data-wahl')), ['A', 'B']);
+  assert.equal(b[0].disabled, false);
+  await b[0].klick();
+  assert.deepEqual(s.aufrufe.map((a) => [a[0], a[1], a[2].wahl, a[2].text]), [['antworten', 'r2d4vn', 'A', undefined]]);
+  assert.equal(schliessen.n, 1);
+});
+
+test('Antwortblatt: freier Text geht mit seinem Entwurf mit, damit Rückgängig ihn zurücklegt; ohne Text geschieht nichts', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  const senden = knopfMit(r.knoepfe, 'Senden');
+  await senden.klick();
+  assert.equal(s.aufrufe.length, 0, 'ein leeres Feld sendet nichts');
+  const feld = finde(r.koerper, 'textarea')[0];
+  feld.value = ' Lieber die Standardbibliothek. ';
+  await senden.klick();
+  assert.equal(s.aufrufe.length, 1);
+  const [, id, opt] = s.aufrufe[0];
+  assert.equal(id, 'r2d4vn');
+  assert.equal(opt.text, 'Lieber die Standardbibliothek.');
+  assert.deepEqual(opt.entwurf, { schluessel: 'antwort/r2d4vn', wert: { text: ' Lieber die Standardbibliothek. ' } });
+  assert.equal(schliessen.n, 1);
+});
+
+test('Abgelehnte Eingabe: Geheimnis zeigt ein Band ohne den Wert, das Blatt bleibt offen, es gibt kein Trotzdem', async () => {
+  const pruefung = { geheimnisse: [{ wo: 'in deinem Satz', zeile: 1, art: 'GitHub-Token' }], personen: [] };
+  const s = attrappe({ ok: false, pruefung });
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.eintrag.einsortierenBlatt(welt(), k, { id: 'k7m2qa' }, schliessen);
+  const ziel = finde(r.koerper, 'select')[0];
+  ziel.value = 'alpha'; for (const f of ziel.horcher.change) f();
+  await knopfMit(r.knoepfe, 'Senden').klick();
+  const text = t(r.koerper);
+  assert.match(text, /Geheimnis gefunden/);
+  assert.match(text, /in deinem Satz, Zeile 1 \(GitHub-Token\)/);
+  assert.match(text, /Sie sendet es nicht/);
+  assert.equal(finde(r.koerper, 'button').filter((b) => t(b) === 'Trotzdem senden').length, 0);
+  assert.equal(schliessen.n, 0, 'das Blatt bleibt offen');
+});
+
+test('Abgelehnte Eingabe: Personendaten lassen sich mit Trotzdem senden freigeben', async () => {
+  const pruefung = { geheimnisse: [], personen: [{ wo: 'im Text', zeile: 2, art: 'E-Mail' }] };
+  const s = attrappe((name, id, opt) => (opt.personenErlaubt ? { ok: true, id: 's1' } : { ok: false, pruefung }));
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'm7q2ke' }, schliessen);
+  finde(r.koerper, 'textarea')[0].value = 'Schreib an jemand@beispiel.test';
+  await knopfMit(r.knoepfe, 'Senden').klick();
+  assert.match(t(r.koerper), /Persönliche Angaben gefunden/);
+  assert.equal(schliessen.n, 0);
+  await knopfMit(r.koerper, 'Trotzdem senden').klick();
+  assert.equal(s.aufrufe.length, 2);
+  assert.equal(s.aufrufe[1][2].personenErlaubt, true);
+  assert.equal(schliessen.n, 1);
+});
+
+test('Einsortieren: Senden wartet auf ein Ziel, dann geht Ziel und Satz mit dem Entwurf an die Schreibschicht', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.eintrag.einsortierenBlatt(welt(), k, { id: 'k7m2qa' }, schliessen);
+  const senden = knopfMit(r.knoepfe, 'Senden');
+  assert.equal(senden.disabled, true, 'ohne Ziel gesperrt');
+  const ziel = finde(r.koerper, 'select')[0];
+  ziel.value = 'beta'; for (const f of ziel.horcher.change) f();
+  assert.equal(senden.disabled, false);
+  finde(r.koerper, 'textarea')[0].value = '  Gehört zur Bibliothek. ';
+  await senden.klick();
+  const [, id, opt] = s.aufrufe[0];
+  assert.equal(id, 'k7m2qa');
+  assert.equal(opt.ziel, 'beta');
+  assert.equal(opt.satz, 'Gehört zur Bibliothek.');
+  assert.equal(opt.entwurf.schluessel, 'einsortieren/k7m2qa');
+  assert.equal(schliessen.n, 1);
+});
+
+test('Einsortieren: An dich ist ein Ziel wie ein Projekt', async () => {
+  const k = await kontext(attrappe());
+  const r = await M.eintrag.einsortierenBlatt(welt(), k, { id: 'k7m2qa' }, schliessen);
+  const werte = finde(r.koerper, 'option').map((o) => o.getAttribute('value'));
+  assert.deepEqual(werte, ['', 'user', 'alpha', 'beta', 'gamma']);
+});
+
+test('Erledigt sendet über die Schreibschicht und geht danach zu Wartet; eine Ablehnung zeigt das Band im Eintrag', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  const w = welt();
+  const r = M.eintrag.eintragAnsicht(w, z(), k, { id: 'm7q2ke' });
+  const erledigt = finde(r.aktion, '[data-handlung="erledigt"]')[0];
+  assert.equal(erledigt.disabled, false);
+  await erledigt.klick();
+  assert.deepEqual(s.aufrufe, [['erledigen', 'm7q2ke']]);
+  assert.deepEqual(k.wege, [['ersetze', '#wartet']]);
+  const nein = attrappe({ ok: false, fehler: 'Ein Eintrag mit der ID m7q-2ke liegt nicht auf diesem Gerät' });
+  const k2 = await kontext(nein);
+  const r2 = M.eintrag.eintragAnsicht(w, z(), k2, { id: 'm7q2ke' });
+  await finde(r2.aktion, '[data-handlung="erledigt"]')[0].klick();
+  assert.deepEqual(k2.wege, []);
+  assert.match(t(r2.inhalt), /Nicht gespeichert/);
+});
+
+test('Erfassen: Titel ist Pflicht, eine Nachricht braucht Text; sonst geht alles mit dem Entwurf an die Schreibschicht', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  const e = await M.erfassen.erfassenAnsicht(welt(), z(), k);
+  const anlegen = finde(e.aktion, '[data-handlung="anlegen"]')[0];
+  await anlegen.klick();
+  assert.equal(s.aufrufe.length, 0, 'ohne Titel nichts');
+  assert.match(t(e.inhalt), /Gib einen Titel ein\./);
+  const titel = finde(e.inhalt, 'input[name="titel"]')[0];
+  titel.value = '  Datei prüfen ';
+  for (const f of titel.horcher.input) f();
+  await anlegen.klick();
+  assert.equal(s.aufrufe.length, 1);
+  const [name, opt] = s.aufrufe[0];
+  assert.equal(name, 'anlegen');
+  assert.deepEqual({ art: opt.art, titel: opt.titel, an: opt.an, text: opt.text, rang: opt.rang, dringend: opt.dringend },
+    { art: 'task', titel: 'Datei prüfen', an: null, text: '', rang: 2, dringend: false });
+  assert.equal(opt.entwurf.schluessel, 'erfassen');
+  assert.deepEqual(M.erfassen.pruefeEintrag({ art: 'message', titel: 'x', text: ' ' }), { fehler: { text: 'Eine Nachricht braucht einen Text.' } });
+  assert.deepEqual(M.erfassen.pruefeEintrag({ art: 'note', titel: 'x', text: '' }), { ok: true });
+});
+
+test('Erfassen: bei einer Idee ist An dich vorbelegt, bei einer anderen Art wieder der Eingang (N3)', async () => {
+  const k = await kontext(attrappe());
+  const e = await M.erfassen.erfassenAnsicht(welt(), z(), k);
+  const an = finde(e.inhalt, 'select[name="an"]')[0];
+  assert.deepEqual(finde(an, 'option').map((o) => o.getAttribute('value')).slice(0, 2), ['', 'user']);
+  const chips = finde(e.inhalt, 'div.chips')[0];
+  const wechsle = (art) => { for (const f of chips.horcher.change) f({ target: { value: art } }); };
+  wechsle('idea');
+  assert.equal(an.value, 'user');
+  wechsle('note');
+  assert.equal(an.value, '');
+  wechsle('idea');
+  an.value = 'alpha'; for (const f of an.horcher.change) f();
+  wechsle('task');
+  assert.equal(an.value, 'alpha', 'ein gewähltes Projekt bleibt');
+});
+
+test('Ergebnis einer Abnahme: Antwort senden reicht Text und Entwurf ein und geht zu Wartet', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  await k.db.schreibe('entwuerfe', entwuerfe()[0]);
+  const w = M.welt.baueWelt({ pfade: dateien(), jetzt: JETZT, entwuerfe: await k.db.alle('entwuerfe') });
+  const r = await M.ablauf.ergebnisAnsicht(w, z(), k, { id: '8k3m1x' });
+  const senden = finde(r.aktion, '[data-handlung="abnahme"]')[0];
+  assert.equal(senden.disabled, false);
+  await senden.klick();
+  const [name, id, opt] = s.aufrufe[0];
+  assert.equal(name, 'urteilSenden');
+  assert.equal(id, '8k3m1x');
+  assert.match(opt.text, /FAIL/);
+  assert.equal(opt.entwurf.schluessel, 'urteil/8k3m1x');
+  assert.equal(Object.keys(opt.entwurf.wert.schritte).length, 9);
+  assert.deepEqual(k.wege, [['ersetze', '#wartet']]);
+});
+
+test('Sendungen, die nicht durchgingen, haben ein Band mit der Wahl des Nutzers: Recht fehlt, Fehler, Konflikt', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  const z0 = schlangeZustaende();
+  const mit = (sendung, id) => M.eintrag.eintragAnsicht(welt({ schlange: [sendung] }), z(), k, { id });
+  const verboten = mit(z0.verboten, 'p4m7bt');
+  assert.match(t(verboten.inhalt), /Token darf nicht schreiben/);
+  assert.equal(finde(verboten.inhalt, 'a').filter((a) => a.getAttribute('href') === '#anmelden').length, 1);
+  const fehler = mit(z0.fehler, 'm7q2ke');
+  assert.match(t(fehler.inhalt), /Nicht gesendet[\s\S]*GitHub lehnt die Sendung ab \(Validation Failed\)/);
+  await knopfMit(fehler.inhalt, 'Erneut senden').klick();
+  await knopfMit(fehler.inhalt, 'Verwerfen').klick();
+  assert.deepEqual(s.aufrufe, [['erneut', 's10'], ['verwerfen', 's10']]);
+  const konflikt = mit({ id: 's5', eintrag: 'm7q2ke', art: 'antwort', zustand: 'konflikt', zeit: JETZT, titel: 'Schon beantwortet', grund: 'Jemand war schneller.' }, 'm7q2ke');
+  await knopfMit(konflikt.inhalt, 'Als Nachtrag senden').klick();
+  assert.deepEqual(s.aufrufe.at(-1), ['senden', 's5']);
+});
+
+// ---- Hinweis
+
+function attrappeSeite() {
+  const knoten = { hinweis: new Knoten('div'), text: new Knoten('span'), knopf: new Knoten('button') };
+  knoten.hinweis.hidden = true; knoten.knopf.hidden = true;
+  return { knoten, wurzel: { getElementById: (id) => ({ hinweis: knoten.hinweis, 'hinweis-text': knoten.text, 'hinweis-knopf': knoten.knopf })[id] } };
+}
+function zeitgeber() {
+  const liste = [];
+  return { liste, setze: (f, ms) => { liste.push({ f, ms, an: true }); return liste.length - 1; }, loesche: (n) => { if (liste[n]) liste[n].an = false; } };
+}
+
+test('Hinweis: zeigt den Satz zehn Sekunden mit Rückgängig, nimmt zurück und räumt danach auf', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const zg = zeitgeber();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zg, wurzel });
+  let zurueck = 0;
+  h.zeige({ text: 'Antwort „A“ gespeichert', rueckgaengig: async () => { zurueck++; return true; } });
+  assert.equal(knoten.hinweis.hidden, false);
+  assert.equal(knoten.text.textContent, 'Antwort „A“ gespeichert');
+  assert.equal(knoten.knopf.hidden, false);
+  assert.equal(zg.liste[0].ms, 10_000);
+  await knoten.knopf.onclick();
+  assert.equal(zurueck, 1);
+  assert.match(knoten.text.textContent, /Zurückgenommen/);
+  assert.equal(knoten.knopf.hidden, true, 'danach gibt es nichts mehr zurückzunehmen');
+  zg.liste.at(-1).f();
+  assert.equal(knoten.hinweis.hidden, true);
+});
+
+test('Hinweis: läuft die Frist ab, verschwindet er; ein neuer Hinweis ersetzt den alten', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const zg = zeitgeber();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zg, wurzel });
+  h.zeige({ text: 'Eins', rueckgaengig: async () => true });
+  h.zeige({ text: 'Zwei', rueckgaengig: async () => true });
+  assert.equal(knoten.text.textContent, 'Zwei');
+  assert.equal(zg.liste[0].an, false, 'der alte Zeitgeber ist gelöscht');
+  zg.liste[1].f();
+  assert.equal(knoten.hinweis.hidden, true);
+});
+
+test('Hinweis: ist die Sendung schon unterwegs, sagt er es, statt Erfolg vorzutäuschen', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zeitgeber(), wurzel });
+  h.zeige({ text: 'Eintrag gespeichert', rueckgaengig: async () => false });
+  await knoten.knopf.onclick();
+  assert.match(knoten.text.textContent, /schon unterwegs/);
+});
+
+test('Prüfung der Ablehnung: Sätze nennen Ort und Art, nie den Wert, und zählen mehrere Funde', () => {
+  const g = M.absenden.pruefungSatz({ geheimnisse: [{ wo: 'im Text', zeile: 1, art: 'GitHub-Token' }, { wo: 'im Titel', zeile: 1, art: 'API-Schlüssel' }], personen: [] });
+  assert.equal(g.titel, 'Geheimnis gefunden');
+  assert.match(g.satz, /zwei Geheimnisse: im Text, Zeile 1 \(GitHub-Token\); im Titel, Zeile 1 \(API-Schlüssel\)\./);
+  const p = M.absenden.pruefungSatz({ geheimnisse: [], personen: [{ wo: 'im Text', zeile: 3, art: 'IBAN' }] });
+  assert.equal(p.titel, 'Persönliche Angaben gefunden');
+  assert.doesNotMatch(`${g.satz}${p.satz}`, /!/);
+});

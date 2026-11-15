@@ -32,7 +32,7 @@ if (navigator.onLine) {
   for (const speicher of Object.keys(SPEICHER)) for (const k of await db.schluessel(speicher)) await db.entferne(speicher, k);
   await setzeEinstellung(db, 'speicher', { dauerhaft: true });
   if (sz.anmelden !== false) { await setzeEinstellung(db, 'anmeldung', { repo: REPO, token: TOKEN }); await setzeEinstellung(db, 'geraet', 'handy'); }
-  const quelle = (extra = {}) => mockQuelle({ dateien: sz.daten, repo: REPO, token: TOKEN, ...extra });
+  const quelle = (extra = {}) => mockQuelle({ dateien: sz.daten, repo: REPO, token: TOKEN, serverzeit: () => JETZT + (sz.uhr ?? 0), ...extra });
   if (sz.seed) {
     const ersteSteuerung = new Abgleichsteuerung({ db, fetch: quelle().fetch, jetzt: () => JETZT, sichtbar: () => false });
     await ersteSteuerung.lauf('vorschau');
@@ -50,7 +50,19 @@ if (navigator.onLine) {
   if (sz.suche) setzeSuchText(sz.suche);
 }
 const steuerung = new Abgleichsteuerung({ db, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, sichtbar: () => true, amNetz: () => navigator.onLine });
-await starteApp({ db, steuerung, jetzt: () => JETZT });
+// Die Vorschau sendet nie von allein: der Zeitgeber der Schreibschicht und des Hinweises steht still, so bleibt jeder Zustand
+// (noch nicht gesendet, Hinweis mit Rückgängig) für das Bild stehen. Der Abgleich läuft mit seinem eigenen Zeitgeber.
+await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} } });
+// Tipps, die ein Szenario braucht (ein Hinweis nach dem Senden, eine abgelehnte Eingabe): wie ein Nutzer, über die Knöpfe
+for (const wahl of [].concat(sz?.klick ?? [])) {
+  const erst = Date.now();
+  let knopf = null;
+  while (!(knopf = document.querySelector(wahl)) && Date.now() - erst < 4000) await new Promise((r) => setTimeout(r, 100));
+  if (!knopf) throw new Error('Knopf fehlt: ' + wahl);
+  await new Promise((r) => setTimeout(r, 400));
+  knopf.click();
+  await new Promise((r) => setTimeout(r, 400));
+}
 if (sz?.formular) {
   // Eingaben der Anmeldung, die die Prüfung ablehnt: so zeigt die Vorschau die Fehler am Feld
   await new Promise((r) => setTimeout(r, 200));

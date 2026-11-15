@@ -21,10 +21,21 @@ arbeitet offline mit einer Warteschlange.
   unter `node --test`) und laufen über `anzeigen.js`; `app.js` verbindet alles und ist für `start.js` und die Vorschau
   derselbe Einstieg. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0); jedes benutzte
   Symbol muss im Sprite stehen und jedes im Sprite benutzt sein (`tests/geruest.test.mjs`).
-- Schreiben ist Teil E: `js/schreiben.js` legt den Vertrag fest (`k.schreiben` mit `antworten`, `urteilSenden`,
-  `erledigen`, `einsortieren`, `anlegen`). Bis dahin sind die Knöpfe gesperrt und ein Satz sagt warum; nichts täuscht
-  einen Erfolg vor. Neue Handlungen bekommen in `welt.js` (`handlungenVon`) einen Eintrag und in der Ansicht einen Knopf
-  mit `data-handlung` (E13; Test und Wegetest prüfen beides).
+- Schreiben (Teil E): `js/schreiben.js` ist die Schreibschicht (`k.schreiben`, ein `Schreiber`): `antworten`, `urteilSenden`,
+  `erledigen`, `einsortieren`, `anlegen` reihen eine Sendung in die Warteschlange (Speicher `schlange`) und geben
+  `{ ok, id }`, `{ ok: false, fehler }` oder `{ ok: false, pruefung }` zurück; `senden`, `erneut`, `verwerfen` und
+  `rueckgaengig` sind die Eingriffe des Nutzers. Eine Sendung wartet zehn Sekunden (Hinweis mit **Rückgängig**,
+  `hinweis.js`), gleicht dann bedingt ab, prüft auf Konflikte (schon beantwortet, einsortiert, erledigt) und geht als ein
+  Commit über die Git-Data-API raus (`senden.js`: Kopf, Blobs, Baum, Commit, Zweig ohne force, mindestens 1 s zwischen
+  schreibenden Anfragen, Neubau bei 409 und 422). Die Dateien einer Sendung baut `dateien.js` Zeichen für Zeichen wie das
+  Postwerkzeug (Testfälle `write`), ULIDs und neue IDs `erzeugen.js` (`crypto.getRandomValues`, Uhr gegen den `Date`-Kopf
+  korrigiert). Die Ansichten gehen über `absenden.js`: eine abgelehnte Eingabe zeigt ein Band (ein Geheimnis geht nie raus,
+  Personendaten mit **Trotzdem senden**). `app.js` baut den Schreiber, wenn ein `fetch` kommt; ohne Schreiber (nur in Tests)
+  bleiben die Knöpfe gesperrt und ein Satz sagt warum. Eine neue Handlung bekommt in `welt.js` (`handlungenVon`) einen
+  Eintrag und in der Ansicht einen Knopf mit `data-handlung` (E13; Test und Wegetest prüfen beides). Die Vorschau lässt die
+  Zeitgeber der Schreibschicht still stehen; ein Szenario tippt mit `klick` einen Knopf an.
+- Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe README) und überspringt
+  sich ohne sie; mit ihnen endet die Prüfung des Postwerkzeugs auf der Sandbox mit Exit 0.
 - Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten
   (`tests/hilfen/beispieldaten.mjs`, neutral: alpha, beta, gamma, rechner-a) und ersetzt dort nur `js/start.js`;
   `tools/rendern.mjs` lässt den Renderer aus p94-hig jedes Szenario prüfen. Ein neuer Zustand ist ein neues Szenario
