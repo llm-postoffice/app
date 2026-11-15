@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Wegetest der App in Chromium (headless, frisches Profil, nur Node ab 22): Anmeldung, Zurück (UNA-3, UNA-4), Blatt
 // (UDI-3), Leiste (UNA-1, UNA-2), ein Knopf je Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe (UEI-6),
-// Statusleiste (UFA-1), Netzzeile (UOF-4), Fassung in Mehr und eine fehlerfreie Konsole (CSP, UPL-3). Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg je Zeile: PASS, FAIL oder BLOCKED.
+// Statusleiste (UFA-1), Netzzeile (UOF-4), Start ohne Netz (UOF-1), neue Fassung (UOF-5), Installation, Fassung in Mehr und eine fehlerfreie Konsole (CSP, UPL-3). Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg je Zeile: PASS, FAIL oder BLOCKED.
 // Dazu IndexedDB und der Abgleich gegen eine nachgebaute GitHub-API: Chromium fängt api.github.com ab, kein Paket
 // geht ins Netz.
 import { spawn } from 'node:child_process';
@@ -19,7 +19,8 @@ const HILFE = `Aufruf: node tools/wege.mjs [OPTIONEN]
 
 Spielt die Wege der App in Chromium nach: Anmeldung, alle Zurück-Wege der Tabelle, Blätter,
 Navigationsleiste, einen Knopf zu jeder Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe
-über Neuladen, Statusleiste, Netzzeile, Fassung in Mehr, IndexedDB, den Abgleich und eine Konsole ohne
+über Neuladen, Statusleiste, Netzzeile, den Start ohne Netz, eine zweite Fassung des Service
+Workers (Update wartet, Neu starten), Installation, Fassung in Mehr, IndexedDB, den Abgleich und eine Konsole ohne
 Fehler. Die Daten sind erfunden (tests/hilfen/beispieldaten.mjs).
 Chromium läuft headless mit einem frischen Profil in $TMPDIR (Vorgabe /tmp) und wird danach entfernt.
 Die Anfragen an api.github.com fängt Chromium ab und beantwortet sie aus einem nachgebauten Repo.
@@ -56,12 +57,18 @@ if (arg.length) {
 const wurzel = new URL('../', import.meta.url).pathname;
 const TYP = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
+// Teil F: `zweiteFassung` lässt den Server einen Service Worker mit anderem Cache-Namen ausliefern (eine neue Fassung der Hülle);
+// `zugriffe` zählt, was der Server ausliefert, damit der Test zeigt, dass der Start ohne Netz nichts vom Server holt.
+let zweiteFassung = false;
+const zugriffe = [];
 const server = createServer(async (q, a) => {
   try {
     const pfad = decodeURIComponent(new URL(q.url, 'http://localhost').pathname);
     const p = normalize(join(wurzel, pfad.endsWith('/') ? `${pfad}index.html` : pfad));
     if (!p.startsWith(wurzel)) { a.writeHead(403); a.end(); return; }
+    zugriffe.push(pfad);
     a.writeHead(200, { 'content-type': TYP[extname(p)] || 'application/octet-stream' });
+    if (zweiteFassung && pfad === '/sw.js') { a.end((await readFile(p, 'utf8')).replace(`postfach-${VERSION}`, `postfach-${VERSION}-zwei`)); return; }
     a.end(await readFile(p));
   } catch { a.writeHead(404); a.end(); }
 }).listen(0, '127.0.0.1');
@@ -140,7 +147,7 @@ let aktuell = null;   // die zuletzt geöffnete Seite; die nächste schließt si
  * Öffnet eine Seite in einem Fenster der Größe breite × hoehe. Sie startet mit dem, was auf dem Gerät liegt (vorbereiten legt
  * Anmeldung und Stand ab); die Anfragen an api.github.com beantwortet `abgefangen`.
  */
-async function seite(url, breite = 360, hoehe = 800) {
+async function seite(url, breite = 360, hoehe = 800, ohneNetz = false) {
   if (aktuell) { await aktuell(); aktuell = null; }
   const { result: { targetId } } = await senden('Target.createTarget', { url: 'about:blank' });
   const { result: { sessionId: s } } = await senden('Target.attachToTarget', { targetId, flatten: true });
@@ -150,6 +157,8 @@ async function seite(url, breite = 360, hoehe = 800) {
   await senden('Network.enable', {}, s);
   await senden('Fetch.enable', { patterns: [{ urlPattern: 'https://api.github.com/*' }] }, s);
   await senden('Page.addScriptToEvaluateOnNewDocument', { source: WAECHTER }, s);
+  // ohneNetz: das Netz ist schon aus, wenn die Seite zum ersten Mal geladen wird (Start ohne Netz, UOF-1)
+  if (ohneNetz) await senden('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, s);
   await senden('Page.navigate', { url }, s); await pause(700);
   const werte = async (x) => (await senden('Runtime.evaluate', { expression: x, returnByValue: true, awaitPromise: true }, s)).result?.result?.value;
   const tippe = async (sel) => {
@@ -173,9 +182,12 @@ async function seite(url, breite = 360, hoehe = 800) {
   };
   const quelle = async (q) => { abgefangen = fange(q); };
   // Bilder von Mehr: hell, dunkel, Text 200 % (UEW-2); nur mit --bilder
-  const bild = async (name) => {
+  const bild = async (name, abschnitt = null) => {
     if (!bilderOrdner) return;
     await mkdir(bilderOrdner, { recursive: true });
+    // abschnitt: Überschrift in Mehr, zu der das Bild scrollt (sonst zeigt es den Anfang)
+    const hin = async () => { if (abschnitt) await werte(`(() => { const h = [...document.querySelectorAll('main h2')].find((e) => e.textContent === ${JSON.stringify(abschnitt)}); if (h) scrollTo(0, h.getBoundingClientRect().top + scrollY - 90); })()`); await pause(200); };
+    await hin();
     const schreibe = async (ende) => {
       const r = await senden('Page.captureScreenshot', { format: 'png' }, s);
       await writeFile(join(bilderOrdner, `${name}-${ende}.png`), Buffer.from(r.result.data, 'base64'));
@@ -185,7 +197,8 @@ async function seite(url, breite = 360, hoehe = 800) {
     await medien('light');
     // Text 200 % über die Wurzel, wie der Browser die Schriftgröße des Systems umsetzt; CSSOM statt <style>, die CSP bleibt an
     await werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`);
-    await werte('scrollTo(0, document.body.scrollHeight)'); await pause(300);
+    if (abschnitt) await hin(); else await werte('scrollTo(0, document.body.scrollHeight)');
+    await pause(300);
     await schreibe('text200');
     await werte(`document.documentElement.style.removeProperty('font-size'); scrollTo(0, 0)`);
   };
@@ -712,6 +725,80 @@ try {
   await p.schliesse();
   abgefangen = fange(standardQuelle());
   await vorbereiten();   // Anmeldung und Stand der Beispieldaten wiederherstellen
+
+  // 7b. Teil F: Start ohne Netz (UOF-1), neue Fassung (UOF-5), Installation und Mitteilungen in Mehr
+  //     Der Server liefert auf Wunsch eine zweite Fassung des Service Workers (anderer Cache-Name); so entsteht der Update-Weg.
+  const hatSteuerung = 'navigator.serviceWorker.controller !== null';
+  const caches_ = `(async () => (await caches.keys()).sort())()`;
+  const hueller = [...(/const DATEIEN = \[([^\]]*)\]/s.exec(await readFile(join(wurzel, 'sw.js'), 'utf8'))?.[1] ?? '').matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  p = await seite(t('#mehr'));
+  melde(await p.warte(hatSteuerung, 10000), 'nach dem ersten Besuch steuert der Service Worker die Seite (UOF-1)', 'keine Steuerung nach 10 s');
+  melde(JSON.stringify(await p.werte(caches_)) === JSON.stringify([`postfach-${VERSION}`]), 'der Cache heißt nach der Fassung und ist der einzige', JSON.stringify(await p.werte(caches_)));
+  melde(await p.werte(`(async () => (await (await caches.open(${JSON.stringify(`postfach-${VERSION}`)})).keys()).length)()`) === hueller.length,
+    `der erste Besuch legt alle ${hueller.length} Dateien der Hülle in den Cache`, `${await p.werte(`(async () => (await (await caches.open(${JSON.stringify(`postfach-${VERSION}`)})).keys()).length)()`)} Dateien`);
+  melde(await p.werte('document.getElementById("neu").hidden') === true, 'ohne neue Fassung fehlt das Band „Neue Fassung geladen“', 'Band da');
+  await p.bild('mehr-installation', 'App installieren');
+  await p.bild('mehr-mitteilungen', 'Mitteilungen');
+  // Mehr in der Hülle: die Installation als nummerierte Liste mit dem Wortlaut der Probe, die Mitteilungen in Worten
+  melde(await p.werte(`(() => { const l = [...document.querySelectorAll('main ol')].find((o) => /Install and create shortcut/.test(o.textContent)); return !!l && l.querySelectorAll('li').length === 5 && l.querySelector('strong').textContent === 'Install and create shortcut'; })()`),
+    'Mehr nennt die Installation in nummerierten Schritten mit „Install and create shortcut“ fett', 'Liste fehlt');
+  melde(await p.werte(`/läuft im Browser/.test(document.querySelector('main').innerText) && !/läuft als installierte App/.test(document.querySelector('main').innerText)`), 'im Browser sagt Mehr „läuft im Browser“', 'anderer Satz');
+  melde(await p.werte(`/ID kopieren im Hinweis legt die ID des Eintrags in die Zwischenablage/.test(document.querySelector('main').innerText) && /Tipp auf den Hinweis öffnet ntfy, nicht diese App/.test(document.querySelector('main').innerText)`),
+    'Mehr sagt, was ID kopieren tut und dass ein Tipp ntfy öffnet', 'Satz fehlt');
+  await p.schliesse();
+
+  // Start ohne Netz: die Seite lädt aus dem Cache, nichts kommt vom Server, die Einträge stehen da, die ruhige Zeile sagt es
+  const vorOhneNetz = zugriffe.length;
+  p = await seite(t('#wartet'), 360, 800, true);
+  const ohne = await p.warte(`document.title === 'Postfach' && document.querySelectorAll('main .karte').length > 3`, 8000);
+  const geholt = zugriffe.slice(vorOhneNetz).filter((z) => z !== '/sw.js' && !z.startsWith('/js/swlogik'));
+  melde(ohne, 'ohne Netz startet die App aus dem Cache und zeigt die Einträge vom letzten Abgleich (UOF-1)', `Titel ${await p.werte('document.title')}, ${await p.werte('document.querySelectorAll("main .karte").length')} Karten`);
+  melde(geholt.length === 0, 'beim Start ohne Netz holt die Seite nichts vom Server', geholt.join(', '));
+  melde(await p.warte('!document.getElementById("stand").hidden', 3000), 'beim Start ohne Netz steht oben die ruhige Zeile „Ohne Netz“ (UOF-4)', 'Zeile fehlt');
+  melde((await p.werte('window.__melde')).length === 0, 'der Start ohne Netz meldet keinen Fehler in der Konsole', (await p.werte('window.__melde')).join('; '));
+  await p.schliesse();
+
+  // Neue Fassung: Entwurf und Schlange liegen vor dem Update auf dem Gerät und überstehen es
+  const dbLesen = (f) => `(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); try { return await (${f})(db); } finally { db.schliesse(); } })()`;
+  p = await seite(t('#mehr'));
+  await p.warte(hatSteuerung, 10000);
+  await p.werte(dbLesen(`async (db) => { await db.schreibe('entwuerfe', { schluessel: 'erfassen', art: 'idea', titel: 'Vor dem Update', an: 'user', text: '', rang: '2', dringend: false, zeit: Date.now() });
+    await db.schreibe('schlange', { id: 'wege-f', eintrag: 'm7q2ke', art: 'antwort', zustand: 'fehler', zeit: Date.now(), grund: 'GitHub lehnt die Sendung ab (Validation Failed).' }); }`));
+  await p.schliesse();
+  zweiteFassung = true;   // der Server liefert jetzt einen Service Worker mit anderem Cache-Namen
+  p = await seite(t('#wartet'));
+  melde(await p.warte('!document.getElementById("neu").hidden', 15000), 'eine neue Fassung des Service Workers zeigt unten die Zeile „Neue Fassung geladen.“ (UOF-5)', `${await p.werte('document.getElementById("neu").hidden')}`);
+  melde(await p.werte(`document.getElementById('neu-text').textContent === 'Neue Fassung geladen.' && document.getElementById('neu-knopf').textContent === 'Neu starten' && !document.getElementById('blatt').open`),
+    'die Zeile trägt den Knopf Neu starten und ist kein Dialog', await p.werte('document.getElementById("neu").innerText'));
+  melde(await p.werte('(() => { const b = document.getElementById("neu-knopf").getBoundingClientRect(); return b.width >= 48 && b.height >= 48; })()'), 'der Knopf Neu starten ist mindestens 48 × 48 dp groß (UZI-1)', 'zu klein');
+  melde(JSON.stringify(await p.werte(caches_)) === JSON.stringify([`postfach-${VERSION}`, `postfach-${VERSION}-zwei`]), 'beide Fassungen der Hülle liegen im Cache, bis der Nutzer wechselt', JSON.stringify(await p.werte(caches_)));
+  melde(await p.werte('navigator.serviceWorker.controller.scriptURL.endsWith("/sw.js")') && await p.werte('(async () => !!(await navigator.serviceWorker.getRegistration()).waiting)()'), 'die alte Fassung steuert weiter, die neue wartet', 'kein wartender Worker');
+  await p.bild('neue-fassung');
+  // Beim Tippen weicht die Zeile: sie zieht dem Schreibenden nichts unter den Händen weg
+  await p.tippe('#leiste a[href="#erfassen"]');
+  await p.werte(`document.querySelector('main input[name="titel"]').focus()`); await pause(300);
+  melde(await p.werte('getComputedStyle(document.getElementById("neu")).display') === 'none', 'während der Eingabe ist die Zeile ausgeblendet', await p.werte('getComputedStyle(document.getElementById("neu")).display'));
+  await p.werte('document.activeElement.blur()'); await pause(300);
+  melde(await p.werte('getComputedStyle(document.getElementById("neu")).display') !== 'none', 'nach der Eingabe steht sie wieder da', 'bleibt aus');
+  await p.tippe('#leiste a[href="#mehr"]');
+  melde(await p.werte(`document.getElementById("neu").hidden && /Neue Fassung geladen/.test(document.querySelector('main .band')?.innerText ?? '')`), 'in Mehr steht das Band bei „Fassung“ und die Zeile unten fehlt', await p.werte('document.querySelector("main .band")?.innerText'));
+  await p.bild('mehr-neue-fassung', 'Dieses Gerät');
+  // Neu starten: „wechseln“ geht an den wartenden Worker, die Seite lädt einmal neu, die alte Hülle fällt weg
+  await p.werte('window.__vorher = 1');
+  await p.tippe('main .band button');
+  melde(await p.warte('window.__vorher === undefined && navigator.serviceWorker.controller !== null', 15000), 'Neu starten übernimmt die neue Fassung und lädt die Seite neu', 'Seite lädt nicht neu');
+  melde(await p.warte(`(async () => JSON.stringify((await caches.keys()).sort()) === ${JSON.stringify(JSON.stringify([`postfach-${VERSION}-zwei`]))})()`, 8000), 'danach bleibt nur die neue Hülle im Cache', JSON.stringify(await p.werte(caches_)));
+  melde(await p.werte('document.getElementById("neu").hidden'), 'danach fehlt die Zeile', 'Zeile bleibt');
+  const nachher = await p.werte(dbLesen(`async (db) => ({ entwurf: (await db.lies('entwuerfe', 'erfassen'))?.titel, schlange: (await db.alle('schlange')).map((s) => s.id) })`));
+  melde(nachher?.entwurf === 'Vor dem Update' && JSON.stringify(nachher.schlange) === '["wege-f"]', 'Entwurf und Schlange überstehen den Neustart', JSON.stringify(nachher));
+  melde(await p.werte('(() => { const n = performance.getEntriesByType("navigation")[0]; return n.type; })()') === 'reload', 'die Seite hat genau einmal neu geladen', await p.werte('performance.getEntriesByType("navigation")[0].type'));
+  await p.werte(dbLesen(`async (db) => { await db.entferne('entwuerfe', 'erfassen'); await db.entferne('schlange', 'wege-f'); }`));
+  await p.schliesse();
+  // zurück zur ersten Fassung, damit die folgenden Wege wie zuvor laufen
+  zweiteFassung = false;
+  p = await seite(t('#wartet'));
+  if (await p.warte('!document.getElementById("neu").hidden', 15000)) { await p.tippe('#neu-knopf'); await p.warte('(async () => (await caches.keys()).length === 1 && (await caches.keys())[0] === ' + JSON.stringify(`postfach-${VERSION}`) + ')()', 15000); }
+  await p.schliesse();
 
   // 8. Konsole: keine Verstöße gegen die CSP, keine Fehler im Skript, in keiner Ansicht
   const ansichten = ['#wartet', '#abnahmen', '#erfassen', '#mehr', '#eingang', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`, `#eintrag/${ID}/einsortieren`, '#ideen', '#mehr/geraet', '#suche', '#anmelden', `#eintrag/${ID}/antworten`, `#eintrag/${EINGANG}/einsortieren`, `#eintrag/${ABNAHME}/schritt/3/fail`, `#eintrag/${ABNAHME}/ergebnis`];

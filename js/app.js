@@ -5,6 +5,7 @@
 import { anzeigen, setzeKontext, setzeSuchText, suchText } from './anzeigen.js';
 import { blattGeschlossen, ersetze, gehe, ort as navigationOrt, schliesseUndGehe, starten, zurueck } from './navigation.js';
 import { netzZeile } from './netz.js';
+import { Aktualisierung, pruefeRegelmaessig, zeigeNeuBand } from './aktualisieren.js';
 import { baueHinweis } from './hinweis.js';
 import { Schreiber } from './schreiben.js';
 import { statusleiste } from './statusleiste.js';
@@ -13,7 +14,11 @@ import { ladeWelt, ortVon } from './welt.js';
 
 const $ = (id) => document.getElementById(id);
 
-export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined }) {
+/**
+ * `aktualisierung` und `installiert` sind für die Vorschau da: sie zeigt die Zustände „neue Fassung wartet“ und „läuft als
+ * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser.
+ */
+export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined }) {
   statusleiste();
   $('zurueck').addEventListener('click', zurueck);
 
@@ -31,8 +36,12 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   if (!schreiben && fetch) {
     schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), hinweis: hinweis.zeige, zeitgeber, beiAenderung: () => k.neuZeichnen() });
   }
+  // Neue Fassung (UOF-5): ein ruhiges Band unten und in Mehr; die App lädt nie von selbst neu
+  const dienst = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+  const eigene = aktualisierung === undefined;
+  aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
   const k = {
-    db, steuerung, schreiben, jetzt, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, aktualisierung, installiert, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },
@@ -54,7 +63,8 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   // Der Stapel unter einem tiefen Link hängt davon ab, woher der Eintrag kommt (Eingang, Ideensammlung, Abnahmen)
   const welt0 = await ladeWelt(db, jetzt());
   if (!(await steuerung.anmeldung())) history.replaceState({ tiefe: 0 }, '', '#anmelden');
-  starten((o) => anzeigen(o), { woher: (id) => ortVon(welt0, id) });
+  let neuBand = { ansicht() {} };
+  starten((o) => { neuBand.ansicht(o.ansicht); return anzeigen(o); }, { woher: (id) => ortVon(welt0, id) });
 
   // Der Abgleich ändert den Stand: neu zeichnen, sobald sich Phase, Fehler, Netz oder Stand ändern; Fortschritt gedrosselt
   let letzter = JSON.stringify([steuerung.zustand.phase, steuerung.zustand.fehler?.art, steuerung.zustand.ohneNetz, steuerung.zustand.letzter?.geprueft]);
@@ -79,7 +89,15 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
     schreiben.aufraeumenBeimStart();
   }
 
-  // Start ohne Netz (UOF-1): der Service Worker hält die Hülle der App.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+  // Start ohne Netz (UOF-1): der Service Worker hält die Hülle der App. Er ist ein Modul (js/swlogik.js).
+  if (aktualisierung) {
+    neuBand = zeigeNeuBand(aktualisierung);
+    neuBand.ansicht(ortJetzt().ansicht);
+    aktualisierung.beiAenderung(() => k.neuZeichnen());
+  }
+  if (dienst) {
+    const registriert = dienst.register('./sw.js', { type: 'module' }).catch(() => null);   // ohne Service Worker läuft die App, nur ohne Offline-Start
+    if (eigene) registriert.then((r) => { if (r) { aktualisierung.beobachte(r); pruefeRegelmaessig(aktualisierung); } });
+  }
   return k;
 }

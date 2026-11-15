@@ -50,9 +50,16 @@ if (navigator.onLine) {
   if (sz.suche) setzeSuchText(sz.suche);
 }
 const steuerung = new Abgleichsteuerung({ db, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, sichtbar: () => true, amNetz: () => navigator.onLine });
+// Szenario „neue Fassung“: eine Registrierung mit wartendem Worker, wie der Browser sie nach einem Update liefert
+let aktualisierung;
+if (sz?.neu) {
+  const { Aktualisierung } = await import('./aktualisieren.js');
+  aktualisierung = new Aktualisierung({ container: { controller: {}, addEventListener() {} }, laden: () => {} });
+  aktualisierung.beobachte({ waiting: { postMessage() {} }, addEventListener() {} });
+}
 // Die Vorschau sendet nie von allein: der Zeitgeber der Schreibschicht und des Hinweises steht still, so bleibt jeder Zustand
 // (noch nicht gesendet, Hinweis mit Rückgängig) für das Bild stehen. Der Abgleich läuft mit seinem eigenen Zeitgeber.
-await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} } });
+await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert });
 // Tipps, die ein Szenario braucht (ein Hinweis nach dem Senden, eine abgelehnte Eingabe): wie ein Nutzer, über die Knöpfe
 for (const wahl of [].concat(sz?.klick ?? [])) {
   const erst = Date.now();
@@ -62,6 +69,13 @@ for (const wahl of [].concat(sz?.klick ?? [])) {
   await new Promise((r) => setTimeout(r, 400));
   knopf.click();
   await new Promise((r) => setTimeout(r, 400));
+}
+if (sz?.scroll) {
+  // Der Renderer macht ein Bild vom sichtbaren Teil: ein Szenario kann Mehr zu einem Abschnitt scrollen (Überschrift oder id)
+  const erst = Date.now();
+  let ziel = null;
+  while (!(ziel = [...document.querySelectorAll('main h2, #fassung')].find((e) => e.textContent === sz.scroll || e.id === sz.scroll)) && Date.now() - erst < 4000) await new Promise((r) => setTimeout(r, 100));
+  if (ziel) scrollTo(0, ziel.getBoundingClientRect().top + scrollY - 90);
 }
 if (sz?.formular) {
   // Eingaben der Anmeldung, die die Prüfung ablehnt: so zeigt die Vorschau die Fehler am Feld

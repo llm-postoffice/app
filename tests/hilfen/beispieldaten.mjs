@@ -212,6 +212,15 @@ export const SZENARIEN = {
     entwuerfe: [{ ...entwuerfe()[0], anmerkung: `Zugang: ${ERFUNDENES_TOKEN}` }] },
   'sendung-fehler': { daten: dateien(), seed: true, live: 'ok', schlange: [schlangeZustaende().verboten, schlangeZustaende().fehler] },
   uhr: { daten: dateien(), seed: true, live: 'ok', uhr: 3 * 60000 },
+  // Teil F: ein wartender Service Worker (`neu`) und die installierte App (`installiert`) lassen sich im Renderer nicht herstellen;
+  // die Vorschau setzt sie ein (tools/vorschau.mjs)
+  'neue-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true },
+  'neue-fassung-schlange': { daten: dateien(), seed: true, live: 'ok', neu: true, schlange: schlange(), entwuerfe: entwuerfe() },
+  installiert: { daten: dateien(), seed: true, live: 'ok', installiert: true },
+  'mehr-installiert': { daten: dateien(), seed: true, live: 'ok', installiert: true, scroll: 'App installieren' },
+  'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
+  'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
+  'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
   'suche-treffer': { daten: dateien(), seed: true, live: 'ok', suche: 'tpc-0e0' },
   'suche-nichts': { daten: dateien(), seed: true, live: 'ok', suche: 'zzz-999' },
 };
@@ -245,4 +254,11 @@ export const ADRESSEN = {
   'abnahme-pruefung': ['eintrag/8k3m1x/ergebnis'],
   'sendung-fehler': ['eintrag/p4m7bt', 'eintrag/m7q2ke'],
   uhr: ['mehr'],
+  'neue-fassung': ['wartet', 'mehr'],
+  'neue-fassung-schlange': ['wartet', 'mehr'],
+  installiert: ['mehr'],
+  'mehr-installiert': ['mehr'],
+  'mehr-fassung': ['mehr'],
+  'mehr-installieren': ['mehr'],
+  'mehr-mitteilungen': ['mehr'],
 };

@@ -7,13 +7,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { starteVorschau } from './vorschau.mjs';
-import { ADRESSEN } from '../tests/hilfen/beispieldaten.mjs';
+import { ADRESSEN, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'rendern';
 const HILFE = `Aufruf: node tools/rendern.mjs [OPTIONEN] [SZENARIO...]
 
 Rendert die Ansichten der App mit erfundenen Daten in Chromium (Handy-Größen, hell, dunkel, Schrift 200 %,
-ohne Netz) und schreibt die Bilder und das Protokoll lauf.txt nach ORDNER. Ohne SZENARIO rendert es alle.
+ohne Netz) und schreibt die Bilder und das Protokoll lauf.txt nach ORDNER. Ohne SZENARIO rendert es alle außer den
+Bildszenarien (mehr-fassung, mehr-installieren, mehr-installiert, mehr-mitteilungen): sie scrollen Mehr zu einem Abschnitt,
+damit das Bild ihn zeigt, und der Renderer meldet beim Scrollen Text unter der Statusleiste als Fehler des Randes.
+Nenne sie mit Namen, um ihre Bilder zu sehen.
 
 Beispiele:
   Alle Szenarien nach bilder/ rendern:
@@ -44,7 +47,7 @@ if (a.values.liste) {
   for (const [n, liste] of Object.entries(ADRESSEN)) process.stdout.write(`${n}: ${liste.join(' ')}\n`);
   process.exit(0);
 }
-const szenarien = a.positionals.length ? a.positionals : Object.keys(ADRESSEN);
+const szenarien = a.positionals.length ? a.positionals : Object.keys(ADRESSEN).filter((n) => !SZENARIEN[n]?.scroll);
 const unbekannt = szenarien.find((s) => !ADRESSEN[s]);
 if (unbekannt) { process.stderr.write(`${PROG}: Fehler: unbekanntes Szenario „${unbekannt}“\nMögliche: ${Object.keys(ADRESSEN).join(', ')}\n`); process.exit(2); }
 const renderer = join(a.values.hig, 'beispiele/rendern-mobil.mjs');
