@@ -1,7 +1,7 @@
 // Wortlaut der Ansichten: Zeiten, Mehrzahlen, Absender und die Wörter der Warteschlange (TXT-6, TXT-10, TXT-12, UOF-3).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { absenderText, adressText, artVon, entwurfZeile, schlangeZeile, schritte, sendungText, um, vor, zeitpunkt } from '../js/ansichtstexte.js';
+import { absenderText, adressText, artVon, entwurfZeile, kurz, schlangeZeile, schritte, sendungText, um, vor, zeitpunkt } from '../js/ansichtstexte.js';
 
 const jetzt = new Date(2026, 10, 14, 14, 7).getTime();
 const am = (t, h, m) => new Date(2026, 10, t, h, m).getTime();
@@ -54,4 +54,15 @@ test('Warteschlange: jeder Zustand sagt in Worten, was mit der Sendung ist (UOF-
   assert.equal(schlangeZeile({ zustand: 'konflikt', grund: 'schon bearbeitet' }).symbol, 'warning-f');
   assert.equal(entwurfZeile(5, 12).text, 'Entwurf: 5 von 12 Schritten beurteilt, noch nicht gesendet');
   assert.equal(entwurfZeile(0, 1).text, 'Entwurf: 0 von 1 Schritt beurteilt, noch nicht gesendet');
+});
+
+test('kurz: Alter einer Zeile in Kurzform mit richtiger Mehrzahl (TXT-10)', () => {
+  assert.equal(kurz(jetzt - 20_000, jetzt), 'gerade eben');
+  assert.equal(kurz(jetzt - 20 * 60000, jetzt), 'vor 20 min');
+  assert.equal(kurz(jetzt - 4 * 3600000, jetzt), 'vor 4 Std.');
+  assert.equal(kurz(jetzt - 26 * 3600000, jetzt), 'vor 1 Tag');
+  assert.equal(kurz(jetzt - 3 * 86400000, jetzt), 'vor 3 Tagen');
+  assert.equal(kurz(jetzt - 21 * 86400000, jetzt), 'vor 3 Wochen');
+  assert.equal(kurz(jetzt - 95 * 86400000, jetzt), 'vor 3 Mon.');
+  assert.equal(kurz(jetzt + 60000, jetzt), 'gerade eben', 'eine Uhr, die vorgeht, ergibt kein negatives Alter');
 });

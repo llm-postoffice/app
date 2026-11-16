@@ -25,6 +25,19 @@ export function vor(ms, jetzt) {
   return `vor ${tage} ${tage === 1 ? 'Tag' : 'Tagen'}`;
 }
 
+/** Alter in Kurzform für eine Zeile der Liste: „gerade eben“, „vor 20 min“, „vor 4 Std.“, „vor 1 Tag“, „vor 3 Wochen“, „vor 4 Mon.“. */
+export function kurz(ms, jetzt) {
+  const min = Math.max(0, Math.floor((jetzt - ms) / 60000));
+  if (min < 1) return 'gerade eben';
+  if (min < 60) return `vor ${min} min`;
+  const std = Math.floor(min / 60);
+  if (std < 24) return `vor ${std} Std.`;
+  const tage = Math.floor(std / 24);
+  if (tage < 14) return tage === 1 ? 'vor 1 Tag' : `vor ${tage} Tagen`;
+  if (tage < 60) return `vor ${Math.floor(tage / 7)} Wochen`;
+  return `vor ${Math.floor(tage / 30)} Mon.`;
+}
+
 export const schritte = (n) => (n === 1 ? '1 Schritt' : `${n} Schritte`);
 export const eintraege = (n) => (n === 1 ? '1 Eintrag' : `${n} Einträge`);
 export const abnahmen = (n) => (n === 1 ? '1 Abnahme' : `${n} Abnahmen`);
@@ -112,3 +125,28 @@ export const entwurfZeile = (beurteilt, gesamt) => ({
   symbol: 'edit_note-f', rolle: 's-warn',
   text: `Entwurf: ${beurteilt} von ${gesamt} ${gesamt === 1 ? 'Schritt' : 'Schritten'} beurteilt, noch nicht gesendet`,
 });
+
+// ---- Übersicht „Alle“: Wörter der Filter und der Sortierung
+
+/** Status der Übersicht: Schlüssel, Wort. Die Reihenfolge ist die der Auswahl und der Gruppen. */
+export const STATUS_WORTE = [
+  { wert: 'dich', text: 'Wartet auf dich' }, { wert: 'arbeit', text: 'In Arbeit' },
+  { wert: 'andere', text: 'Wartet auf anderes' }, { wert: 'offen', text: 'Offen' },
+];
+/** Priorität: Dringend ist ein eigenes Merkmal, Hoch, Normal und Niedrig stehen für den Rang 1, 2 und 3 und höher. */
+export const PRIO_WORTE = [
+  { wert: 'dringend', text: 'Dringend' }, { wert: 'hoch', text: 'Hoch' }, { wert: 'normal', text: 'Normal' }, { wert: 'niedrig', text: 'Niedrig' },
+];
+/** Sortierung: Schlüssel, Wort in der Auswahl und der Satz über der Liste („Gruppiert nach Projekt“). */
+export const SORT_WORTE = [
+  { wert: 'projekt', text: 'Projekt', zeile: 'Nach Projekt gruppiert' },
+  { wert: 'prioritaet', text: 'Priorität', zeile: 'Nach Priorität gruppiert' },
+  { wert: 'art', text: 'Art', zeile: 'Nach Art gruppiert' },
+  { wert: 'status', text: 'Status', zeile: 'Nach Status gruppiert' },
+  { wert: 'alter-neu', text: 'Alter, neue zuerst', zeile: 'Nach Alter, neue zuerst' },
+  { wert: 'alter-alt', text: 'Alter, alte zuerst', zeile: 'Nach Alter, alte zuerst' },
+];
+/** Die vier Filter in der Reihenfolge der Chips: Schlüssel im Filter und Wort auf dem Chip. */
+export const FILTER_WORTE = [
+  { dim: 'status', text: 'Status' }, { dim: 'projekt', text: 'Projekt' }, { dim: 'art', text: 'Art' }, { dim: 'prio', text: 'Priorität' },
+];

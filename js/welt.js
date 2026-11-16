@@ -1,5 +1,5 @@
 // Die Welt der Ansichten: aus den Dateien auf dem Gerät (leseStand) rechnet sie die Einträge, ihren Zustand und die
-// Listen für Wartet, Abnahmen, Eingang, Ideensammlung und Suche. Reine Funktionen ohne Browser, damit node --test jede
+// Listen für Wartet, Alle, Abnahmen, Eingang, Ideensammlung und Suche. Reine Funktionen ohne Browser, damit node --test jede
 // Liste und jeden Satz prüft. Sie nutzt Zustand und Urteile aus Teil C (zustand.js, urteil.js) und ändert nichts an
 // ihnen. Text aus Einträgen ist fremder Text: Einzeiler laufen durch sichtbar(), die Anzeige setzt ihn nur als
 // textContent (USI-1).
@@ -7,7 +7,7 @@ import { leseStand } from './abgleich.js';
 import { absender, adressen, anDich, dateienNachId, finde, Hauptbuch, imEingang, istIdeeAnDich, ladeEintraege, ladeProjekte, projektDes, vergleiche, vertrauen, wartetAufDich } from './zustand.js';
 import { fruehereErgebnisse, leseSchritte, sichtbar } from './urteil.js';
 import { idMitStrich, normId, ulidZeit } from './format.js';
-import { absenderText, adressText, artVon, entwurfZeile, schlangeZeile, schritte as schritteText, um, zeitpunkt } from './ansichtstexte.js';
+import { ARTEN, PRIO_WORTE, SORT_WORTE, STATUS_WORTE, absenderText, adressText, artVon, entwurfZeile, kurz, schlangeZeile, schritte as schritteText, um, zeitpunkt } from './ansichtstexte.js';
 
 const OFFEN_WORTE = new Set(['PASS', 'SKIP']);
 const geschlossen = (st) => st.status === 'done' || st.status === 'dropped';
@@ -167,6 +167,87 @@ export function zaehler(w) {
     abnahmen: abn.length, offeneSchritte: abn.reduce((n, { e }) => n + abnahmeSchritte(e).offen.length, 0),
   };
 }
+
+// ---- Alle: alle offenen Einträge, gefiltert, sortiert und gruppiert
+
+const stufeVon = (st) => (st.priority <= 1 ? 'hoch' : st.priority === 2 ? 'normal' : 'niedrig');
+const statusVon = (e, st) => (wartetAufDich(e, st) ? 'dich' : st.status === 'in_progress' ? 'arbeit' : st.status === 'waiting' ? 'andere' : 'offen');
+const OHNE_PROJEKT = 'ohne Projekt';
+
+/**
+ * Alle offenen Einträge für die Übersicht „Alle“, auch die, die nicht auf dich warten: je Eintrag die Karte (karteVon) mit
+ * Lage (dich, arbeit, andere, offen; das ist der Status der Auswahl), Stufe (hoch, normal, niedrig), Alter in Kurzform, Anlagezeit und Rangschlüssel.
+ * Ohne Reihenfolge; sie ergibt sich aus `gruppiere`.
+ */
+export function uebersichtModelle(w, optionen = {}) {
+  return w.liste.filter(({ st }) => !geschlossen(st)).map((x) => ({
+    ...karteVon(w, x, optionen), lage: statusVon(x.e, x.st), stufe: stufeVon(x.st), erstellt: x.st.created,
+    alter: kurz(x.st.created, w.jetzt), rangSchluessel: w.buch.rangSchluessel(x.e),
+  }));
+}
+
+/** Ein leerer Filter: keine Auswahl heißt alle; die Sortierung ist die Vorgabe (nach Projekt gruppiert). */
+export const leererFilter = () => ({ status: [], projekt: [], art: [], prio: [], sortierung: 'projekt' });
+/** Ist etwas gefiltert? Die Sortierung zählt nicht. */
+export const hatFilter = (f) => ['status', 'projekt', 'art', 'prio'].some((d) => f[d].length);
+
+const wertVon = {
+  status: (m) => m.lage, projekt: (m) => m.projekt ?? '', art: (m) => m.kind,
+};
+const passtZu = (m, f, dim) => {
+  if (!f[dim].length) return true;
+  if (dim === 'prio') return f.prio.includes(m.stufe) || (m.dringend && f.prio.includes('dringend'));
+  return f[dim].includes(wertVon[dim](m));
+};
+
+/** Die Einträge, die zum Filter passen; `ohne` lässt eine Dimension außer Acht (für die Zahlen in ihrer eigenen Auswahl). */
+export const filtere = (modelle, f, ohne = null) => modelle.filter((m) => ['status', 'projekt', 'art', 'prio'].every((d) => d === ohne || passtZu(m, f, d)));
+
+/**
+ * Die Auswahl einer Dimension: [{ wert, text, n }]. `n` zählt die Einträge, die mit den anderen Filtern zu diesem Wert passen.
+ * Projekte und Arten stehen nur, wenn es offene Einträge dazu gibt oder der Wert schon gewählt ist.
+ */
+export function auswahlOptionen(modelle, f, dim) {
+  const rest = filtere(modelle, f, dim);
+  const zahl = (test) => rest.filter(test).length;
+  if (dim === 'status') return STATUS_WORTE.map((o) => ({ ...o, n: zahl((m) => m.lage === o.wert) }));
+  if (dim === 'prio') return PRIO_WORTE.map((o) => ({ ...o, n: zahl((m) => (o.wert === 'dringend' ? m.dringend : m.stufe === o.wert)) }));
+  if (dim === 'art') {
+    return Object.keys(ARTEN).filter((k) => modelle.some((m) => m.kind === k) || f.art.includes(k))
+      .map((k) => ({ wert: k, text: ARTEN[k].wort, n: zahl((m) => m.kind === k) }));
+  }
+  const namen = [...new Set([...modelle.map((m) => m.projekt ?? ''), ...f.projekt])].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'de')));
+  return namen.map((n) => ({ wert: n, text: n || OHNE_PROJEKT, n: zahl((m) => (m.projekt ?? '') === n) }));
+}
+
+const nachRang = (a, b) => vergleiche(a.rangSchluessel, b.rangSchluessel);
+const nachAlter = (a, b) => a.erstellt - b.erstellt || (a.id < b.id ? -1 : 1);
+
+/**
+ * Gruppen für die Liste: [{ wert, titel, eintraege, fuerDich }]. Die Sortierung nennt die Gruppe: projekt, prioritaet, art oder
+ * status; innerhalb einer Gruppe gilt der Rang (Dringendes zuerst, dann die ältere Anlage). `alter-neu` und `alter-alt` ergeben
+ * eine Gruppe ohne Titel. Leere Gruppen fehlen.
+ */
+export function gruppiere(modelle, sortierung = 'projekt') {
+  const gruppe = (wert, titel, eintraege) => ({ wert, titel, eintraege, fuerDich: eintraege.filter((m) => m.lage === 'dich').length });
+  const nach = (arten, schluessel, titelVon) => arten.map((a) => gruppe(a, titelVon(a), modelle.filter((m) => schluessel(m) === a).sort(nachRang))).filter((g) => g.eintraege.length);
+  switch (sortierung) {
+    case 'alter-neu': return modelle.length ? [gruppe('alle', null, [...modelle].sort((a, b) => nachAlter(b, a)))] : [];
+    case 'alter-alt': return modelle.length ? [gruppe('alle', null, [...modelle].sort(nachAlter))] : [];
+    case 'prioritaet': return nach(PRIO_WORTE.map((o) => o.wert), (m) => (m.dringend ? 'dringend' : m.stufe), (a) => PRIO_WORTE.find((o) => o.wert === a).text);
+    case 'art': return nach(Object.keys(ARTEN), (m) => m.kind, (a) => ARTEN[a].wort);
+    case 'status': return nach(STATUS_WORTE.map((o) => o.wert), (m) => m.lage, (a) => STATUS_WORTE.find((o) => o.wert === a).text);
+    default: {
+      const namen = [...new Set(modelle.map((m) => m.projekt ?? ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'de')));
+      return nach(namen, (m) => m.projekt ?? '', (n) => n || OHNE_PROJEKT);
+    }
+  }
+}
+
+/** Ist das eine Sortierung, die nach Projekt gruppiert (dann steht das Projekt nicht in der Zeile)? */
+export const gruppiertNachProjekt = (sortierung) => sortierung === 'projekt';
+/** Gültige Sortierungen: die Schlüssel in der Reihenfolge der Auswahl. */
+export const SORTIERUNGEN = SORT_WORTE.map((o) => o.wert);
 
 /** Gruppen der Abnahmen je Rechner: [{ host, abnahmen, offen, aelteste }], nach Name sortiert; ohne Rechner „ohne Rechner“. */
 export function abnahmenNachRechner(w) {
