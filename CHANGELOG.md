@@ -1,5 +1,13 @@
 # Änderungen
 
+## 20261117.01 (2026-11-17)
+
+Neuer Reiter **Alle** und Web-Push als Probe.
+
+- **Alle:** alle offenen Einträge aller Projekte, auch die, die nicht auf dich warten, nach Projekt gruppiert. Filter für Status, Projekt, Art und Priorität; sortierbar nach Projekt, Priorität, Art, Status und Alter. Die Art steht als farbiger Chip mit Symbol und Wort an jeder Zeile.
+- Ein Tipp auf eine Zeile öffnet den Eintrag wie in **Wartet**; Zurück führt mit demselben Filter in die Liste. Die Leiste unten hat fünf Reiter und passt bei 360 px in eine Reihe.
+- **Web-Push (Probe)** in **Mehr** schaltet Hinweise ohne ntfy ein (nur mit den Google Play Services), kopiert das Abo für `claude-post webpush setup` und beendet es; scheitert der Browser, steht sein Fehlertext da. Ein Tipp auf den Hinweis öffnet das Postfach. ntfy bleibt, wie es ist.
+
 ## 20261115.02 (2026-11-15)
 
 Teil F: Offline, Installation, Mitteilungen und Update. Die App startet ohne Netz, sagt, wie du sie installierst und was die Hinweise tun, und wartet mit einer neuen Fassung, bis du sie übernimmst.
