@@ -57,9 +57,31 @@ if (sz?.neu) {
   aktualisierung = new Aktualisierung({ container: { controller: {}, addEventListener() {} }, laden: () => {} });
   aktualisierung.beobachte({ waiting: { postMessage() {} }, addEventListener() {} });
 }
+// Szenario „Web-Push“: ein nachgebauter Browser (Registrierung, Berechtigung, Zwischenablage); der Renderer hat weder Google Play
+// Services noch einen Push-Dienst. 'fehler' lässt subscribe so scheitern, wie es ohne Push-Dienst scheitert.
+let webpush;
+if (sz?.webpush) {
+  const { WebPushProbe } = await import('./webpush.js');
+  const ENDPUNKT = 'https:' + '//fcm.googleapis.com/fcm/send/erfunden';
+  const abo = { endpoint: ENDPUNKT, toJSON: () => ({ endpoint: ENDPUNKT, keys: { p256dh: 'x', auth: 'y' } }), unsubscribe: async () => true };
+  let aktuell = sz.webpush === 'an' ? abo : null;
+  const manager = {
+    getSubscription: async () => aktuell,
+    subscribe: async () => {
+      if (sz.webpush === 'fehler') throw Object.assign(new Error('Registration failed - push service error'), { name: 'AbortError' });
+      aktuell = abo; return abo;
+    },
+  };
+  webpush = new WebPushProbe({
+    dienst: { getRegistration: async () => ({ pushManager: manager }) },
+    benachrichtigung: { permission: 'granted', requestPermission: async () => 'granted' },
+    zwischenablage: { writeText: async () => {} }, hatPush: true,
+    schluessel: { lies: async () => sz.schluessel ?? '', schreibe: async () => {} },
+  });
+}
 // Die Vorschau sendet nie von allein: der Zeitgeber der Schreibschicht und des Hinweises steht still, so bleibt jeder Zustand
 // (noch nicht gesendet, Hinweis mit Rückgängig) für das Bild stehen. Der Abgleich läuft mit seinem eigenen Zeitgeber.
-await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert });
+await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert, webpush });
 // Tipps, die ein Szenario braucht (ein Hinweis nach dem Senden, eine abgelehnte Eingabe): wie ein Nutzer, über die Knöpfe
 for (const wahl of [].concat(sz?.klick ?? [])) {
   const erst = Date.now();

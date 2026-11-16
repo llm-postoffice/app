@@ -50,6 +50,11 @@ arbeitet offline mit einer Warteschlange.
   (Bilder von unteren Abschnitten in Mehr) laufen nicht im Standardlauf von `tools/rendern.mjs`, weil der Renderer beim
   Scrollen „unter der Statusleiste“ meldet. Der Wegetest ändert den Cache-Namen des Service Workers über den Server und
   belegt Start ohne Netz und Update-Weg in Chromium.
+- Web-Push als Probe (Auftrag phzd86): `js/webpush.js` (`WebPushProbe`, Browser und Speicher des Schlüssels sind Parameter), der Abschnitt
+  „Web-Push (Probe)“ in `js/mehr.js` (fehlt, wenn `k.webpush` fehlt) und die Handler `push` und `notificationclick` in `sw.js` (Logik
+  in `js/swlogik.js`). Der Push trägt keinen Text; das Postwerkzeug sendet ihn (`claude-post webpush`). Die Berechtigung für
+  Mitteilungen fragt nur der Tipp auf **Einschalten**. Entfernen: diese drei Stellen, die Zeile in `app.js` und die Szenarien
+  `mehr-webpush*`.
 - Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe README) und überspringt
   sich ohne sie; mit ihnen endet die Prüfung des Postwerkzeugs auf der Sandbox mit Exit 0.
 - Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten

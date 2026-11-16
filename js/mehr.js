@@ -6,7 +6,7 @@ import { el } from './dom.js';
 import { TAKTE } from './steuerung.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
 import { UHR_WARNUNG_MS, abweichungText } from './erzeugen.js';
-import { MITTEILUNGEN, NEUE_FASSUNG, NEU_STARTET, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
+import { MITTEILUNGEN, NEUE_FASSUNG, NEU_STARTET, WEBPUSH, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
 import { VERSION } from './version.js';
 import { band, feld, knopf, linkKnopf, ruhigeKarte } from './karten.js';
 import { zaehler } from './welt.js';
@@ -45,6 +45,36 @@ function stand(z, k) {
 /** Text mit **fett** als Knoten: die Beschriftungen der Oberfläche stehen fett (DOB-1). */
 const mitFett = (text) => text.split('**').map((teil, i) => (i % 2 ? el('strong', {}, teil) : teil));
 
+const ERGEBNIS_BAND = { ok: { ton: 'ok', symbol: 'check_circle' }, info: { ton: 'info', symbol: 'info-f' }, fehler: { ton: 'fehler', symbol: 'error-f' } };
+
+/** Der Abschnitt Web-Push (Probe, Auftrag phzd86): Schlüssel eingeben, einschalten, Abo kopieren, beenden. Der genaue Fehlertext des
+ *  Browsers steht sichtbar unter dem Band, denn die Probe soll zeigen, woran es scheitert. Ohne `k.webpush` fehlt der Abschnitt. */
+function webpushAbschnitt(w, k) {
+  const stand = !w.unterstuetzt ? WEBPUSH.stand.nichtUnterstuetzt : w.berechtigung === 'denied' ? WEBPUSH.stand.gesperrt : w.host ? WEBPUSH.stand.an(w.host) : WEBPUSH.stand.aus;
+  const danach = (aktion) => async () => { await aktion(); k.neuZeichnen(); };
+  const e = w.ergebnis;
+  const ergebnis = e ? band({ ...ERGEBNIS_BAND[e.ton], titel: e.titel, satz: e.satz }) : null;
+  if (ergebnis && e.einzelheiten) ergebnis.querySelector('div').append(el('pre', {}, e.einzelheiten));
+  let bedienung = [];
+  if (w.unterstuetzt && w.host) {
+    bedienung = [el('div', { class: 'zeilenknoepfe' },
+      knopf(WEBPUSH.knoepfe.kopieren, { id: 'webpush-kopieren', klasse: 'tonal', an: danach(() => k.webpush.kopieren()) }),
+      knopf(WEBPUSH.knoepfe.beenden, { id: 'webpush-beenden', klasse: 'text', an: danach(() => k.webpush.beenden()) }))];
+  } else if (w.unterstuetzt) {
+    const eingabe = el('input', { type: 'text', name: 'webpush-schluessel', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' });
+    eingabe.value = w.schluessel;
+    eingabe.addEventListener('input', () => k.webpush.merke(eingabe.value));   // überlebt das Neuzeichnen und das Beenden durch das System
+    bedienung = [feld({ beschriftung: WEBPUSH.feld.beschriftung, steuerung: eingabe, hinweis: WEBPUSH.feld.hinweis }),
+      el('div', { class: 'zeilenknoepfe' }, knopf(WEBPUSH.knoepfe.an, { id: 'webpush-an', klasse: 'gefuellt', an: danach(() => k.webpush.einschalten(eingabe.value)) }))];
+  }
+  return abschnitt(WEBPUSH.titel,
+    ...WEBPUSH.absaetze.map((a) => el('p', {}, mitFett(a))),
+    el('details', {}, el('summary', {}, WEBPUSH.schritte.titel), el('ol', { class: 'ablauf-schritte' }, WEBPUSH.schritte.liste.map((t) => el('li', {}, mitFett(t))))),
+    el('p', { id: 'webpush-stand' }, stand),
+    ...bedienung, ergebnis,
+    ...WEBPUSH.neben.map((a) => el('p', { class: 'neben' }, mitFett(a))));
+}
+
 /** Die Ansicht Mehr. */
 export async function mehrAnsicht(welt, z, k) {
   const c = zaehler(welt);
@@ -67,6 +97,7 @@ export async function mehrAnsicht(welt, z, k) {
   const uhrBand = uhr && Math.abs(uhr.abweichung) >= UHR_WARNUNG_MS
     ? band({ ton: 'warn', symbol: 'schedule', titel: 'Die Uhr dieses Geräts geht falsch', satz: `Sie geht ${abweichungText(uhr.abweichung)}. Neue Einträge tragen die Zeit von GitHub, damit sie richtig geordnet sind. Stelle die Uhr in den Einstellungen des Geräts auf automatisch.` })
     : null;
+  const webpush = k.webpush ? webpushAbschnitt(await k.webpush.zustand(), k) : [];
   const installiert = k.installiert ?? globalThis.matchMedia?.('(display-mode: standalone)').matches ?? false;
   const inst = installationAnzeige(installiert);
   // Wartet eine neue Fassung, steht das Band bei Fassung; es lädt nie von selbst neu (UOF-5)
@@ -92,6 +123,7 @@ export async function mehrAnsicht(welt, z, k) {
       ...MITTEILUNGEN.absaetze.map((a) => el('p', {}, mitFett(a))),
       el('details', {}, el('summary', {}, MITTEILUNGEN.abo.titel), el('ol', { class: 'ablauf-schritte' }, MITTEILUNGEN.abo.schritte.map((t) => el('li', {}, mitFett(t))))),
       ...MITTEILUNGEN.neben.map((a) => el('p', { class: 'neben' }, mitFett(a)))),
+    ...webpush,
     ...abschnitt('App installieren',
       el('p', {}, inst.satz),
       inst.schritte.length ? el('ol', { class: 'ablauf-schritte' }, inst.schritte.map((t) => el('li', {}, mitFett(t)))) : null,

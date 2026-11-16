@@ -141,6 +141,8 @@ export function dateien(liste = eintraege()) {
 }
 
 /** Ein erfundenes Token von GitHub für die Prüfung vor dem Senden; zur Laufzeit verkettet, damit kein Scanner es im Quelltext findet. */
+/** Ein erfundener öffentlicher VAPID-Schlüssel: 65 Byte, das erste ist 4, base64url (nur für das Bild der Probe in Mehr). */
+const SCHLUESSEL = btoa(String.fromCharCode(4, ...Array.from({ length: 64 }, (_, i) => (i * 7 + 1) % 256))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 export const ERFUNDENES_TOKEN = ['gh', 'p_', 'A1b2C3d4'.repeat(4)].join('');
 
 /** Sendungen der Warteschlange, wie die Schreibschicht (Teil E) sie anlegt: eine je Zustand. */
@@ -221,6 +223,10 @@ export const SZENARIEN = {
   'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
   'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
   'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
+  // Web-Push als Probe: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden
+  'mehr-webpush': { daten: dateien(), seed: true, live: 'ok', webpush: 'aus', schluessel: SCHLUESSEL, scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-an': { daten: dateien(), seed: true, live: 'ok', webpush: 'an', scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-fehler': { daten: dateien(), seed: true, live: 'ok', webpush: 'fehler', schluessel: SCHLUESSEL, klick: '#webpush-an', scroll: 'Web-Push (Probe)' },
   'suche-treffer': { daten: dateien(), seed: true, live: 'ok', suche: 'tpc-0e0' },
   'suche-nichts': { daten: dateien(), seed: true, live: 'ok', suche: 'zzz-999' },
 };
@@ -261,4 +267,7 @@ export const ADRESSEN = {
   'mehr-fassung': ['mehr'],
   'mehr-installieren': ['mehr'],
   'mehr-mitteilungen': ['mehr'],
+  'mehr-webpush': ['mehr'],
+  'mehr-webpush-an': ['mehr'],
+  'mehr-webpush-fehler': ['mehr'],
 };
