@@ -18,6 +18,7 @@ export function einstieg(name) {
 import { Abgleichsteuerung } from './steuerung.js';
 import { starteApp } from './app.js';
 import { setzeSuchText } from './anzeigen.js';
+import { setzeFilter } from './uebersicht.js';
 import { SPEICHER, oeffneOderRueckfall, setzeEinstellung } from './speicher.js';
 
 const NAME = ${JSON.stringify(name)};
@@ -48,6 +49,7 @@ if (navigator.onLine) {
   }[sz.live ?? 'ok'];
   fetchen = live().fetch;
   if (sz.suche) setzeSuchText(sz.suche);
+  if (sz.filter) setzeFilter({ status: [], projekt: [], art: [], prio: [], sortierung: 'projekt', ...sz.filter });
 }
 const steuerung = new Abgleichsteuerung({ db, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, sichtbar: () => true, amNetz: () => navigator.onLine });
 // Szenario „neue Fassung“: eine Registrierung mit wartendem Worker, wie der Browser sie nach einem Update liefert

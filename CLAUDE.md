@@ -19,7 +19,7 @@ arbeitet offline mit einer Warteschlange.
   Parameter) kennen den Browser nicht selbst. Die Ansichten (Teil D) bauen ihren Baum nur mit `el()` und `ico()` aus
   `dom.js` (nie `innerHTML`, Daten nur über `textContent`; ein Test erzwingt es), lesen den Stand über `welt.js` (rein,
   unter `node --test`) und laufen über `anzeigen.js`; `app.js` verbindet alles und ist für `start.js` und die Vorschau
-  derselbe Einstieg. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0); jedes benutzte
+  derselbe Einstieg. Alle (`uebersicht.js`) hält den Filter im Speicher der Seite; Filter und Sortierung rechnet `welt.js` (rein), eine Auswahl ist ein Blatt mit Adresse `#alle/NAME`; die Vorschau setzt den Filter über `filter` im Szenario. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0); jedes benutzte
   Symbol muss im Sprite stehen und jedes im Sprite benutzt sein (`tests/geruest.test.mjs`).
 - Schreiben (Teil E): `js/schreiben.js` ist die Schreibschicht (`k.schreiben`, ein `Schreiber`): `antworten`, `urteilSenden`,
   `erledigen`, `einsortieren`, `anlegen` reihen eine Sendung in die Warteschlange (Speicher `schlange`) und geben

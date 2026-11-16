@@ -1,6 +1,6 @@
 # Gesamtübersicht: Steckbrief und Varianten
 
-Entwurf zum Eintrag a52nwr, Schritt 2 der Schleife für eine neue Ansicht. Gebaut wird noch nichts.
+Entwurf zum Eintrag a52nwr, Schritte 1 und 2 der Schleife für eine neue Ansicht; Wahl und Bau stehen unten.
 
 ## Steckbrief
 
@@ -29,6 +29,27 @@ Erwartete Wahl: A. Sie gruppiert nach Projekt (der Überblick, den der Desktop n
 - Die Symbole filter_list, expand_more, close, swap_vert und list (Reiter) fehlen im Sprite und kommen im Bau aus Material Symbols Rounded.
 - Eine Zeile in A und C zeigt das Alter („4 Std.“); die Sortierung nach Alter braucht dafür Alter und Eingang aus dem Eintrag.
 
+## Wahl (2026-11-16)
+
+Der Nutzer wählte „Variante A, aber mit den beschrifteten eingefärbten Icons aus Variante C“. Grund: das Icon für Freigabe allein
+in A erklärt nicht, was es ist; der farbige Chip aus Icon, Wort und Fläche in C ist sofort verständlich.
+
+Gebaut: Reiter **Alle** zwischen Wartet und Abnahmen, nach Projekt gruppiert, vier Filter als Chips (Status, Projekt, Art, Priorität),
+Sortierung als Auswahl (Projekt, Priorität, Art, Status, Alter), jede Zeile mit der Art als Chip. Ein Chip öffnet die Auswahl als
+Blatt mit Kästchen und Zahl der Treffer (`#alle/status` und so weiter); ein Tipp auf eine Zeile öffnet denselben Eintrag wie in Wartet.
+
+Zu den Befunden oben:
+
+- Fünf Reiter: `.leiste` rastert mit `minmax(4.5rem, 1fr)`; der Wegetest prüft eine Reihe bei 360 px. Bei Schrift 200 % bricht die Leiste
+  in drei Reihen um (vorher zwei).
+- Symbole: `list`, `list-f`, `expand_more` und `swap_vert` stehen aus Material Symbols Rounded im Sprite; `filter_list` und `close` entfielen.
+- Die Filterleiste klebt nicht und bricht um statt zu scrollen, damit bei 360 × 800 und Schrift 200 % nichts abgeschnitten ist. Das Blatt
+  scrollt als Ganzes wie die anderen Blätter.
+- Das Alter kommt als „vor 4 Std.“ aus der Anlagezeit des Eintrags (`kurz` in `ansichtstexte.js`).
+- Der Chip der Art ist derselbe Baustein (`chipArt`) wie in der Karte von Wartet; dort stand er schon, die Wahl ändert Wartet nicht.
+
 ## Quellen der Bilder
 
-`varianten/bauen.mjs` erzeugt die Entwurfsseiten (`a.html` und weitere), `varianten/rendern.mjs PFAD-ZU-p94-hig AUSGABE` rendert sie mit `beispiele/rendern-mobil.mjs` aus p94-hig. Die Seiten nutzen `app.css`; die App selbst bleibt unverändert.
+Die Bilder entstanden mit Entwurfsseiten und einem Skript, die nach der Wahl entfernt wurden; sie liegen im Verlauf des Zweigs
+`uebersicht-varianten` (Ordner `varianten/`). Die gebaute Ansicht rendert `node tools/rendern.mjs` (Szenarien `normal`, `alle-projekt`,
+`alle-alter`, `alle-nichts`).
