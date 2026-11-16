@@ -1,0 +1,73 @@
+/* Wegwerf-Entwurf der Gesamtübersicht: nur Werte aus app.css, nicht in die App eingebunden. */
+.leiste { grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr)); }
+.leiste a { min-height: 72px; }
+.leiste .sym { width: 56px; }
+.symbol { display: grid; place-items: center; width: 48px; height: 48px; border: 0; border-radius: 24px; background: none; color: var(--text); }
+main { padding-bottom: 24px; }
+
+/* Kopf der Übersicht */
+.summe { margin: 4px 0 8px; font-size: 0.9375rem; line-height: 1.375rem; color: var(--neben); }
+.summe b { color: var(--text); font-weight: 600; }
+
+/* Filterleiste: kleben unter der oberen Leiste */
+.fleiste { position: sticky; top: 64px; z-index: 1; margin: 0 calc(var(--rand) * -1); padding: 4px var(--rand) 8px; background: var(--grund); }
+.reihe { display: flex; gap: 8px; overflow-x: auto; margin: 0 calc(var(--rand) * -1); padding: 0 var(--rand); scrollbar-width: none; }
+.reihe + .reihe { margin-top: 8px; }
+.fchip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px 0 16px; border: 1px solid var(--neben); border-radius: 12px; background: none; font-size: 0.875rem; font-weight: 500; color: var(--text); white-space: nowrap; }
+.fchip .ico { width: 20px; height: 20px; }
+.fchip.an { background: var(--tonal); color: var(--auf-tonal); border-color: var(--tonal); }
+.fchip.kurz { padding: 0 16px; }
+.fchip .art-ico { color: var(--k-acc); }
+.sortzeile { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 0; font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.sortzeile button { display: inline-flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 8px 0 12px; border: 0; background: none; color: var(--akzent); font-weight: 500; font-size: 0.875rem; }
+.sortzeile .ico { width: 20px; height: 20px; }
+
+/* A: Gruppen nach Projekt, kompakte Zeilen */
+.gruppe { margin: 0; padding: 0; list-style: none; }
+.gruppenkopf { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 12px calc(var(--rand) * -1) 0; padding: 8px var(--rand); background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.gruppenkopf b { font-size: 1rem; color: var(--text); font-weight: 700; }
+.zeile { display: grid; grid-template-columns: 40px 1fr auto; gap: 4px 12px; align-items: start; min-height: 72px; padding: 12px 0; border-bottom: 1px solid var(--linie); color: var(--text); text-decoration: none; }
+.zeile .rund { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 20px; background: var(--k-cont); color: var(--k-acc); }
+.zeile .mitte { display: grid; gap: 2px; min-width: 0; }
+.zeile .t { font-size: 1rem; line-height: 1.375rem; font-weight: 600; }
+.zeile .m { font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); display: flex; flex-wrap: wrap; gap: 0 6px; align-items: center; }
+.zeile .rechts { display: grid; justify-items: end; gap: 4px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); white-space: nowrap; }
+.zeile .rechts .ico { width: 20px; height: 20px; color: var(--f-acc); }
+.zeile.dringend { box-shadow: inset 4px 0 0 var(--f-acc); padding-left: 12px; margin-left: -12px; }
+.prio { font-weight: 600; color: var(--text); }
+.prio.hoch { color: var(--f-acc); }
+
+/* C: Segment auf der Startansicht und Liste mit Trennlinien */
+.segment { display: grid; grid-template-columns: 1fr 1fr; margin: 4px 0 12px; border: 1px solid var(--neben); border-radius: 24px; overflow: hidden; }
+.segment button { min-height: 48px; border: 0; background: none; font-size: 0.875rem; font-weight: 500; color: var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.segment button + button { border-left: 1px solid var(--neben); }
+.segment button[aria-pressed="true"] { background: var(--tonal); color: var(--auf-tonal); }
+.segment button[aria-pressed="true"]::before { content: "\2713"; }
+.filterfeld { display: flex; align-items: center; gap: 12px; min-height: 56px; margin: 0 0 8px; padding: 0 16px; border-radius: 16px; background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; }
+.filterfeld .ico { color: var(--neben); }
+.filterfeld .wert { flex: 1; min-width: 0; }
+.filterfeld .wert b { display: block; font-weight: 600; }
+.formular { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 12px; padding: 16px; border-radius: 16px; background: var(--flaeche); }
+.formular label { display: grid; gap: 4px; font-size: 0.8125rem; font-weight: 500; }
+.formular label.breit { grid-column: 1 / -1; }
+.formular select { min-height: 48px; width: 100%; padding: 8px 12px; border: 1px solid var(--neben); border-radius: 4px; background: var(--grund); font-size: 0.9375rem; }
+.liste-c { margin: 0; padding: 0; list-style: none; }
+.liste-c .zeile { grid-template-columns: 1fr auto; }
+.liste-c .zeile .kopfz { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.8125rem; line-height: 1.25rem; }
+.liste-c .zeile .kopfz .projekt { font-weight: 700; font-size: 0.9375rem; }
+.liste-c .zeile .t { grid-column: 1 / -1; }
+.liste-c .zeile .zst { grid-column: 1 / -1; }
+
+/* B: Blatt von unten über der gedimmten Liste */
+.dimm { position: fixed; inset: 0; z-index: 5; background: rgb(0 0 0 / 0.4); }
+.blatt-v { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; max-height: 86dvh; display: flex; flex-direction: column; border-radius: 28px 28px 0 0; background: var(--grund); }
+.blatt-v .griff { width: 32px; height: 4px; margin: 12px auto 4px; border-radius: 2px; background: var(--neben); opacity: 0.4; }
+.blatt-v .koerper { overflow-y: auto; min-height: 0; padding: 0 var(--rand); }
+.blatt-v h2 { margin: 8px 0 12px; font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; }
+.blatt-v h3 { margin: 12px 0 8px; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; color: var(--neben); }
+.blatt-v .chips-v { display: flex; flex-wrap: wrap; gap: 8px; }
+.blatt-v .chips-v .fchip { padding: 0 16px; }
+.blatt-v .knoepfe { display: flex; gap: 8px; justify-content: space-between; padding: 12px var(--rand) calc(12px + env(safe-area-inset-bottom)); background: var(--grund); border-top: 1px solid var(--linie); }
+.aktiv { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+.aktiv .fchip { padding: 0 8px 0 12px; }
+.leer-hinweis { margin: 16px 0; color: var(--neben); }
