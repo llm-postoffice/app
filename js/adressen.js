@@ -3,20 +3,22 @@
 // darunter nach. Die Tabellen stammen aus dem Entwurf und dem Nachtrag zur App.
 import { idMitStrich as gliedern, normId as normalisiere } from './format.js';
 
-/** Die vier Hauptbereiche der Navigationsleiste, in der Reihenfolge der Leiste. */
-export const BEREICHE = ['wartet', 'abnahmen', 'erfassen', 'mehr'];
+/** Die fünf Hauptbereiche der Navigationsleiste, in der Reihenfolge der Leiste. */
+export const BEREICHE = ['wartet', 'alle', 'abnahmen', 'erfassen', 'mehr'];
 
 const TITEL = {
-  wartet: 'Wartet auf dich', abnahmen: 'Abnahmen', erfassen: 'Erfassen', mehr: 'Mehr',
+  wartet: 'Wartet auf dich', alle: 'Alle offenen', abnahmen: 'Abnahmen', erfassen: 'Erfassen', mehr: 'Mehr',
   eingang: 'Eingang', eintrag: 'Eintrag', ideen: 'Ideensammlung', suche: 'Suche', anmelden: 'Anmelden', ergebnis: 'Ergebnis',
 };
 const BLATT_TITEL = { einsortieren: 'Einsortieren', geraet: 'Gerätename', antworten: 'Deine Antwort' };
+/** Die Auswahlen des Blatts in Alle: Adresse `#alle/NAME` und Titel. */
+export const AUSWAHL_TITEL = { status: 'Status', projekt: 'Projekt', art: 'Art', prio: 'Priorität', sortieren: 'Sortieren nach' };
 
 // Welcher Hauptbereich in der Leiste gewählt ist, solange die Daten nichts anderes sagen: Eintrag, Abnahme-Schritt
 // und Suche gehören zu Wartet. anzeigen.js wählt für eine Abnahme Abnahmen und für eine Idee Mehr, wenn es den
 // Eintrag kennt (bereichVonArt).
 const BEREICH_VON = {
-  wartet: 'wartet', abnahmen: 'abnahmen', erfassen: 'erfassen', mehr: 'mehr',
+  wartet: 'wartet', alle: 'alle', abnahmen: 'abnahmen', erfassen: 'erfassen', mehr: 'mehr',
   eingang: 'wartet', eintrag: 'wartet', schritt: 'wartet', ergebnis: 'wartet', ideen: 'mehr', suche: 'wartet', anmelden: null,
 };
 
@@ -37,7 +39,8 @@ export const bereichVonArt = (kind) => (kind === 'test' ? 'abnahmen' : kind === 
 
 const ID = '([0-9A-Za-z-]{1,32})';
 const MUSTER = [
-  [/^#(wartet|abnahmen|erfassen|mehr|eingang|ideen|suche|anmelden)$/, (m) => ({ ansicht: m[1] })],
+  [/^#(wartet|alle|abnahmen|erfassen|mehr|eingang|ideen|suche|anmelden)$/, (m) => ({ ansicht: m[1] })],
+  [/^#alle\/(status|projekt|art|prio|sortieren)$/, (m) => ({ ansicht: 'alle', blatt: 'auswahl', welche: m[1] })],
   [/^#mehr\/geraet$/, () => ({ ansicht: 'mehr', blatt: 'geraet' })],
   [new RegExp(`^#eintrag/${ID}$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]) })],
   [new RegExp(`^#eintrag/${ID}/einsortieren$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]), blatt: 'einsortieren' })],
@@ -71,6 +74,7 @@ export function adresseVon(o) {
   if (o.ansicht === 'ergebnis') return `#eintrag/${o.id}/ergebnis`;
   if (o.ansicht === 'eintrag') return `#eintrag/${o.id}${o.blatt ? `/${o.blatt}` : ''}`;
   if (o.ansicht === 'mehr' && o.blatt) return `#mehr/${o.blatt}`;
+  if (o.ansicht === 'alle' && o.blatt) return `#alle/${o.welche}`;
   return `#${o.ansicht}`;
 }
 
@@ -82,6 +86,7 @@ export function titelVon(o) {
 /** Titel des Blatts, das über der Ansicht offen ist, sonst null. */
 export function blattTitelVon(o) {
   if (o.blatt === 'satz') return `${o.wort} für Schritt ${o.schritt}`;
+  if (o.blatt === 'auswahl') return AUSWAHL_TITEL[o.welche];
   return o.blatt ? BLATT_TITEL[o.blatt] : null;
 }
 
@@ -106,6 +111,7 @@ export function stapelUnter(o, ort = () => null) {
   };
   switch (o.ansicht) {
     case 'wartet': case 'anmelden': return [];
+    case 'alle': return o.blatt ? ['#wartet', '#alle'] : ['#wartet'];
     case 'ideen': return ['#wartet', '#mehr'];
     case 'mehr': return o.blatt ? ['#wartet', '#mehr'] : ['#wartet'];
     case 'eintrag': {

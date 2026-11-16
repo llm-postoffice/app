@@ -4,13 +4,16 @@ import { BEREICHE, blattTitelVon, hatZurueck, idMitStrich, normId, parse, stapel
 
 const ID = '9f3k2a';
 
-test('die vier Hauptbereiche stehen in der Reihenfolge der Leiste', () => {
-  assert.deepEqual(BEREICHE, ['wartet', 'abnahmen', 'erfassen', 'mehr']);
+test('die fünf Hauptbereiche stehen in der Reihenfolge der Leiste', () => {
+  assert.deepEqual(BEREICHE, ['wartet', 'alle', 'abnahmen', 'erfassen', 'mehr']);
 });
 
 // Adresse, Ansicht, Bereich in der Leiste, Stapel darunter: Entwurf (Navigation) und Nachtrag (Adressen)
 const TABELLE = [
   ['#wartet', 'wartet', 'wartet', []],
+  ['#alle', 'alle', 'alle', ['#wartet']],
+  ['#alle/projekt', 'alle', 'alle', ['#wartet', '#alle']],
+  ['#alle/sortieren', 'alle', 'alle', ['#wartet', '#alle']],
   ['#abnahmen', 'abnahmen', 'abnahmen', ['#wartet']],
   ['#erfassen', 'erfassen', 'erfassen', ['#wartet']],
   ['#mehr', 'mehr', 'mehr', ['#wartet']],
@@ -93,4 +96,19 @@ test('Titel und Blätter der neuen Adressen', () => {
   assert.equal(blattTitelVon(parse(`#eintrag/${ID}/schritt/3/blocked`)), 'BLOCKED für Schritt 3');
   assert.equal(titelVon(parse(`#eintrag/${ID}/ergebnis`)), 'Ergebnis');
   assert.equal(parse(`#eintrag/${ID}/schritt/3/FAIL`), null);
+});
+
+test('Alle: die Auswahlen sind Blätter mit eigener Adresse und Titel; eine unbekannte Auswahl ergibt null', () => {
+  for (const [welche, titel] of [['status', 'Status'], ['projekt', 'Projekt'], ['art', 'Art'], ['prio', 'Priorität'], ['sortieren', 'Sortieren nach']]) {
+    const o = parse(`#alle/${welche}`);
+    assert.equal(o.blatt, 'auswahl');
+    assert.equal(o.welche, welche);
+    assert.equal(blattTitelVon(o), titel);
+    assert.ok(titel.length <= 30);
+  }
+  assert.equal(parse('#alle/farbe'), null);
+  assert.equal(blattTitelVon(parse('#alle')), null);
+  assert.equal(titelVon(parse('#alle')), 'Alle offenen');
+  assert.equal(hatZurueck(parse('#alle')), false, 'Alle ist ein Hauptbereich');
+  assert.equal(hatZurueck(parse('#alle/status')), false, 'das Blatt ist ein dialog über dem Hauptbereich');
 });

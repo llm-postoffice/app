@@ -12,7 +12,7 @@ const DATEIEN = [
   './js/entwuerfe.js', './js/erfassen.js', './js/erzeugen.js', './js/format.js', './js/hinweis.js', './js/karten.js', './js/markdown.js',
   './js/mehr.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/schreiben.js', './js/senden.js',
   './js/speicher.js', './js/start.js', './js/statusleiste.js',
-  './js/steuerung.js', './js/swlogik.js', './js/texte.js', './js/urteil.js', './js/version.js', './js/welt.js', './js/zustand.js',
+  './js/steuerung.js', './js/swlogik.js', './js/texte.js', './js/uebersicht.js', './js/urteil.js', './js/version.js', './js/welt.js', './js/zustand.js',
   './symbole/symbol-192.png', './symbole/symbol-512.png', './symbole/maskierbar-512.png',
 ];
 
