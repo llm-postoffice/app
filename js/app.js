@@ -5,6 +5,7 @@
 import { anzeigen, setzeKontext, setzeSuchText, suchText } from './anzeigen.js';
 import { blattGeschlossen, ersetze, gehe, ort as navigationOrt, schliesseUndGehe, starten, zurueck } from './navigation.js';
 import { netzZeile } from './netz.js';
+import { starteFristen } from './frist.js';
 import { Aktualisierung, pruefeRegelmaessig, zeigeNeuBand } from './aktualisieren.js';
 import { baueHinweis } from './hinweis.js';
 import { Anhangholer } from './anhangholer.js';
@@ -57,6 +58,7 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   const ortJetzt = () => navigationOrt();
   setzeKontext(k);
   netzZeile($('stand'), steuerung);
+  starteFristen($('inhalt'), { jetzt, zeitgeber });   // Fristen („Nächster Abgleich in etwa 40 s“) laufen im Text mit; Uhr und Zeitgeber sind die der App
 
   // Suche: die Eingabe steht oben in der Leiste; jede Eingabe zeichnet die Treffer neu (mit kurzer Pause)
   let pause = null;
@@ -102,10 +104,11 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   }
 
   // Der Abgleich ändert den Stand: neu zeichnen, sobald sich Phase, Fehler, Netz oder Stand ändern; Fortschritt gedrosselt
-  let letzter = JSON.stringify([steuerung.zustand.phase, steuerung.zustand.fehler?.art, steuerung.zustand.ohneNetz, steuerung.zustand.letzter?.geprueft]);
+  const stand = (z) => JSON.stringify([z.phase, z.fehler?.art, z.ohneNetz, z.letzter?.geprueft, z.naechster]);
+  let letzter = stand(steuerung.zustand);
   let gedrosselt = null;
   steuerung.beiAenderung((z) => {
-    const jetztStand = JSON.stringify([z.phase, z.fehler?.art, z.ohneNetz, z.letzter?.geprueft]);
+    const jetztStand = stand(z);
     if (jetztStand !== letzter) { letzter = jetztStand; k.neuZeichnen(); return; }
     if (z.phase === 'laeuft' && !gedrosselt) gedrosselt = setTimeout(() => { gedrosselt = null; k.neuZeichnen(); }, 400);
   });

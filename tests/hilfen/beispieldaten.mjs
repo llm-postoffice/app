@@ -171,6 +171,21 @@ export function schlangeZustaende() {
   };
 }
 
+/**
+ * Sendungen, die gewartet haben und jetzt weitergehen (Netz ist wieder da): eine wird gesendet, zwei gehen gleich raus (`sendet`);
+ * zwei warten nach einem Fehler von GitHub 40 Sekunden auf den nächsten Versuch (`versuch`); zwei sind eben raus (`raus`).
+ */
+export function schlangeWeiter() {
+  const z = JETZT - 3 * 60000;
+  const antwort = { eintrag: 'r2d4vn', art: 'antwort', wahl: 'A', zeit: z, gewartet: true };
+  const nachtrag = { eintrag: 'k7m2qa', art: 'einsortieren', ziel: 'alpha', zeit: z + 60000, gewartet: true };
+  return {
+    sendet: [{ id: 'x1', ...antwort, zustand: 'sendet' }, { id: 'x2', ...nachtrag, zustand: 'liegt' }, { id: 'x3', eintrag: 'm7q2ke', art: 'antwort', zeit: z + 90000, gewartet: true, zustand: 'liegt' }],
+    versuch: [{ id: 'x4', ...antwort, zustand: 'liegt', nichtVor: JETZT + 40000, grund: 'GitHub antwortet mit Status 503.' }, { id: 'x5', ...nachtrag, zustand: 'liegt', nichtVor: JETZT + 40000 }],
+    raus: [{ id: 'x6', ...antwort, zustand: 'gesendet', zeit: JETZT - 8000 }, { id: 'x7', ...nachtrag, zustand: 'gesendet', zeit: JETZT - 5000 }],
+  };
+}
+
 /** Sendungen für die Warteschlange: drei warten auf Netz (eine davon ein neuer Eintrag, den GitHub noch nicht kennt), eine hängt. */
 export function schlangeOffline() {
   const z = JETZT - 3 * 60000;
@@ -276,6 +291,10 @@ export const SZENARIEN = {
   'schlange-offline': { daten: dateien(), seed: true, live: 'netz', schlange: schlangeOffline() },
   'schlange-online': { daten: dateien(), seed: true, live: 'ok', schlange: schlangeOffline().filter((s) => s.id === 'w4') },
   'schlange-leer': { daten: dateien(), seed: true, live: 'ok' },
+  // Zustände nach dem Netz: wird gesendet, nächster Versuch, gesendet (js/schlange.js; die Zeilen „Zuletzt abgeglichen“ zeigen alle Szenarien mit Stand)
+  'schlange-sendet': { daten: dateien(), seed: true, live: 'ok', nachStart: schlangeWeiter().sendet },
+  'schlange-versuch': { daten: dateien(), seed: true, live: 'ok', schlange: schlangeWeiter().versuch },
+  'schlange-gesendet': { daten: dateien(), seed: true, live: 'ok', nachStart: schlangeWeiter().raus },
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
   'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
   'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
@@ -287,6 +306,7 @@ export const SZENARIEN = {
 /** Die Adressen, die die Vorschau je Szenario rendert. */
 export const ADRESSEN = {
   'schlange-offline': ['wartet', 'schlange', 'eintrag/n9x4kt', 'eintrag/r2d4vn'], 'schlange-online': ['wartet', 'schlange', 'eintrag/m7q2ke'], 'schlange-leer': ['schlange'],
+  'schlange-sendet': ['wartet', 'schlange'], 'schlange-versuch': ['wartet', 'schlange', 'eintrag/r2d4vn'], 'schlange-gesendet': ['wartet', 'schlange'],
   normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],

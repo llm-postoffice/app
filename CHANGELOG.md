@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261118.01 (2026-11-18)
+
+Abgleich und wartende Sendungen zeigen ihren Stand: **Wartet** nennt, ob gerade abgeglichen wird und wann der nächste Abgleich kommt; das Band „Noch nicht gesendet“ und die Seite dazu sagen „wird gesendet …“, „nächster Versuch in etwa 40 s“ und „gesendet um 14:07“.
+
+- Was gewartet hatte und rausging, meldet ein Hinweis mit der Uhrzeit.
+
 ## 20261117.12 (2026-11-17)
 
 Fotos werden vor dem Senden verkleinert (beim Teilen und bei **Datei anhängen**, bis 20 MiB); die Zeile nennt „verkleinert von … auf …“. Bildschirmfotos (PNG bis 1 MiB) bleiben unverändert. Ein verkleinertes Foto trägt keine Ortsangabe mehr.

@@ -6,6 +6,7 @@
 import { el, ico } from './dom.js';
 import { annahmeVon, fadenVon, handlungenVon, karteVon, moeglichkeiten, offenSatz, ortVon, abnahmeSchritte, sendungHaengt, sendungWartet, sendungZu, stufeVon } from './welt.js';
 import { PRIO_WORTE, sendungText, sendungZustand } from './ansichtstexte.js';
+import { fristKnoten } from './frist.js';
 import { verwerfenKnopf } from './schlange.js';
 import { idMitStrich } from './format.js';
 import { vertrauen } from './zustand.js';
@@ -73,7 +74,7 @@ function sendungBand(welt, e, k, z) {
   if (sendungWartet(welt, s, z.ohneNetz)) {
     const w = sendungZustand(s, { ohneNetz: z.ohneNetz });
     const satz = s.art === 'anlegen' ? 'Der Eintrag liegt auf diesem Gerät und geht raus, sobald du online bist.' : `${sendungText(s)} geht raus, sobald du online bist.`;
-    return band({ ton: 'warn', symbol: w.symbol, titel: 'Noch nicht gesendet', satz: s.warteArt === 'netz' || z.ohneNetz ? satz : (w.satz ?? 'Ein neuer Versuch folgt.'),
+    return band({ ton: 'warn', symbol: w.symbol, titel: 'Noch nicht gesendet', satz: s.warteArt === 'netz' || z.ohneNetz ? satz : [[...(w.satz ? [`${w.satz} `] : []), ...(w.bis ? ['Nächster Versuch ', fristKnoten(w.bis, welt.jetzt), '.'] : ['Ein neuer Versuch folgt.'])]],
       knoepfe: [verwerfenKnopf(s, k, { ziel: s.art === 'anlegen' ? '#wartet' : null })] });
   }
   if (!sendungHaengt(s)) return null;
