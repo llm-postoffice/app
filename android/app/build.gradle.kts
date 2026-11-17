@@ -1,5 +1,6 @@
 // App-Modul der Android-Hülle. versionName ist die Fassung aus js/version.js, versionCode dieselbe Zahl ohne Punkt.
-// webDateien kopiert beim Bau dieselben Dateien wie DATEIEN in sw.js in die Assets unter web/.
+// webDateien kopiert beim Bau dieselben Dateien wie DATEIEN in sw.js in die Assets unter web/ und legt den Lizenztext
+// (LICENSES/Apache-2.0.txt) und die Liste BIBLIOTHEKEN.txt der enthaltenen Bibliotheken unter lizenzen/ dazu.
 plugins {
     id("com.android.application")
 }
@@ -53,19 +54,21 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 }
 
-/** Kopiert die Web-App in die Assets (web/), damit die WebView sie ohne Netz zeigt. */
+/** Kopiert die Web-App in die Assets (web/), damit die WebView sie ohne Netz zeigt, und die Lizenzdateien (lizenzen/). */
 abstract class WebDateien : DefaultTask() {
     @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE) abstract val dateien: ConfigurableFileCollection
     @get:Internal abstract val wurzel: DirectoryProperty
     @get:Input abstract val muster: ListProperty<String>
+    @get:Internal abstract val lizenzDateien: ConfigurableFileCollection
     @get:OutputDirectory abstract val ziel: DirectoryProperty
     @get:Inject abstract val fs: FileSystemOperations
 
     @TaskAction
     fun kopiere() {
         fs.sync {
-            from(wurzel) { include(muster.get()) }
-            into(ziel.dir("web"))
+            from(wurzel) { include(muster.get()); into("web") }
+            from(lizenzDateien) { into("lizenzen") }
+            into(ziel)
         }
     }
 }
@@ -74,7 +77,8 @@ val webMuster = listOf("index.html", "app.css", "manifest.webmanifest", "js/**",
 val webDateien = tasks.register<WebDateien>("webDateien") {
     wurzel.set(web)
     muster.set(webMuster)
-    dateien.from(fileTree(web) { include(webMuster) })
+    lizenzDateien.from(web.resolve("LICENSES/Apache-2.0.txt"), file("BIBLIOTHEKEN.txt"))
+    dateien.from(fileTree(web) { include(webMuster) }, lizenzDateien)
 }
 
 androidComponents {

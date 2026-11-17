@@ -102,4 +102,4 @@ https://github.com/llm-postoffice/app/issues
 
 GPL-3.0-or-later, siehe [LICENSE](LICENSE).
 
-Die Symbole in `index.html` sind Material Symbols Rounded von Google (Apache-2.0, Text in [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt), Quelle https://github.com/google/material-design-icons). Die App-Symbole in `symbole/` sind Platzhalter aus dem Beispiel von p94-hig unter GPL-3.0-or-later.
+Die Symbole in `index.html` sind Material Symbols Rounded von Google (Apache-2.0, Text in [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt), Quelle https://github.com/google/material-design-icons). Die App-Symbole in `symbole/` sind Platzhalter aus dem Beispiel von p94-hig unter GPL-3.0-or-later. Das Android-APK enthält Apache-2.0-Bibliotheken; Liste und Lizenztext liegen darin unter `lizenzen/` (Bau: [docs/entwicklung/huelle.md](docs/entwicklung/huelle.md)).

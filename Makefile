@@ -77,9 +77,15 @@ signatur:
 
 # Signiertes Release-APK, benannt wie am Release: llm-post-FASSUNG.apk
 apk-release: sdk-vorhanden
-	@test -r "$(SIGNATUR)/llm-post.p12" || { \
-	  echo "make: Fehler: kein Signierschlüssel in $(SIGNATUR)" >&2; \
-	  echo "Leg ihn einmal an mit: make signatur" >&2; exit 1; }
+	@for d in llm-post.p12 passwort; do \
+	  if [ ! -e "$(SIGNATUR)/$$d" ]; then \
+	    echo "make: Fehler: Signierschlüssel fehlt: $(SIGNATUR)/$$d" >&2; \
+	    echo "Leg ihn einmal an mit: make signatur; gab es schon Releases, stell ihn aus deiner Sicherung wieder her." >&2; exit 1; \
+	  elif [ ! -r "$(SIGNATUR)/$$d" ]; then \
+	    echo "make: Fehler: Signierschlüssel nicht lesbar: $(SIGNATUR)/$$d (keine Leserechte)" >&2; \
+	    echo "Gib dir Leserechte: chmod u+r $(SIGNATUR)/$$d" >&2; exit 1; \
+	  fi; \
+	done
 	LLMPOST_SIGNATUR="$(SIGNATUR)" $(GRADLEW) assembleRelease
 	@v=$$(sed -nE "s/.*VERSION = '([0-9.]+)'.*/\1/p" js/version.js); \
 	cp android/app/build/outputs/apk/release/app-release.apk "android/app/build/llm-post-$$v.apk"; \

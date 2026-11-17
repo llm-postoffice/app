@@ -11,7 +11,6 @@ Die App heißt jetzt LLM-Post, hat ein neues Symbol und kommt auch als Android-A
 - **Teilen** aus einer anderen App legt den Text als Entwurf in **Erfassen**.
 - In der Android-App meldest du dich einmal an; das Token liegt dort im Schlüsselspeicher von Android, nicht in der Datenbank der App.
 - **Mehr** zeigt in der Android-App keinen Abschnitt **App installieren** und keine Zeile **Neue Fassung geladen**; Updates kommen über Obtainium.
-- Für Entwickler: `make apk`, `make apk-test`, `make signatur`, `make apk-release` und `make symbole`; Bau und Release in `docs/entwicklung/huelle.md`.
 
 ## 20261117.03 (2026-11-17)
 
