@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261117.02 (2026-11-17)
+
+Die Probe für Web-Push in **Mehr** ist weg. Hinweise kommen weiter über ntfy.
+
+- Der Abschnitt **Web-Push (Probe)** in **Mehr** fehlt jetzt. An den Hinweisen über ntfy ändert sich nichts.
+
 ## 20261117.01 (2026-11-17)
 
 Neuer Reiter **Alle** und Web-Push als Probe.
