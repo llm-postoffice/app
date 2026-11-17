@@ -1,4 +1,4 @@
-// Material You für die Vorschau: erfundene Systempaletten (Monet) und die Zuordnung ihrer Töne zu den Farbrollen von app.css.
+// Material You für Vorschau und Tests: erfundene Systempaletten (Monet) und die Zuordnung ihrer Töne zu den Farbrollen von app.css.
 // Rein, ohne Browser. Die Paletten sind nachgebaut, nicht vom Gerät gelesen: Helligkeit (Ton) und Farbton stimmen mit
 // Android überein (Töne 0, 10, 50, 100 bis 1000 = Helligkeit 100, 99, 95, 90 bis 0), die Buntheit (accent1 48, accent2 16,
 // accent3 32 bei Farbton +60, neutral1 4, neutral2 8) ist in CIE-LCh angenähert und in den sRGB-Raum gekürzt.
@@ -47,37 +47,31 @@ export function palette(h) {
 }
 export const PALETTEN = Object.fromEntries(Object.entries(GRUNDFARBEN).map(([n, h]) => [n, palette(h)]));
 
-// Zuordnung nach Material 3 (Standardschema), aus den Systemtönen: Rolle von app.css = [Palette, Ton].
-const AKZENT = {
-  hell: { '--akzent': ['accent1', 600], '--auf-akzent': ['accent1', 0], '--tonal': ['accent1', 100], '--auf-tonal': ['accent1', 900] },
-  dunkel: { '--akzent': ['accent1', 200], '--auf-akzent': ['accent1', 800], '--tonal': ['accent1', 700], '--auf-tonal': ['accent1', 100] },
-};
-const FLAECHEN = {
-  hell: {
-    '--grund': ['neutral1', 10], '--flaeche': ['neutral1', 50], '--text': ['neutral1', 900], '--neben': ['neutral2', 700],
-    '--linie': ['neutral2', 200], '--umgekehrt': ['neutral1', 800], '--auf-umgekehrt': ['neutral1', 50],
-  },
-  dunkel: {
-    '--grund': ['neutral1', 900], '--flaeche': ['neutral1', 800], '--text': ['neutral1', 100], '--neben': ['neutral2', 200],
-    '--linie': ['neutral2', 700], '--umgekehrt': ['neutral1', 100], '--auf-umgekehrt': ['neutral1', 800],
-  },
-};
-// Aktion im Hinweis unten (Snackbar): inversePrimary
-const HINWEIS = { hell: ['accent1', 200], dunkel: ['accent1', 600] };
+// Zuordnung nach Material 3 (Standardschema) aus den Systemtönen: Rolle (wie in js/farben.js), Palette und Ton in Hell, Palette
+// und Ton in Dunkel. Dieselbe Tabelle steht in android/…/Farben.kt; tests/farbrollen.test.mjs vergleicht beide.
+export const TABELLE = [
+  ['akzent', 'accent1', 600, 'accent1', 200],
+  ['auf-akzent', 'accent1', 0, 'accent1', 800],
+  ['tonal', 'accent1', 100, 'accent1', 700],
+  ['auf-tonal', 'accent1', 900, 'accent1', 100],
+  ['grund', 'neutral1', 10, 'neutral1', 900],
+  ['flaeche', 'neutral1', 50, 'neutral1', 800],
+  ['text', 'neutral1', 900, 'neutral1', 100],
+  ['neben', 'neutral2', 700, 'neutral2', 200],
+  ['linie', 'neutral2', 200, 'neutral2', 700],
+  ['umgekehrt', 'neutral1', 800, 'neutral1', 100],
+  ['auf-umgekehrt', 'neutral1', 50, 'neutral1', 800],
+  ['hinweis-knopf', 'accent1', 200, 'accent1', 600],
+];
 
-/** Die Rollen als Werte: variante 'a' (nur Akzente) oder 'b' (auch Flächen), schema 'hell' oder 'dunkel'. */
-export function rollen(variante, pal, schema) {
-  const tab = { ...AKZENT[schema], ...(variante === 'b' ? FLAECHEN[schema] : {}) };
-  const aus = Object.fromEntries(Object.entries(tab).map(([rolle, [p, t]]) => [rolle, pal[p][t]]));
-  aus['--hinweis-knopf'] = pal[HINWEIS[schema][0]][HINWEIS[schema][1]];
-  return aus;
+/** Die Rollen als Werte für ein Schema ('hell' oder 'dunkel'): { ROLLE: '#rrggbb' }. */
+export function rollen(pal, schema) {
+  const [pi, ti] = schema === 'hell' ? [1, 2] : [3, 4];
+  return Object.fromEntries(TABELLE.map((z) => [z[0], pal[z[pi]][z[ti]]]));
 }
 
-/** Werte aller Rollen einer Variante für beide Schemata (feste Rollen kommen aus app.css und fehlen hier). */
-export function rollenBeider(variante, name) {
-  const pal = PALETTEN[name];
-  return { hell: rollen(variante, pal, 'hell'), dunkel: rollen(variante, pal, 'dunkel') };
-}
+/** Die Nachricht der Hülle für eine Beispielpalette (Protokoll im Kopf von js/huelle.js). */
+export const farbenNachricht = (name) => ({ art: 'farben', hell: rollen(PALETTEN[name], 'hell'), dunkel: rollen(PALETTEN[name], 'dunkel') });
 
 const kanal = (hex, i) => unlin(parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16) / 255);
 export const leuchtdichte = (hex) => 0.2126 * kanal(hex, 0) + 0.7152 * kanal(hex, 1) + 0.0722 * kanal(hex, 2);

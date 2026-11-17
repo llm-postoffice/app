@@ -1,10 +1,20 @@
 #!/usr/bin/env node
-// Kontrast der Farbrollen für die Beispielpaletten von Material You (tests/hilfen/farbrollen.mjs), je Variante, Palette und
-// Schema. Feste Rollen kommen aus app.css. Text auf Fläche braucht 4,5:1, Symbole, Kanten und Knopfflächen 3:1.
-// Aufruf: node tools/farbkontrast.mjs [--alles]   (ohne --alles nur Paare unter ihrer Schwelle)
+// Kontrast der Farbrollen für die Beispielpaletten von Material You (tests/hilfen/farbrollen.mjs), je Palette und Schema.
+// Feste Rollen kommen aus app.css. Text auf Fläche braucht 4,5:1, Symbole, Kanten und Knopfflächen 3:1.
+// Aufruf: node tools/farbkontrast.mjs [--alles]   (ohne --alles nur Paare unter ihrer Schwelle; -h zeigt die Hilfe)
 import { readFileSync } from 'node:fs';
-import { PALETTEN, kontrast, rollenBeider } from '../tests/hilfen/farbrollen.mjs';
+import { PALETTEN, kontrast, rollen } from '../tests/hilfen/farbrollen.mjs';
 
+if (process.argv.includes('-h') || process.argv.includes('--help')) {
+  process.stdout.write(`Aufruf: node tools/farbkontrast.mjs [--alles]
+
+Rechnet den Kontrast der Farbrollen für drei Beispielpaletten von Material You nach, hell und dunkel.
+Ohne --alles stehen nur Paare unter ihrer Schwelle da; am Ende die Zahl dieser Paare.
+
+Exit-Status: 0 kein Paar unter der Schwelle, 1 mindestens eines.
+`);
+  process.exit(0);
+}
 const css = readFileSync(new URL('../app.css', import.meta.url), 'utf8');
 const werte = (text) => Object.fromEntries([...text.matchAll(/(--[a-z0-9-]+):\s*(#[0-9a-f]{6})/g)].map((m) => [m[1], m[2]]));
 const hellCss = werte(/:root\s*{([^}]*)}/.exec(css)[1]);
@@ -26,11 +36,11 @@ const PAARE = [
 
 const alles = process.argv.includes('--alles');
 let schlecht = 0;
-for (const v of ['a', 'b']) {
+{
   for (const name of Object.keys(PALETTEN)) {
-    const r = rollenBeider(v, name);
     for (const schema of ['hell', 'dunkel']) {
-      const w = { ...(schema === 'hell' ? hellCss : dunkelCss), ...r[schema] };
+      const w = { ...(schema === 'hell' ? hellCss : dunkelCss) };
+      for (const [rolle, wert] of Object.entries(rollen(PALETTEN[name], schema))) w[`--${rolle}`] = wert;
       const zeilen = [];
       for (const [vg, hg, min, zweck] of PAARE) {
         if (!w[vg] || !w[hg]) continue;
@@ -39,8 +49,9 @@ for (const v of ['a', 'b']) {
         if (!ok) schlecht++;
         if (alles || !ok) zeilen.push(`  ${ok ? 'ok  ' : 'ZU WENIG'} ${k.toFixed(2).replace('.', ',')}:1 (mindestens ${min}) ${zweck}: ${vg} ${w[vg]} auf ${hg} ${w[hg]}`);
       }
-      if (zeilen.length) process.stdout.write(`Variante ${v.toUpperCase()}, ${name}, ${schema}\n${zeilen.join('\n')}\n`);
+      if (zeilen.length) process.stdout.write(`${name}, ${schema}\n${zeilen.join('\n')}\n`);
     }
   }
 }
 process.stdout.write(`${schlecht} Paare unter der Schwelle\n`);
+process.exitCode = schlecht ? 1 : 0;

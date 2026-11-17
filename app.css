@@ -1,13 +1,14 @@
 /* Postfach: Werte nach dem Entwurf der App (Material 3, p94-hig mobile). Schrift in rem, damit sie mit
    <meta name="text-scale" content="scale"> der Schriftgröße des Systems folgt (USC-1); Ziele in px (UZI-1).
    Alle Farben stehen hier einmal als Werte für Hell und Dunkel; Text auf Fläche erreicht mindestens 4,5:1,
-   Symbole und Kanten mindestens 3:1 (nachgerechnet im Entwurf). */
+   Symbole und Kanten mindestens 3:1 (nachgerechnet im Entwurf). In der Android-Hülle setzt js/farben.js die Rollen akzent bis
+   hinweis-knopf aus den Systemfarben (Material You) auf :root; Arten, Zustände und Kennung bleiben fest. */
 :root {
   color-scheme: light dark;
   --rand: 16px;
   --grund: #ffffff; --flaeche: #f0f2f7; --text: #1b1c1f; --neben: #44474e;
   --akzent: #0b57d0; --auf-akzent: #ffffff; --tonal: #d3e3fd; --auf-tonal: #041e49;
-  --linie: #c4c7cf; --umgekehrt: #2f3033; --auf-umgekehrt: #f2f0f4;
+  --linie: #c4c7cf; --umgekehrt: #2f3033; --auf-umgekehrt: #f2f0f4; --hinweis-knopf: #d3e3fd;
   /* Arten: Akzent (Symbol, Kante), Fläche (Chip, Kopfkarte), Text auf der Fläche */
   --frage-acc: #00696f; --frage-cont: #cdeff1; --frage-on: #00363a;
   --freigabe-acc: #6750a4; --freigabe-cont: #e9ddff; --freigabe-on: #22005d;
@@ -25,7 +26,7 @@
   :root {
     --grund: #121316; --flaeche: #1e2025; --text: #e3e3e6; --neben: #c4c6cf;
     --akzent: #a8c7fa; --auf-akzent: #062e6f; --tonal: #0842a0; --auf-tonal: #d3e3fd;
-    --linie: #44474e; --umgekehrt: #e3e3e6; --auf-umgekehrt: #2f3033;
+    --linie: #44474e; --umgekehrt: #e3e3e6; --auf-umgekehrt: #2f3033; --hinweis-knopf: #0b57d0;
     --frage-acc: #4fd8e3; --frage-cont: #004f54; --frage-on: #9cf0f8;
     --freigabe-acc: #cfbcff; --freigabe-cont: #4f378b; --freigabe-on: #e9ddff;
     --abnahme-acc: #ffafd8; --abnahme-cont: #7b1b59; --abnahme-on: #ffd8ec;
@@ -409,8 +410,7 @@ fieldset.feld legend { padding: 0; margin-bottom: 4px; font-weight: 500; }
 .hinweis span { flex: 1 1 12rem; min-width: 0; padding: 10px 0; }
 /* Die Zeile zur neuen Fassung weicht, solange jemand tippt: sie zieht nie den Boden unter den Händen weg (UOF-5) */
 body:has(:is(main, #blatt) :is(input, textarea, select):focus) #neu { display: none; }
-.hinweis button { min-height: 48px; padding: 0 12px; border: 0; background: none; color: var(--tonal); font-weight: 500; }
-@media (prefers-color-scheme: dark) { .hinweis button { color: #0b57d0; } }
+.hinweis button { min-height: 48px; padding: 0 12px; border: 0; background: none; color: var(--hinweis-knopf); font-weight: 500; }
 
 /* Aktionsleiste über der Navigationsleiste: Hauptaktion in Daumenreichweite (UAN-3) */
 .aktion { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px max(var(--rand), env(safe-area-inset-right)) 8px max(var(--rand), env(safe-area-inset-left)); background: var(--grund); border-top: 1px solid var(--linie); }

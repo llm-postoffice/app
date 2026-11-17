@@ -32,6 +32,7 @@ class HauptActivity : Activity() {
     private val tresor by lazy { Tresor(File(noBackupFilesDir, "token.bin")) }
     private var antwort: JavaScriptReplyProxy? = null
     private var anstehend: Ziel? = null
+    private var gesendeteFarben: String? = null
     private val lader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -100,10 +101,12 @@ class HauptActivity : Activity() {
     private fun verarbeite(text: String, proxy: JavaScriptReplyProxy) {
         val m = try { JSONObject(text) } catch (_: JSONException) { return }
         val nr = m.optInt("nr", 0)
-        // Unbekannte Arten übergeht die Hülle; weitere Werte an die Seite (etwa Systemfarben) kommen als neue Art dazu
+        // Unbekannte Arten übergeht die Hülle; weitere Werte an die Seite kommen als neue Art dazu
         when (m.optString("art")) {
             "bereit" -> {
                 antwort = proxy
+                gesendeteFarben = null
+                sendeFarben()
                 anstehend?.let { proxy.postMessage(nachrichtVon(it)) }
                 anstehend = null
             }
@@ -121,6 +124,28 @@ class HauptActivity : Activity() {
         }
     }
 
+    /** Die Systemfarben (Material You) als Nachricht an die Seite; ohne Wert eines Tons (kommt ab Android 12 nicht vor) nichts. */
+    private fun systemfarben(): String? = farbenNachricht { palette, ton ->
+        val id = resources.getIdentifier(systemfarbe(palette, ton), "color", "android")
+        if (id == 0) null else getColor(id)
+    }
+
+    /** Schickt die Farben, wenn die Seite bereit ist und sich etwas geändert hat. */
+    private fun sendeFarben() {
+        val p = antwort ?: return
+        val n = systemfarben() ?: return
+        if (n == gesendeteFarben) return
+        gesendeteFarben = n
+        p.postMessage(n)
+    }
+
+    // Ein anderes Hintergrundbild oder der Wechsel von Hell und Dunkel kann die Activity neu aufbauen (die Seite meldet sich dann mit
+    // bereit); bleibt sie bestehen, holt die Rückkehr in den Vordergrund die neuen Farben nach.
+    override fun onResume() {
+        super.onResume()
+        sendeFarben()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         web?.saveState(outState)
@@ -136,6 +161,7 @@ class HauptActivity : Activity() {
     private inner class Klient : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
             antwort = null   // eine neue Seite meldet sich mit bereit neu
+            gesendeteFarben = null
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =

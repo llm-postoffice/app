@@ -224,10 +224,8 @@ export const SZENARIEN = {
   // Android-Hülle: die Vorschau setzt eine Brücke ohne Wirkung ein (tools/vorschau.mjs)
   huelle: { daten: dateien(), seed: true, live: 'ok', huelle: true },
   'mehr-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, scroll: 'Mitteilungen' },
-  // Material You: die Vorschau legt erfundene Systemfarben (Monet) auf die Farbrollen; Variante a nur Akzente, b auch Flächen
-  // (tests/hilfen/farbrollen.mjs). Entwurf, bis der Nutzer gewählt hat.
-  ...Object.fromEntries(['a', 'b'].flatMap((v) => ['gruen', 'orange', 'violett'].map((n) => [`farben-${v}-${n}`, { daten: dateien(), seed: true, live: 'ok', farben: { variante: v, palette: n } }]))),
-  'farben-c-fest': { daten: dateien(), seed: true, live: 'ok' },
+  // Material You: die Vorschau gibt eine erfundene Systempalette (Monet) durch denselben Weg wie die Hülle (tests/hilfen/farbrollen.mjs)
+  ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, { daten: dateien(), seed: true, live: 'ok', farben: n }])),
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
   'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
   'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
@@ -277,6 +275,5 @@ export const ADRESSEN = {
   'mehr-mitteilungen': ['mehr'],
   huelle: ['wartet', 'mehr'],
   'mehr-huelle': ['mehr'],
-  ...Object.fromEntries(['a', 'b'].flatMap((v) => ['gruen', 'orange', 'violett'].map((n) => [`farben-${v}-${n}`, ['wartet', 'eintrag/r2d4vn']]))),
-  'farben-c-fest': ['wartet', 'eintrag/r2d4vn'],
+  ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, ['wartet', 'alle', 'erfassen', 'mehr', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten']])),
 };

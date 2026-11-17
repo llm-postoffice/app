@@ -7,29 +7,20 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { JETZT, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
-import { rollenBeider } from '../tests/hilfen/farbrollen.mjs';
+import { farbenNachricht } from '../tests/hilfen/farbrollen.mjs';
 
 const wurzel = new URL('../', import.meta.url).pathname;
 const TYP = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.json': 'application/json' };
 
-/** Szenarien mit `farben`: Material You nachgestellt. Die Werte stehen im Einstieg selbst, damit sie auch ohne Netz da sind;
- *  gesetzt werden sie über das CSSOM (die CSP erlaubt kein Inline-Skript und keinen Inline-Stil). */
+/** Szenarien mit `farben` (Name einer Beispielpalette): die Nachricht, die die Hülle schickte, geht vor dem Start durch denselben Weg
+ *  wie in der App (js/farben.js). Sie steht im Einstieg selbst, damit sie auch ohne Netz da ist. */
 function farbenCode(name) {
   const f = SZENARIEN[name]?.farben;
   if (!f) return '';
   return `{
-  const FARBEN = ${JSON.stringify(rollenBeider(f.variante, f.palette))};
-  const dunkel = matchMedia('(prefers-color-scheme: dark)');
-  const blatt = new CSSStyleSheet();
-  document.adoptedStyleSheets = [...document.adoptedStyleSheets, blatt];
-  const setze = () => {
-    const w = FARBEN[dunkel.matches ? 'dunkel' : 'hell'];
-    for (const [k, v] of Object.entries(w)) document.documentElement.style.setProperty(k, v);
-    blatt.replaceSync('.hinweis button { color: var(--hinweis-knopf); }');
-  };
-  setze();
-  dunkel.addEventListener('change', setze);
+  const { systemfarbenVon } = await import('./farben.js');
+  systemfarbenVon()?.uebernimm(${JSON.stringify(farbenNachricht(f))});
 }
 `;
 }

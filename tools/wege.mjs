@@ -892,6 +892,17 @@ try {
   const geoeffnet = await p.warte(`location.hash === '#eintrag/r2d4vn'`, 4000);
   await p.zurueck();
   melde(geoeffnet && await p.hash() === '#erfassen', 'ein Link der Hülle öffnet den Eintrag, Zurück führt nach Erfassen', await p.stand());
+  // Systemfarben (Material You): ohne Nachricht gelten die festen Farben, eine Nachricht setzt die Rollen auf :root (CSSOM, die CSP bleibt)
+  const farbe = (name) => p.werte(`getComputedStyle(document.documentElement).getPropertyValue('--${name}').trim()`);
+  const fest = { akzent: await farbe('akzent'), grund: await farbe('grund') };
+  melde(fest.akzent === '#0b57d0' && fest.grund === '#ffffff', 'ohne Farben der Hülle gelten die festen Farben', JSON.stringify(fest));
+  await p.werte(`__huelleSchicke({ art: 'farben', hell: { akzent: '#006e18', 'auf-akzent': '#ffffff', grund: '#f8fef7', tonal: '#99f993', 'auf-tonal': '#002204', text: 'rot', frage: '#ff0000' }, dunkel: { akzent: '#7cdc78' } })`);
+  await pause(300);
+  const gesetzt = { akzent: await farbe('akzent'), grund: await farbe('grund'), tonal: await farbe('tonal'), text: await farbe('text'), frage: await farbe('frage-acc'),
+    koerper: await p.werte(`getComputedStyle(document.body).backgroundColor`), knopf: await p.werte(`getComputedStyle(document.querySelector('.gefuellt, #leiste a[aria-current]') ?? document.body).backgroundColor`) };
+  melde(gesetzt.akzent === '#006e18' && gesetzt.grund === '#f8fef7' && gesetzt.tonal === '#99f993' && gesetzt.koerper === 'rgb(248, 254, 247)',
+    'Farben der Hülle setzen akzent, grund und tonal auf :root, der Körper nimmt den Grund an', JSON.stringify(gesetzt));
+  melde(gesetzt.text === '#1b1c1f' && gesetzt.frage === '#00696f', 'ein ungültiger Wert und eine Art (frage) bleiben fest', JSON.stringify({ text: gesetzt.text, frage: gesetzt.frage }));
   await p.werte("location.hash = '#wartet'; location.reload()"); await pause(800);
   melde(await p.warte('location.hash === "#wartet"', 4000) && await p.hash() === '#wartet', 'nach dem Neuladen bleibt die App angemeldet, das Token kommt aus der Brücke', await p.stand());
   huelleMeldungen.push(...((await p.werte('window.__melde')) ?? []));
