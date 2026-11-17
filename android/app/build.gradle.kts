@@ -9,6 +9,10 @@ val fassung: String = Regex("""VERSION = '(\d{8}\.\d{2})'""")
     .find(web.resolve("js/version.js").readText())?.groupValues?.get(1)
     ?: error("js/version.js nennt keine Fassung der Form YYYYMMDD.NN")
 
+// Signatur für Releases: Ordner aus LLMPOST_SIGNATUR mit llm-post.p12 und passwort (make signatur legt ihn an).
+// Ohne die Variable baut assembleRelease ein unsigniertes APK.
+val signatur: File? = providers.environmentVariable("LLMPOST_SIGNATUR").orNull?.let(::File)
+
 android {
     namespace = "io.github.llm_postoffice.llmpost"
     compileSdk = 37
@@ -18,6 +22,22 @@ android {
         targetSdk = 36
         versionName = fassung
         versionCode = fassung.replace(".", "").toInt()
+    }
+    signingConfigs {
+        if (signatur != null) {
+            create("release") {
+                storeFile = signatur.resolve("llm-post.p12")
+                storeType = "PKCS12"
+                storePassword = signatur.resolve("passwort").readText().trim()
+                keyAlias = "llm-post"
+                keyPassword = storePassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
     buildFeatures {
         buildConfig = true

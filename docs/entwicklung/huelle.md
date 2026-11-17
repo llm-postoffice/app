@@ -52,3 +52,30 @@ Ohne `XDG_DATA_HOME` gilt `~/.local/share`. Jede Variable lässt sich beim Aufru
   ```sh
   adb shell am start -a android.intent.action.VIEW -d 'llmpost://eintrag/ID'
   ```
+
+## Release
+
+Ein Tag der Form `YYYYMMDD.NN` startet `.github/workflows/huelle.yml`: Tests, Bau, Signatur, dann hängt der Lauf
+`llm-post-TAG.apk` an das Release des Tags und legt es mit dem Abschnitt aus `CHANGELOG.md` an, wenn es fehlt. Der
+Tag muss gleich `js/version.js` sein. Push den Tag mit deinem Konto; ein Tag aus einem Workflow startet keinen Lauf.
+
+Einmal vorher:
+
+1. Leg den Signierschlüssel an. Er liegt danach in `~/.local/share/llm-post/signatur/`. Sichere den Ordner außerhalb
+   dieses Rechners: ohne ihn gibt es keine Updates mehr, nur eine Neuinstallation.
+   ```sh
+   make signatur
+   ```
+2. Trag ihn als Secrets im Repo ein:
+   ```sh
+   base64 -w0 ~/.local/share/llm-post/signatur/llm-post.p12 | gh secret set SIGNATUR_P12
+   gh secret set SIGNATUR_PASSWORT < ~/.local/share/llm-post/signatur/passwort
+   ```
+
+Lokal signiert bauen: `make apk-release`; das APK liegt dann in `android/app/build/llm-post-FASSUNG.apk`.
+
+Nach dem zweiten Release prüfen, dass beide Fassungen dasselbe Zertifikat tragen (gleiche Zeile `SHA-256 digest`):
+```sh
+~/.local/share/android-sdk/build-tools/37.0.0/apksigner verify --print-certs llm-post-ALT.apk
+~/.local/share/android-sdk/build-tools/37.0.0/apksigner verify --print-certs llm-post-NEU.apk
+```

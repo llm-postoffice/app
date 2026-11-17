@@ -7,7 +7,7 @@ HIG ?= ../p94-hig
 BILDER ?= bilder
 NODE ?= node
 
-.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden
+.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release
 
 check: test fremdhost secrets render wege
 
@@ -44,6 +44,7 @@ GRADLE_USER_HOME ?= $(XDG_DATA_HOME)/gradle
 ANDROID_USER_HOME ?= $(XDG_DATA_HOME)/android
 export ANDROID_HOME GRADLE_USER_HOME ANDROID_USER_HOME
 GRADLEW := android/gradlew -p android
+SIGNATUR ?= $(XDG_DATA_HOME)/llm-post/signatur
 
 sdk-vorhanden:
 	@test -f "$(ANDROID_HOME)/licenses/android-sdk-license" || { \
@@ -57,3 +58,25 @@ apk: sdk-vorhanden
 
 apk-test: sdk-vorhanden
 	$(GRADLEW) testDebugUnitTest
+
+# Signierschlüssel für Releases, einmal: legt ihn nur an, wenn er fehlt, und gibt nie etwas davon aus
+signatur:
+	@if [ -e "$(SIGNATUR)/llm-post.p12" ]; then echo "make: Signierschlüssel liegt schon in $(SIGNATUR); er bleibt, wie er ist"; exit 0; fi; \
+	umask 077; mkdir -p "$(SIGNATUR)"; chmod 700 "$(SIGNATUR)"; \
+	head -c 32 /dev/urandom | base64 -w0 > "$(SIGNATUR)/passwort"; \
+	keytool -genkeypair -keystore "$(SIGNATUR)/llm-post.p12" -storetype PKCS12 -alias llm-post \
+	  -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=LLM-Post" \
+	  -storepass:file "$(SIGNATUR)/passwort" -keypass:file "$(SIGNATUR)/passwort"; \
+	chmod 600 "$(SIGNATUR)/llm-post.p12" "$(SIGNATUR)/passwort"; \
+	echo "make: Signierschlüssel angelegt in $(SIGNATUR)"; \
+	echo "Sichere den Ordner außerhalb dieses Rechners; ohne ihn gibt es keine Updates, nur eine Neuinstallation."
+
+# Signiertes Release-APK, benannt wie am Release: llm-post-FASSUNG.apk
+apk-release: sdk-vorhanden
+	@test -r "$(SIGNATUR)/llm-post.p12" || { \
+	  echo "make: Fehler: kein Signierschlüssel in $(SIGNATUR)" >&2; \
+	  echo "Leg ihn einmal an mit: make signatur" >&2; exit 1; }
+	LLMPOST_SIGNATUR="$(SIGNATUR)" $(GRADLEW) assembleRelease
+	@v=$$(sed -nE "s/.*VERSION = '([0-9.]+)'.*/\1/p" js/version.js); \
+	cp android/app/build/outputs/apk/release/app-release.apk "android/app/build/llm-post-$$v.apk"; \
+	echo "make: signiertes APK liegt in android/app/build/llm-post-$$v.apk"
