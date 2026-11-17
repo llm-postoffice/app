@@ -3,6 +3,7 @@ package io.github.llm_postoffice.llmpost
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -14,11 +15,22 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
+import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+import java.io.File
+import java.util.concurrent.Executors
+import org.json.JSONException
+import org.json.JSONObject
 
 /** Die einzige Ansicht der Hülle: eine WebView mit LLM-Post aus den Assets, Herkunft appassets.androidplatform.net. */
 class HauptActivity : Activity() {
     private var web: WebView? = null
+    private val arbeiter = Executors.newSingleThreadExecutor()
+    private val tresor by lazy { Tresor(File(noBackupFilesDir, "token.bin")) }
+    private var antwort: JavaScriptReplyProxy? = null
+    private var anstehend: Ziel? = null
     private val lader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -58,7 +70,52 @@ class HauptActivity : Activity() {
             val v = web
             if (v != null && v.canGoBack()) v.goBack() else moveTaskToBack(true)
         }
-        if (savedInstanceState == null || w.restoreState(savedInstanceState) == null) w.loadUrl(START)
+        // Brücke zur Web-App: Objekt llmpost vor dem ersten Skript, nur Herkunft der Assets, nur Hauptframe (js/huelle.js)
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            WebViewCompat.addWebMessageListener(w, BRUECKE, setOf("https://$HOST")) { _, nachricht, herkunft, hauptframe, proxy ->
+                if (hauptframe && herkunft.scheme == "https" && herkunft.host == HOST) nachricht.data?.let { verarbeite(it, proxy) }
+            }
+        }
+        // Ein Link oder geteilter Text beim Start; nach Neuaufbau oder Start aus den letzten Apps gilt der alte Intent nicht
+        val neu = savedInstanceState == null && (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0
+        val ziel = if (neu) zielAus(intent) else null
+        if (ziel is Ziel.Teilen) anstehend = ziel
+        if (savedInstanceState == null || w.restoreState(savedInstanceState) == null) w.loadUrl(START + (ziel?.let(::adresseVon) ?: ""))
+    }
+
+    private fun zielAus(intent: Intent?): Ziel? = intent?.let {
+        zielVon(it.action, it.dataString, it.type, it.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(), it.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString())
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val ziel = zielAus(intent) ?: return
+        val p = antwort
+        if (p != null) p.postMessage(nachrichtVon(ziel)) else anstehend = ziel
+    }
+
+    private fun verarbeite(text: String, proxy: JavaScriptReplyProxy) {
+        val m = try { JSONObject(text) } catch (_: JSONException) { return }
+        val nr = m.optInt("nr", 0)
+        // Unbekannte Arten übergeht die Hülle; weitere Werte an die Seite (etwa Systemfarben) kommen als neue Art dazu
+        when (m.optString("art")) {
+            "bereit" -> {
+                antwort = proxy
+                anstehend?.let { proxy.postMessage(nachrichtVon(it)) }
+                anstehend = null
+            }
+            "token-holen" -> arbeiter.execute {
+                val t = tresor.lies()
+                runOnUiThread { if (!isDestroyed) proxy.postMessage(antwortToken(nr, t)) }
+            }
+            "token-setzen" -> {
+                val t = if (m.isNull("token")) null else m.optString("token").ifEmpty { null }
+                arbeiter.execute {
+                    val ok = (t == null || t.length <= TOKEN_MAX) && runCatching { tresor.setze(t) }.isSuccess
+                    runOnUiThread { if (!isDestroyed) proxy.postMessage(if (ok) antwortOk(nr) else antwortFehler(nr)) }
+                }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -69,10 +126,15 @@ class HauptActivity : Activity() {
     override fun onDestroy() {
         web?.destroy()
         web = null
+        arbeiter.shutdown()
         super.onDestroy()
     }
 
     private inner class Klient : WebViewClient() {
+        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            antwort = null   // eine neue Seite meldet sich mit bereit neu
+        }
+
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
             lader.shouldInterceptRequest(request.url)
 
@@ -102,5 +164,7 @@ class HauptActivity : Activity() {
     companion object {
         const val HOST = "appassets.androidplatform.net"
         const val START = "https://$HOST/assets/web/index.html"
+        const val BRUECKE = "llmpost"
+        const val TOKEN_MAX = 4096
     }
 }

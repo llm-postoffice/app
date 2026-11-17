@@ -39,3 +39,16 @@ Ohne `XDG_DATA_HOME` gilt `~/.local/share`. Jede Variable lässt sich beim Aufru
   Links nach draußen öffnet der Browser. Zurück geht durch den Verlauf der App und verlässt sie ganz oben.
 - Das Symbol `res/drawable-nodpi/symbol_vorne.png` ist eine Kopie von `symbole/maskierbar-512.png`; `SymbolTest`
   hält beide gleich.
+
+## Brücke zur Web-App
+
+- Die Hülle legt vor dem ersten Skript das Objekt `llmpost` an (`WebViewCompat.addWebMessageListener`), nur für die
+  Herkunft der Assets und nur im Hauptframe. Das Protokoll steht im Kopf von `js/huelle.js`.
+- `Ziel.kt` liest Intents ohne Android-Typen (`ZielTest`): `llmpost://eintrag/ID` öffnet den Eintrag, jede andere
+  Adresse mit dem Schema öffnet Wartet, Teilen (`text/plain`) legt den Text als Entwurf in Erfassen.
+- `Tresor.kt` hält das Token: AES-GCM mit einem Schlüssel im Android Keystore, Datei `token.bin` in
+  `noBackupFilesDir`. Fehlt der Schlüssel (etwa nach einer Neuinstallation), fragt die App neu nach der Anmeldung.
+- Einen Link auf einem angeschlossenen Handy ausprobieren:
+  ```sh
+  adb shell am start -a android.intent.action.VIEW -d 'llmpost://eintrag/ID'
+  ```
