@@ -5,10 +5,13 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
+import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -33,6 +36,9 @@ class HauptActivity : Activity() {
     private var antwort: JavaScriptReplyProxy? = null
     private var anstehend: Ziel? = null
     private var gesendeteFarben: String? = null
+    private var speichern: Offen? = null
+    private var dateiAuswahl: ValueCallback<Array<Uri>>? = null
+    private class Offen(val nr: Int, val datei: Speichern, val proxy: JavaScriptReplyProxy)
     private val lader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -68,6 +74,21 @@ class HauptActivity : Activity() {
         w.settings.allowContentAccess = false
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         w.webViewClient = Klient()
+        w.webChromeClient = object : WebChromeClient() {
+            // <input type=file> der Seite (Datei anhängen): die Dateiauswahl des Systems; jeder Aufruf wird beantwortet
+            override fun onShowFileChooser(view: WebView, rueckruf: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
+                dateiAuswahl?.onReceiveValue(null)
+                dateiAuswahl = rueckruf
+                return try {
+                    startActivityForResult(params.createIntent(), ANFRAGE_DATEI)
+                    true
+                } catch (_: ActivityNotFoundException) {
+                    dateiAuswahl = null
+                    rueckruf.onReceiveValue(null)
+                    true
+                }
+            }
+        }
         rahmen.addView(w, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
             // Zurück geht durch den Verlauf der App (ein Blatt schließt zuerst); ganz oben verlässt es die App
@@ -114,6 +135,21 @@ class HauptActivity : Activity() {
                 val t = tresor.lies()
                 runOnUiThread { if (!isDestroyed) proxy.postMessage(antwortToken(nr, t)) }
             }
+            "speichern" -> {
+                // Eine Datei der Seite ablegen: der Nutzer wählt Ort und Namen im Dialog des Systems (Storage Access Framework)
+                val s = speichernVon(m.optString("name"), m.optString("typ"), m.optString("daten"))
+                if (s == null || speichern != null) { proxy.postMessage(antwortFehler(nr)); return }
+                speichern = Offen(nr, s, proxy)
+                try {
+                    startActivityForResult(
+                        Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(s.typ).putExtra(Intent.EXTRA_TITLE, s.name),
+                        ANFRAGE_SPEICHERN,
+                    )
+                } catch (_: ActivityNotFoundException) {
+                    speichern = null
+                    proxy.postMessage(antwortFehler(nr))
+                }
+            }
             "token-setzen" -> {
                 val t = if (m.isNull("token")) null else m.optString("token").ifEmpty { null }
                 arbeiter.execute {
@@ -146,12 +182,37 @@ class HauptActivity : Activity() {
         sendeFarben()
     }
 
+    @Deprecated("Eine Activity ohne AndroidX kennt nur diesen Weg")
+    override fun onActivityResult(anfrage: Int, ergebnis: Int, daten: Intent?) {
+        super.onActivityResult(anfrage, ergebnis, daten)
+        when (anfrage) {
+            ANFRAGE_SPEICHERN -> {
+                val o = speichern ?: return
+                speichern = null
+                val ziel = daten?.data
+                if (ergebnis != RESULT_OK || ziel == null) { o.proxy.postMessage(antwortAbgebrochen(o.nr)); return }
+                arbeiter.execute {
+                    val ok = runCatching { contentResolver.openOutputStream(ziel, "wt")?.use { it.write(o.datei.daten) } != null }.getOrDefault(false)
+                    runOnUiThread { if (!isDestroyed) o.proxy.postMessage(if (ok) antwortOk(o.nr) else antwortFehler(o.nr)) }
+                }
+            }
+            ANFRAGE_DATEI -> {
+                // Die Antwort muss immer kommen, sonst öffnet die WebView nie wieder eine Dateiauswahl
+                val f = dateiAuswahl ?: return
+                dateiAuswahl = null
+                f.onReceiveValue(if (ergebnis == RESULT_OK) WebChromeClient.FileChooserParams.parseResult(ergebnis, daten) else null)
+            }
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         web?.saveState(outState)
     }
 
     override fun onDestroy() {
+        dateiAuswahl?.onReceiveValue(null)
+        dateiAuswahl = null
         web?.destroy()
         web = null
         arbeiter.shutdown()
@@ -195,5 +256,7 @@ class HauptActivity : Activity() {
         const val START = "https://$HOST/assets/web/index.html"
         const val BRUECKE = "llmpost"
         const val TOKEN_MAX = 4096
+        const val ANFRAGE_SPEICHERN = 41
+        const val ANFRAGE_DATEI = 42
     }
 }

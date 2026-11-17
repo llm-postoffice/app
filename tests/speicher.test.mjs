@@ -9,8 +9,8 @@ test('der Speicher im Arbeitsspeicher erfüllt den Vertrag der Schnittstelle', a
   assert.deepEqual(await vertrag(speicherDatenbank()), []);
 });
 
-test('das Schema nennt alle Speicher, die Teil C und E brauchen', () => {
-  assert.deepEqual(Object.keys(SPEICHER).sort(), ['baum', 'dateien', 'einstellungen', 'entwuerfe', 'schlange']);
+test('das Schema nennt alle Speicher, die Teil C, E und die Anhänge brauchen', () => {
+  assert.deepEqual(Object.keys(SPEICHER).sort(), ['anhaenge', 'baum', 'dateien', 'einstellungen', 'entwuerfe', 'schlange']);
   assert.deepEqual(SPEICHER.schlange.indizes, ['zustand']);
 });
 

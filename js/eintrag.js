@@ -17,6 +17,8 @@ import { absender } from './absenden.js';
 import { URTEILE, zeitpunkt } from './ansichtstexte.js';
 import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 import { naechsterOffen } from './abnahme.js';
+import { anhaengeAbschnitt } from './anhaengeansicht.js';
+import { anhangWahl } from './anhangwahl.js';
 
 /** Die ID im Wortlaut der Ansicht: „Abnahme k7m-2qa“. */
 export const eintragsZeile = (art, id) => el('p', { class: 'eintragszeile' }, `${art} `, idSpan(idMitStrich(id)));
@@ -146,6 +148,7 @@ export function eintragAnsicht(welt, z, k, o) {
     teile.push(...moeglichkeitenListe(e));
   }
   teile.push(...fadenListe(welt, e));
+  teile.push(...anhaengeAbschnitt(welt, e, k));
   const quelle = e.head.get('Source');
   if (quelle) teile.push(el('h2', {}, 'Quelle'), el('p', { class: 'quelle' }, el('code', {}, sichtbar(quelle, true))));
   return { inhalt: teile, aktion: aktionsLeiste(welt, eintrag, k, extra, erledigen), titel: m.art.wort };
@@ -183,10 +186,11 @@ export async function antwortBlatt(welt, k, o, schliessen) {
   if (gesperrt) koerper.push(band({ ton: 'info', symbol: 'info-f', satz: SENDEN_FEHLT }));
   let wahl = null;
   let textSchluessel = null;
+  const anhang = await anhangWahl(k, schluessel.antwort(e.id), { gesperrt });
   const { platz: ablehnung, los } = absender(
     (opt) => (wahl
-      ? k.schreiben.antworten(e.id, { wahl, ...opt })
-      : k.schreiben.antworten(e.id, { text: textSchluessel.t.value.trim(), entwurf: { schluessel: schluessel.antwort(e.id), wert: { text: textSchluessel.t.value } }, ...opt })),
+      ? k.schreiben.antworten(e.id, { wahl, anhaenge: anhang.liste(), entwurf: { schluessel: schluessel.antwort(e.id), wert: textSchluessel.t.value.trim() ? { text: textSchluessel.t.value } : null }, ...opt })
+      : k.schreiben.antworten(e.id, { text: textSchluessel.t.value.trim(), anhaenge: anhang.liste(), entwurf: { schluessel: schluessel.antwort(e.id), wert: { text: textSchluessel.t.value } }, ...opt })),
     () => schliessen());
   if (liste.length) {
     koerper.push(el('div', { class: 'antworten' }, liste.map((m) => {
@@ -198,7 +202,7 @@ export async function antwortBlatt(welt, k, o, schliessen) {
     })));
   }
   textSchluessel = await textFeld(k, schluessel.antwort(e.id), 'antwort', liste.length ? 'Eigene Antwort' : 'Deine Antwort');
-  koerper.push(textSchluessel.feld, ablehnung);
+  koerper.push(textSchluessel.feld, anhang.platz, ablehnung);
   const senden = knopf('Senden', { klasse: 'gefuellt', gesperrt, an: async (ev) => {
     if (!textSchluessel.t.value.trim()) { textSchluessel.t.focus(); return; }
     wahl = null;

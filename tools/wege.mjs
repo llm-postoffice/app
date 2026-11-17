@@ -7,12 +7,13 @@
 // geht ins Netz.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { VERSION } from '../js/version.js';
 import { mockQuelle } from '../tests/hilfen/mockquelle.mjs';
+import { FENSTER_PNG, MESSLAUF, anhaengeDazu } from '../tests/hilfen/anhangdaten.mjs';
 import { ERFUNDENES_TOKEN, REPO, SZENARIEN, TOKEN, eintraege, entwuerfe } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'wege';
@@ -72,7 +73,7 @@ const server = createServer(async (q, a) => {
     a.writeHead(200, { 'content-type': TYP[extname(p)] || 'application/octet-stream' });
     if (zweiteFassung && pfad === '/sw.js') { a.end((await readFile(p, 'utf8')).replace(`postfach-${VERSION}`, `postfach-${VERSION}-zwei`)); return; }
     a.end(await readFile(p));
-  } catch { a.writeHead(404); a.end(); }
+  } catch { if (!a.headersSent) a.writeHead(404); a.end(); }
 }).listen(0, '127.0.0.1');
 await new Promise((r) => server.once('listening', r));
 const basis = `http://127.0.0.1:${server.address().port}/index.html`;
@@ -101,6 +102,9 @@ const senden = (method, params = {}, sessionId) => new Promise((r) => {
   try { chrome.stdio[3].write(JSON.stringify({ id: n, method, params, sessionId }) + '\0'); } catch { r({}); }
 });
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Wartet, bis die Mock-Quelle einen Commit verbucht hat, auf den `passt` zutrifft; gibt ihn zurück oder null. */
+const qaWarte = async (q, passt, ms) => { for (let t = 0; t < ms; t += 250) { const c = q.commits.find((x) => !x.fremd && passt(x)); if (c) return c; await pause(250); } return null; };
+const SPEICHER_ERWARTET = { anhaenge: 1, baum: 1, dateien: 1, einstellungen: 1, entwuerfe: 1, schlange: 1 };
 
 let fehler = 0;
 const melde = (ok, weg, ist) => { if (!ok) fehler++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${weg}${ok ? '' : `: ${ist}`}`); };
@@ -193,6 +197,12 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
     await werte(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); e.focus(); e.select?.(); })()`);
     await senden('Input.insertText', { text }, s); await pause(200);
   };
+  // Eine Datei im <input type=file> wählen, wie die Dateiauswahl es täte (löst input und change aus)
+  const datei = async (sel, pfade) => {
+    const { result: { root } } = await senden('DOM.getDocument', {}, s);
+    const { result: { nodeId } } = await senden('DOM.querySelector', { nodeId: root.nodeId, selector: sel }, s);
+    await senden('DOM.setFileInputFiles', { files: pfade, nodeId }, s); await pause(600);
+  };
   const zurueck = async () => { await werte('history.back()'); await pause(500); };
   const medien = async (modus) => { await senden('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: modus }] }, s); await pause(300); };
   const netz = async (an) => {
@@ -227,7 +237,7 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
   const schliesse = () => senden('Target.closeTarget', { targetId });
   aktuell = schliesse;
   const stand = async () => werte(`[location.hash, document.getElementById('titel').textContent, document.getElementById('zurueck').hidden ? 'ohne Pfeil' : 'mit Pfeil'].join(' | ')`);
-  return { werte, tippe, schreibe, taste, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
+  return { werte, tippe, schreibe, datei, taste, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
 }
 
 // Startet Chromium nicht, ist das BLOCKED und kein FAIL (TXT-14): der Test konnte nicht laufen.
@@ -512,7 +522,7 @@ try {
     const kr = r(kn); const ir = r(inh); const br = r(b);
     if (ir.bottom > kr.top + 0.5) fehler.push('Inhalt reicht ' + Math.round(ir.bottom - kr.top) + ' px unter die Knöpfe');
     if (br.top < -0.5 || br.bottom > innerHeight + 0.5) fehler.push('Blatt ragt aus dem Fenster');
-    for (const f of inh.querySelectorAll('input:not([type=radio]):not([type=checkbox]), select, textarea')) if (r(f).height < 47.5) fehler.push(f.name + ' nur ' + Math.round(r(f).height) + ' px hoch');
+    for (const f of inh.querySelectorAll('input:not([type=radio]):not([type=checkbox]):not([type=file]), select, textarea')) if (r(f).height < 47.5) fehler.push(f.name + ' nur ' + Math.round(r(f).height) + ' px hoch');
     const knoepfe = [...kn.querySelectorAll('button')].map(r);
     for (let i = 0; i < knoepfe.length; i++) for (let j = i + 1; j < knoepfe.length; j++) {
       const a = knoepfe[i]; const c = knoepfe[j];
@@ -914,6 +924,107 @@ try {
   huelleMeldungen.push(...((await p.werte('window.__melde')) ?? []));
   melde(huelleMeldungen.length === 0, 'die Seiten der Hülle bleiben frei von CSP-Verstößen und Skriptfehlern', huelleMeldungen.join('; '));
   await p.schliesse();
+
+  // 7b. Anhänge: ein Datenstand der Fassung 1 bleibt beim Öffnen erhalten; Bild und Text erscheinen; Herunterladen löst einen Download
+  //     aus, ohne die CSP zu berühren; ohne Netz sagt der Anhang, was hilft; Anhängen und Senden legen die Bytes unter attachments/ ab
+  {
+    const downloads = join(profil, 'downloads');
+    const hochladen = join(profil, 'hochladen');
+    await mkdir(downloads, { recursive: true }); await mkdir(hochladen, { recursive: true });
+    await senden('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
+    let netzAn = true;   // Chromium fängt api.github.com ab; die Quelle sagt, ob das Netz da ist
+    const qa = mockQuelle({ dateien: anhaengeDazu(new Map(SZENARIEN.normal.daten)), repo: REPO, token: TOKEN, serverzeit: () => Date.now(), amNetz: () => netzAn });
+    abgefangen = fange(qa);
+    // Datenbank der Fassung 1 (ohne Speicher anhaenge) mit Anmeldung und einem Entwurf anlegen, auf einer Seite ohne die App
+    const alt = await seite(t('').replace('index.html', 'manifest.webmanifest'));
+    await alt.werte(`(async () => {
+      const { SPEICHER, DB_NAME } = await import('/js/speicher.js');
+      await new Promise((ok) => { const r = indexedDB.deleteDatabase(DB_NAME); r.onsuccess = ok; r.onerror = ok; r.onblocked = ok; });
+      const db = await new Promise((ok, no) => { const r = indexedDB.open(DB_NAME, 1);
+        r.onupgradeneeded = () => { for (const [n, d] of Object.entries(SPEICHER)) { if (n === 'anhaenge') continue; const o = r.result.createObjectStore(n, { keyPath: d.schluessel }); for (const i of d.indizes ?? []) o.createIndex(i, i); } };
+        r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+      await new Promise((ok, no) => { const tx = db.transaction(['einstellungen', 'entwuerfe'], 'readwrite');
+        tx.objectStore('einstellungen').put({ name: 'anmeldung', wert: { repo: ${JSON.stringify(REPO)}, token: ${JSON.stringify(TOKEN)} } });
+        tx.objectStore('einstellungen').put({ name: 'geraet', wert: 'handy' });
+        tx.objectStore('entwuerfe').put({ schluessel: 'antwort/alt', text: 'Entwurf aus Fassung 1', zeit: 1 });
+        tx.oncomplete = ok; tx.onerror = () => no(tx.error); });
+      db.close();
+    })()`);
+    const vorher = await alt.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank();
+      const e = await db.lies('entwuerfe', 'antwort/alt'); const a = await db.lies('einstellungen', 'anmeldung'); await db.schreibe('anhaenge', { sha: 'x', daten: 'QQ==', zeit: 1 });
+      const ok = (await db.lies('anhaenge', 'x')).daten === 'QQ=='; db.schliesse();
+      const roh = await new Promise((r) => { const q = indexedDB.open('postfach'); q.onsuccess = () => { const v = q.result.version; const n = [...q.result.objectStoreNames].sort(); q.result.close(); r({ v, n }); }; });
+      return { entwurf: e?.text, repo: a?.wert?.repo, ok, roh }; })()`);
+    melde(vorher?.entwurf === 'Entwurf aus Fassung 1' && vorher?.repo === REPO && vorher?.ok && vorher?.roh?.v === 2 && vorher.roh.n.join() === Object.keys(SPEICHER_ERWARTET).sort().join(),
+      'eine Datenbank der Fassung 1 wird beim Öffnen auf Fassung 2 gehoben: Entwurf und Anmeldung bleiben, der Speicher anhaenge ist da', JSON.stringify(vorher));
+    await alt.schliesse();
+
+    p = await seite(t(`#eintrag/${ID}`));
+    const zeigt = await p.warte(`document.querySelectorAll('.anhaenge li').length === 3`, 15000);
+    melde(zeigt && await p.werte(`[...document.querySelectorAll('main h2')].some((h) => h.textContent === 'Anhänge (3)')`),
+      'der Eintrag zeigt den Abschnitt Anhänge (3) mit drei geschlossenen Zeilen', `${await p.stand()}`);
+    melde((qa.zaehler.blob ?? 0) === 0 && await p.werte(`[...document.querySelectorAll('.anhang-inhalt')].every((e) => e.hidden)`),
+      'geschlossen lädt die App keinen Anhang', `Blobs ${qa.zaehler.blob}`);
+    await p.tippe('.anhaenge li:nth-child(1) .anhang-kopf');
+    const bild = await p.warte(`(() => { const i = document.querySelector('.anhaenge li:nth-child(1) img.anhang-bild'); return !!i && i.complete && i.naturalWidth === 300 && i.naturalHeight === 400; })()`, 8000);
+    melde(bild && qa.zaehler.blob === 1, 'ein Tipp auf das Bild lädt genau einen Blob und zeigt es als data-Adresse unter der CSP', `Bild ${bild}, Blobs ${qa.zaehler.blob}`);
+    await p.tippe('.anhaenge li:nth-child(3) .anhang-kopf');
+    melde(await p.warte(`(document.querySelector('.anhaenge li:nth-child(3) pre.anhang-text')?.textContent ?? '') === ${JSON.stringify(MESSLAUF)}`, 8000),
+      'der Text steht Zeichen für Zeichen in der Zeile', await p.werte(`document.querySelector('.anhaenge li:nth-child(3) .anhang-inhalt')?.textContent`));
+    melde(await p.werte(`getComputedStyle(document.querySelector('.anhaenge li:nth-child(3) pre.anhang-text')).fontFamily.includes('monospace')`), 'der Text steht in fester Schrift',
+      await p.werte(`getComputedStyle(document.querySelector('.anhaenge li:nth-child(3) pre.anhang-text')).fontFamily`));
+    await p.tippe('.anhaenge li:nth-child(1) button.text');
+    let geladen = [];
+    for (let n = 0; n < 40 && !geladen.length; n++) { await pause(250); geladen = (await readdir(downloads)).filter((f) => !f.endsWith('.crdownload')); }
+    const gespeichert = geladen.length ? await readFile(join(downloads, geladen[0])) : Buffer.alloc(0);
+    melde(geladen.join() === 'eingabefelder-standard.png' && Buffer.compare(gespeichert, Buffer.from(FENSTER_PNG)) === 0,
+      'Herunterladen im Browser legt die Datei mit Name und gleichen Bytes ab', `Dateien ${JSON.stringify(geladen)}, ${gespeichert.length} Bytes`);
+    melde(/Heruntergeladen\./.test(await p.werte(`document.querySelector('.anhaenge li:nth-child(1)').textContent`)), 'danach steht „Heruntergeladen.“ in der Zeile', 'Meldung fehlt');
+    netzAn = false; await p.netz(false);
+    await p.tippe('.anhaenge li:nth-child(2) .anhang-kopf');
+    melde(await p.warte(`/Ohne Netz/.test(document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent) && /Öffne ihn einmal mit Netz/.test(document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent)`, 5000),
+      'ohne Netz sagt ein noch nie geladener Anhang, was hilft', await p.werte(`document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent`));
+    melde(await p.werte(`!!document.querySelector('.anhaenge li:nth-child(1) img.anhang-bild') && !document.querySelector('.anhaenge li:nth-child(1) .anhang-inhalt').hidden`), 'ein schon geladener Anhang bleibt ohne Netz sichtbar', 'Bild weg');
+    netzAn = true; await p.netz(true);
+    await p.tippe('.anhaenge li:nth-child(2) .anhang-inhalt button');
+    melde(await p.warte(`[...document.querySelectorAll('.anhaenge li:nth-child(2) button')].some((b) => b.textContent === 'Herunterladen')`, 8000), 'Erneut versuchen lädt den Anhang, sobald Netz da ist', 'kein Herunterladen');
+    const m1 = (await p.werte('window.__melde')) ?? [];
+    melde(m1.length === 0, 'Bild, Text und Download lösen keine Verstöße gegen die CSP und keine Skriptfehler aus', m1.join('; '));
+
+    // Anhängen: Datei wählen, Eintrag anlegen, zehn Sekunden Rückgängig abwarten
+    const skizze = join(hochladen, 'skizze.png'); const notiz = join(hochladen, 'notiz.txt');
+    await writeFile(skizze, FENSTER_PNG); await writeFile(notiz, 'Zeile 1\nZeile 2\n');
+    p = await seite(t('#erfassen'));
+    await p.warte(`!!document.querySelector('input[type=file]')`);
+    await p.schreibe('[name=titel]', 'Mit Skizze');
+    await p.datei('input[type=file]', [skizze, notiz]);
+    const gewaehlt = await p.werte(`[...document.querySelectorAll('.gewaehlt li')].map((l) => l.textContent).join('|')`);
+    melde(gewaehlt === 'skizze.png1,2 KiBEntfernen|notiz.txt16 BEntfernen', 'zwei gewählte Dateien stehen mit Größe und Entfernen unter Datei anhängen', gewaehlt);
+    await p.tippe('[data-handlung=anlegen]');
+    const angelegt = await qaWarte(qa, (c) => /^post: new [0-9a-z]{6}: Mit Skizze$/.test(c.message), 16000);
+    const neuPfade = angelegt ? [...angelegt.dateien.keys()].filter((x) => x.includes('/attachments/') && !x.startsWith(`entries/${ID.slice(0, 2)}/${ID}/`)) : [];
+    melde(Boolean(angelegt) && neuPfade.length === 2 && neuPfade.every((x) => /^entries\/[0-9a-z]{2}\/[0-9a-z]{6}\/attachments\/(skizze\.png|notiz\.txt)$/.test(x))
+      && Buffer.compare(Buffer.from(angelegt.dateien.get(neuPfade.find((x) => x.endsWith('skizze.png')))), Buffer.from(FENSTER_PNG)) === 0
+      && angelegt.dateien.get(neuPfade.find((x) => x.endsWith('notiz.txt'))) === 'Zeile 1\nZeile 2\n',
+    'Eintrag anlegen sendet nach zehn Sekunden einen Commit mit beiden Anhängen unter attachments/, Bytes gleich', JSON.stringify(neuPfade));
+    const kodierungen = qa.protokoll.filter((a) => a.art === 'blobNeu').map((a) => JSON.parse(a.body).encoding).sort().join();
+    melde(kodierungen === 'base64,base64,utf-8', 'Anhänge gehen als Base64, der Eintrag als Text', kodierungen);
+    // Antworten mit einer Datei
+    p = await seite(t(`#eintrag/${ID}/antworten`));
+    await p.warte(`!!document.querySelector('input[type=file]')`);
+    await p.schreibe('#blatt textarea', 'Mit Notiz.');
+    await p.datei('input[type=file]', [notiz]);
+    await p.tippe('#blatt-knoepfe .gefuellt');
+    const beantwortet = await qaWarte(qa, (c) => c.message === `post: answer ${ID}`, 16000);
+    const nachtrag = beantwortet ? [...beantwortet.dateien.keys()].filter((x) => x.startsWith(`entries/r2/${ID}/`) && x.endsWith('-addendum.md') && beantwortet.dateien.get(x).includes('Mit Notiz.')) : [];
+    const ulid = nachtrag[0]?.split('/').pop().split('-')[0];
+    melde(nachtrag.length === 1 && beantwortet.dateien.get(nachtrag[0]).includes('- Attachments: notiz.txt\n') && beantwortet.dateien.get(`entries/r2/${ID}/attachments/${ulid}/notiz.txt`) === 'Zeile 1\nZeile 2\n',
+      'Antworten mit Datei: Nachtrag mit Feld Attachments und die Datei unter attachments/ULID/', JSON.stringify(nachtrag));
+    const m2 = [...((await p.werte('window.__melde')) ?? [])];
+    melde(m2.length === 0, 'Dateiauswahl, Senden und Antworten lösen keine Verstöße gegen die CSP aus', m2.join('; '));
+    await p.schliesse();
+    abgefangen = fange(standardQuelle());
+  }
 
   // 8. Konsole: keine Verstöße gegen die CSP, keine Fehler im Skript, in keiner Ansicht
   const ansichten = ['#wartet', '#alle', '#alle/status', '#alle/sortieren', '#abnahmen', '#erfassen', '#mehr', '#eingang', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`, `#eintrag/${ID}/einsortieren`, '#ideen', '#mehr/geraet', '#suche', '#anmelden', `#eintrag/${ID}/antworten`, `#eintrag/${EINGANG}/einsortieren`, `#eintrag/${ABNAHME}/schritt/3/fail`, `#eintrag/${ABNAHME}/ergebnis`];

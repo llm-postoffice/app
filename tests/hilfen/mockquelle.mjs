@@ -1,12 +1,17 @@
 // Eine Mock-Quelle für Abgleich und Senden: ein fetch, das die Endpunkte von GitHub nachbildet, die die App braucht.
 // Lesen: Baum, GraphQL object(oid:), Blob. Schreiben (Teil E, Git Data API): Kopf des Zweigs, Commit lesen, Blob, Baum mit
 // base_tree, Commit und das Verschieben des Zweigs (ohne force nur vorwärts, sonst 422 wie GitHub). Dateien sind ein Map
-// von Pfad zu Text; ein angenommener Commit ersetzt den Inhalt des Map, ein Test, der das Map selbst ändert, spielt
+// von Pfad zu Text (Anhänge auch zu Bytes); ein angenommener Commit ersetzt den Inhalt des Map, ein Test, der das Map selbst ändert, spielt
 // einen fremden Push (der Kopf rückt dann von allein weiter). Die Prüfsummen sind echte Git-Blob-Prüfsummen. Ein Test kann Ausfälle einschleusen (vorher) und liest das Protokoll der Anfragen. Die Datei läuft in Node
 // und im Browser (die Vorschau und der Wegetest nutzen sie dort): sie braucht kein node:-Modul, nur SHA-1 und Base64
 // aus eigenem Code.
 const kodiere = (text) => new TextEncoder().encode(text);
-const byteLaenge = (text) => kodiere(text).length;
+// Der Inhalt einer Datei ist Text (String) oder, für Anhänge, Bytes (Uint8Array)
+const bytesVon = (inhalt) => (typeof inhalt === 'string' ? kodiere(inhalt) : inhalt);
+const byteLaenge = (inhalt) => bytesVon(inhalt).length;
+const ausBase64 = (b64) => Uint8Array.from(atob(b64.replace(/\s+/g, '')), (c) => c.charCodeAt(0));
+/** Bytes, die gültiges UTF-8 sind, bleiben Text (damit Tests Strings vergleichen können); sonst bleiben es Bytes. */
+const textOderBytes = (bytes) => { try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return bytes; } };
 
 /** SHA-1 über Bytes, Ergebnis als Hex; gerade genug, um Git-Prüfsummen zu bilden. */
 export function sha1Hex(bytes) {
@@ -40,9 +45,9 @@ const base64 = (bytes) => {
   return btoa(s);
 };
 
-export const blobSha = (text) => {
-  const kopf = kodiere(`blob ${byteLaenge(text)}\0`);
-  const koerper = kodiere(text);
+export const blobSha = (inhalt) => {
+  const koerper = bytesVon(inhalt);
+  const kopf = kodiere(`blob ${koerper.length}\0`);
   const alles = new Uint8Array(kopf.length + koerper.length);
   alles.set(kopf); alles.set(koerper, kopf.length);
   return sha1Hex(alles);
@@ -105,9 +110,14 @@ export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', v
     const body = init.body ? JSON.parse(init.body) : {};
     const lim = kopfLimit();
     if (art === 'blobNeu') {
-      if (typeof body.content !== 'string' || (body.encoding ?? 'utf-8') !== 'utf-8') return json({ message: 'Invalid blob' }, 422, lim);
-      const sha = blobSha(body.content);
-      q.blobs.set(sha, body.content);
+      const kodierung = body.encoding ?? 'utf-8';
+      if (typeof body.content !== 'string' || !['utf-8', 'base64'].includes(kodierung)) return json({ message: 'Invalid blob' }, 422, lim);
+      let inhalt = body.content;
+      if (kodierung === 'base64') {
+        try { inhalt = textOderBytes(ausBase64(body.content)); } catch { return json({ message: 'Invalid blob' }, 422, lim); }
+      }
+      const sha = blobSha(inhalt);
+      q.blobs.set(sha, inhalt);
       return json({ sha, url: `https://api.github.com${prefix}/git/blobs/${sha}` }, 201, lim);
     }
     if (art === 'baumNeu') {
@@ -170,7 +180,7 @@ export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', v
       const sha = u.pathname.split('/').pop();
       const treffer = [...dateien.values()].find((t) => blobSha(t) === sha);
       if (treffer === undefined) return json({ message: 'Not Found' }, 404, kopfLimit());
-      return json({ sha, size: byteLaenge(treffer), encoding: 'base64', content: base64(kodiere(treffer)).replace(/(.{60})/g, '$1\n') }, 200, kopfLimit());
+      return json({ sha, size: byteLaenge(treffer), encoding: 'base64', content: base64(bytesVon(treffer)).replace(/(.{60})/g, '$1\n') }, 200, kopfLimit());
     }
     if (art === 'ref') return json({ ref: `refs/heads/${zweig}`, object: { sha: aktuellerKopf().sha, type: 'commit' } }, 200, kopfLimit());
     if (art === 'commit') {
@@ -188,7 +198,7 @@ export function mockQuelle({ dateien, repo = 'org/daten', token = 'TESTTOKEN', v
       const repository = {};
       for (const m of query.matchAll(/(a\d+): object\(oid: "([0-9a-f]{40})"\)/g)) {
         const text = [...dateien.values()].find((t) => blobSha(t) === m[2]);
-        repository[m[1]] = text === undefined ? null : { text, isTruncated: false, isBinary: false };
+        repository[m[1]] = text === undefined ? null : typeof text === 'string' ? { text, isTruncated: false, isBinary: false } : { text: null, isTruncated: false, isBinary: true };
       }
       return json({ data: { repository } }, 200, kopfLimit());
     }

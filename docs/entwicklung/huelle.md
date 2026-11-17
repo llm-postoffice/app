@@ -29,6 +29,10 @@ Werkzeuge liegen unter `$XDG_DATA_HOME` (ohne: `~/.local/share`): `android-sdk` 
   `tests/farbrollen.test.mjs` vergleicht beide). Der Hintergrund der Activity vor dem ersten Bild ist Ton 10 (hell) oder 900 (dunkel)
   der Palette neutral1. Nicht auf dem Handy belegt: ob ein Wechsel des Hintergrundbilds die Activity neu aufbaut oder nur die Rückkehr
   die Farben nachholt; beide Wege sind abgedeckt.
+- Anhänge: Die Nachricht `speichern` (Name, Typ, Base64; Protokoll im Kopf von `js/huelle.js`) prüft `Speichern.kt` (Name ohne
+  Pfad, höchstens 100 Zeichen, MIME-Typ, höchstens 1 MiB); `HauptActivity.kt` öffnet dazu `ACTION_CREATE_DOCUMENT` und
+  schreibt die Bytes an den gewählten Ort, ohne neue Berechtigung. `<input type=file>` der Seite (Datei anhängen) bedient
+  `onShowFileChooser` mit der Dateiauswahl des Systems. Beides prüft kein Test auf der JVM, nur das Handy.
 - Ändert sich eine Abhängigkeit (Apache-2.0), ändert sich `android/app/BIBLIOTHEKEN.txt` mit.
 
 ## Release

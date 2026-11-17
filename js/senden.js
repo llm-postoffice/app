@@ -28,7 +28,7 @@ export function schreibTakt({ uhr = () => performance.now(), warte = (ms) => new
 }
 
 /**
- * Schreibt `dateien` ([{ pfad, inhalt }], Text) als einen Commit auf den Zweig. Parameter:
+ * Schreibt `dateien` ([{ pfad, inhalt }] Text oder [{ pfad, base64 }] Bytes, etwa Anhänge) als einen Commit auf den Zweig. Parameter:
  *   fetch    wie window.fetch
  *   quelle   { repo: 'EIGENTÜMER/NAME', token, zweig: 'main' }
  *   dateien  neue Dateien; ein Pfad, der es schon gibt, wäre überschrieben: die ULIDs und IDs machen das unmöglich
@@ -88,7 +88,8 @@ export async function sendeCommit({ fetch, quelle, dateien, nachricht, takt = sc
   bei({ phase: 'blobs', versuch: 1 });
   const eintraege = [];
   for (const d of dateien) {
-    const { daten } = await rufe('POST', '/git/blobs', { content: d.inhalt, encoding: 'utf-8' });
+    // Text geht als UTF-8, Anhänge als Base64: GitHub legt die Bytes unverändert ab
+    const { daten } = await rufe('POST', '/git/blobs', d.base64 !== undefined ? { content: d.base64, encoding: 'base64' } : { content: d.inhalt, encoding: 'utf-8' });
     if (typeof daten?.sha !== 'string') throw new AbgleichFehler('antwort', 'GitHub legt den Blob nicht an');
     eintraege.push({ path: d.pfad, mode: '100644', type: 'blob', sha: daten.sha });
   }

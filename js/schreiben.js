@@ -1,11 +1,12 @@
 // Die Schreibschicht (Teil E): `k.schreiben` ist ein Schreiber mit diesen Funktionen; jede gibt eine Zusage zurück und reiht
 // die Sendung in die Warteschlange (Speicher „schlange“), statt sofort zu senden:
 //
-//   antworten(id, { wahl, text, entwurf })        Antwort auf eine Frage (wahl ist der Schlüssel einer Möglichkeit) oder Nachtrag
+//   antworten(id, { wahl, text, anhaenge, entwurf })  Antwort auf eine Frage (wahl ist der Schlüssel einer Möglichkeit) oder Nachtrag;
+//                                                 anhaenge sind [{ name, groesse, typ, daten (Base64) }] (docs: anhaenge.js)
 //   urteilSenden(id, { text, entwurf })           Antwort auf eine Abnahme; text ist der Antworttext (abnahme.js antwortText)
 //   erledigen(id)                                 Eintrag erledigen
 //   einsortieren(id, { ziel, satz, entwurf })     Nachtrag mit To und Project; ziel ist „user“ oder ein Projektname
-//   anlegen({ art, titel, an, text, rang, dringend, entwurf })   neuer Eintrag
+//   anlegen({ art, titel, an, text, rang, dringend, anhaenge, entwurf })   neuer Eintrag
 //   senden(sendung)                               Sendung aus dem Konflikt trotzdem senden (Trotzdem senden, Als Nachtrag senden)
 //   erneut(sendung), verwerfen(sendung), rueckgaengig(sendung)
 //
@@ -15,13 +16,16 @@
 // Eine Sendung wartet zehn Sekunden (Rückgängig), ehe sie raus darf. Vor dem Senden gleicht der Schreiber ab (bedingte
 // Anfrage, ETag) und prüft, ob die Frage inzwischen beantwortet, der Eintrag erledigt oder einsortiert ist.
 //
-// Sendung in der Warteschlange: { id, eintrag, art, zustand, zeit, sendenAb, von, dateien, nachricht, ... } mit
+// Sendung in der Warteschlange: { id, eintrag, art, zustand, zeit, sendenAb, von, dateien, nachricht, anhaenge, ... } mit
 //   art      antwort | urteil | erledigt | einsortieren | anlegen
 //   zustand  liegt | sendet | gesendet | konflikt | token | verboten | fehler    (Wörter: ansichtstexte.js schlangeZeile)
 //   entwurf  { schluessel, wert }: was die Eingabe war; Rückgängig und Verwerfen legen sie zurück (UEI-6)
+//   anhaenge die Anhänge der Eingabe (Base64); sie bleiben mit der Sendung auf dem Gerät, bis sie raus ist, und gehören zum
+//            Entwurf anhaenge/SCHLÜSSEL, den Rückgängig zurücklegt
 // Die Dateien einer Sendung stehen beim Einreihen fest (Stempel, ULIDs, ID): ein zweiter Versuch schreibt dieselben
 // Pfade mit demselben Inhalt, ist also harmlos, falls der erste ankam und die App vor der Antwort endete.
 import { adressText, um } from './ansichtstexte.js';
+import { anhangPfadVon } from './anhaenge.js';
 import { anlegenDateien, antwortDateien, erledigtDateien, kurz, moeglichkeitenRoh, pruefeSendung, routeDateien, urteilDateien } from './dateien.js';
 import { korrigierteZeit, merkeUhr, stempel, ulidErzeuger, zufallsbytes } from './erzeugen.js';
 import { idMitStrich, ulidZeit } from './format.js';
@@ -102,6 +106,9 @@ export function konfliktVon(welt, s) {
   return null;
 }
 
+/** Alle Pfade des Stands: die Dateien der Einträge und die Anhänge. */
+const baumPfade = (baum) => new Set([...(baum?.eintraege ?? []).map((x) => x.pfad), ...(baum?.anhaenge ?? []).map(anhangPfadVon)]);
+
 /** Ein Schreiber mit allem, was er braucht, als Parameter (Datenbank, fetch, Uhr, Abgleich), damit node --test ihn prüft. */
 export class Schreiber {
   /**
@@ -149,7 +156,7 @@ export class Schreiber {
       zustand: 'liegt', zeit: jetzt, sendenAb: jetzt + this.rueckgaengigMs, dateien: sendung.dateien, nachricht: sendung.nachricht,
       entwurf: entwurf ? { schluessel: entwurf.schluessel, wert: entwurf.wert ?? null } : null,
     };
-    if (entwurf) await this.db.entferne('entwuerfe', entwurf.schluessel);
+    if (entwurf) { await this.db.entferne('entwuerfe', entwurf.schluessel); await this.db.entferne('entwuerfe', `anhaenge/${entwurf.schluessel}`); }
     await this.db.schreibe('schlange', eintrag);
     this.beiAenderung();
     this.hinweis({ text: hinweisText, rueckgaengig: () => this.rueckgaengig(eintrag.id) });
@@ -172,13 +179,13 @@ export class Schreiber {
     }
   }
 
-  antworten(id, { wahl = null, text = '', entwurf = null, personenErlaubt = false } = {}) {
+  antworten(id, { wahl = null, text = '', anhaenge = [], entwurf = null, personenErlaubt = false } = {}) {
     return this.versuche(async () => {
       const { e, ctx } = await this.vorbereiten(id);
-      const sendung = antwortDateien(ctx, e, { wahl, text });
+      const sendung = antwortDateien(ctx, e, { wahl, text, anhaenge });
       const roh = wahl ? moeglichkeitenRoh(e).find((m) => m.wahl.toLowerCase() === String(wahl).toLowerCase()) : null;
       const bild = roh ? ` „${roh.wahl}“` : '';
-      return this.einreihen({ eintrag: e.id, art: 'antwort', wahl: roh?.wahl ?? null, text: String(text ?? '').trim(), von: ctx.geraet },
+      return this.einreihen({ eintrag: e.id, art: 'antwort', wahl: roh?.wahl ?? null, text: String(text ?? '').trim(), anhaenge, von: ctx.geraet },
         sendung, { entwurf, personenErlaubt, hinweisText: `Antwort${bild} gespeichert` });
     });
   }
@@ -208,11 +215,11 @@ export class Schreiber {
     });
   }
 
-  anlegen({ art, titel, an = null, text = '', rang = 2, dringend = false, entwurf = null, personenErlaubt = false }) {
+  anlegen({ art, titel, an = null, text = '', rang = 2, dringend = false, anhaenge = [], entwurf = null, personenErlaubt = false }) {
     return this.versuche(async () => {
       const { ctx } = await this.vorbereiten(null);
-      const sendung = anlegenDateien(ctx, { art, titel, an, text, rang, dringend });
-      return this.einreihen({ eintrag: sendung.id, art: 'anlegen', neueArt: art, eintragTitel: String(titel).trim(), von: ctx.geraet },
+      const sendung = anlegenDateien(ctx, { art, titel, an, text, rang, dringend, anhaenge });
+      return this.einreihen({ eintrag: sendung.id, art: 'anlegen', neueArt: art, eintragTitel: String(titel).trim(), anhaenge, von: ctx.geraet },
         sendung, { entwurf, personenErlaubt, hinweisText: `Eintrag ${idMitStrich(sendung.id)} gespeichert` });
     });
   }
@@ -227,6 +234,9 @@ export class Schreiber {
     if (!s || s.zustand === 'gesendet' || s.zustand === 'sendet') return false;
     if (s.entwurf?.wert && !(await this.db.lies('entwuerfe', s.entwurf.schluessel))) {
       await this.db.schreibe('entwuerfe', { ...s.entwurf.wert, schluessel: s.entwurf.schluessel, zeit: this.jetzt() });
+    }
+    if (s.entwurf && s.anhaenge?.length && !(await this.db.lies('entwuerfe', `anhaenge/${s.entwurf.schluessel}`))) {
+      await this.db.schreibe('entwuerfe', { anhaenge: s.anhaenge, schluessel: `anhaenge/${s.entwurf.schluessel}`, zeit: this.jetzt() });
     }
     await this.db.entferne('schlange', id);
     this.beiAenderung();
@@ -353,7 +363,8 @@ export class Schreiber {
       if (!a.ok) return behandle(a.fehler);
       const welt = await ladeWelt(this.db, this.jetzt());
       const baum = await this.db.lies('baum', 'stand');
-      schonDa = Boolean(baum) && s.dateien.every((d) => baum.eintraege.some((x) => x.pfad === d.pfad));
+      const pfade = baumPfade(baum);
+      schonDa = Boolean(baum) && s.dateien.every((d) => pfade.has(d.pfad));
       if (!schonDa && !s.trotzdem) {
         const k = konfliktVon(welt, s);
         if (k) { await this.setze(s, { zustand: 'konflikt', ...k }); return 'weiter'; }
@@ -361,7 +372,7 @@ export class Schreiber {
         // Als Nachtrag senden: allein der Text, ohne Answer, Verdict und Status
         const { e, st, ctx } = await this.vorbereiten(s.eintrag);
         const neu = s.art === 'antwort'
-          ? antwortDateien(ctx, e, { wahl: s.wahl, text: s.text, nachtrag: true })
+          ? antwortDateien(ctx, e, { wahl: s.wahl, text: s.text, nachtrag: true, anhaenge: s.anhaenge ?? [] })
           : urteilDateien(ctx, e, st, s.antwort, { nachtrag: true });
         dateien = neu.dateien; nachricht = neu.nachricht;
       }
@@ -388,7 +399,7 @@ export class Schreiber {
   async raeume() {
     const baum = await this.db.lies('baum', 'stand');
     if (!baum) return;
-    const pfade = new Set(baum.eintraege.map((x) => x.pfad));
+    const pfade = baumPfade(baum);
     let geaendert = false;
     for (const s of await this.db.alle('schlange')) {
       if (s.zustand === 'gesendet' && s.dateien?.length && s.dateien.every((d) => pfade.has(d.pfad))) { await this.db.entferne('schlange', s.id); geaendert = true; }

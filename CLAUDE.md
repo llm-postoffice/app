@@ -37,6 +37,7 @@ arbeitet offline mit einer Warteschlange.
   bleiben die Knöpfe gesperrt und ein Satz sagt warum. Eine neue Handlung bekommt in `welt.js` (`handlungenVon`) einen
   Eintrag und in der Ansicht einen Knopf mit `data-handlung` (E13; Test und Wegetest prüfen beides). Die Vorschau lässt die
   Zeitgeber der Schreibschicht still stehen; ein Szenario tippt mit `klick` einen Knopf an.
+- Anhänge (Fassung 20261117.06): Der Abgleich liest Name und Größe aus dem Baum (`baum.anhaenge`), nie den Inhalt; `js/anhangholer.js` lädt ihn beim Aufklappen über die Blob-Abfrage und hält ihn im Speicher `anhaenge` (Datenbank Fassung 2). `js/anhaengeansicht.js` zeigt den Abschnitt am Eintrag (Bilder nur Raster als `data:`-Adresse, Text über `textContent`), `js/anhangwahl.js` das Anhängen in Erfassen und Antworten; die Regeln für Namen, Größe und Pfade (`attachments/NAME`, `attachments/ULID/NAME` mit Feld `Attachments`) stehen in `js/anhaenge.js` und `js/dateien.js` wie im Postwerkzeug. Herunterladen: im Browser ein Link auf einen Blob, in der Hülle die Brückennachricht `speichern`. Urteile (Abnahme) und Neu adressieren nehmen noch keine Anhänge.
 - Offline, Installation und Update (Teil F): `sw.js` ist ein Modul (`register('./sw.js', { type: 'module' })`) und hält die Hülle
   nach Fassung; seine Entscheidungen (welche Caches fallen weg, wann wartet ein Update, was gibt ihn frei) stehen in
   `js/swlogik.js`, rein unter `node --test`. `js/aktualisieren.js` (`Aktualisierung`, Container und Neuladen sind Parameter)

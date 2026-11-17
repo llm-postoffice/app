@@ -3,7 +3,12 @@
 // Im Browser fehlt es; dann bleibt alles, wie es ist. Nachrichten sind JSON-Texte:
 //   Seite an Hülle: { art: 'bereit' } (die App läuft, die Hülle schickt, was ansteht);
 //                   { nr, art: 'token-holen' }, Antwort { nr, art: 'token', token: Text oder null };
-//                   { nr, art: 'token-setzen', token: Text oder null }, Antwort { nr, art: 'ok' } oder { nr, art: 'fehler' }.
+//                   { nr, art: 'token-setzen', token: Text oder null }, Antwort { nr, art: 'ok' } oder { nr, art: 'fehler' };
+//                   { nr, art: 'speichern', name, typ, daten }: legt die Datei ab (daten ist Base64, höchstens 1 MiB; name ohne
+//                   Pfad, höchstens 100 Zeichen; typ ein MIME-Typ). Die Hülle zeigt den Speichern-Dialog des Systems; Antwort
+//                   { nr, art: 'ok' }, { nr, art: 'abgebrochen' } (der Nutzer schloss den Dialog) oder { nr, art: 'fehler' }.
+//                   Der Dialog wartet auf den Nutzer, darum braucht frage('speichern', …) eine lange Wartezeit (3. Parameter).
+//                   Dateien für <input type=file> (Datei anhängen) wählt die Hülle selbst (WebChromeClient), ohne Nachricht.
 //   Hülle an Seite: { art: 'oeffnen', adresse: '#…' } (ein Link llmpost://…); { art: 'teilen', titel, text } (für Erfassen);
 //                   { art: 'farben', hell: { ROLLE: '#rrggbb', … }, dunkel: { … } } (Systemfarben, Material You; die Rollen heißen
 //                   wie die Variablen in app.css ohne `--`, die Liste steht in farben.js; die Hülle schickt sie nach bereit und
@@ -60,14 +65,14 @@ export class Huelle {
 
   #sende(o) { this.#objekt.postMessage(JSON.stringify(o)); }
 
-  /** Fragt die Hülle; erfüllt sich mit der Antwort derselben nr, nach WARTEZEIT_MS ohne Antwort ein Fehler. */
-  frage(art, daten = {}) {
+  /** Fragt die Hülle; erfüllt sich mit der Antwort derselben nr, nach `wartezeit` (Vorgabe WARTEZEIT_MS) ohne Antwort ein Fehler. */
+  frage(art, daten = {}, wartezeit = WARTEZEIT_MS) {
     const nr = ++this.#nr;
     return new Promise((ok, fehler) => {
       const uhr = this.#zeitgeber.setze(() => {
         if (!this.#offen.delete(nr)) return;
         fehler(new Error('Die Hülle antwortet nicht.'));
-      }, WARTEZEIT_MS);
+      }, wartezeit);
       this.#offen.set(nr, { ok, uhr });
       this.#sende({ ...daten, nr, art });
     });

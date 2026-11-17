@@ -64,6 +64,17 @@ test('ohne Antwort lehnt frage nach der Wartezeit ab', async () => {
   await assert.rejects(p, { message: 'Die Hülle antwortet nicht.' });
 });
 
+test('speichern wartet auf den Dialog der Hülle: die Wartezeit ist der dritte Parameter, die Antwort kommt nach nr', async () => {
+  const zeiten = [];
+  const o = attrappe((n) => (n.art === 'speichern' ? { nr: n.nr, art: 'abgebrochen' } : undefined));
+  const h = new Huelle(o, { zeitgeber: { setze: (f, ms) => { zeiten.push(ms); return 1; }, loesche() {} } });
+  assert.deepEqual(await h.frage('speichern', { name: 'a.pdf', typ: 'application/pdf', daten: 'QQ==' }, 600_000), { nr: 1, art: 'abgebrochen' });
+  assert.deepEqual(o.gesendet[0], { nr: 1, art: 'speichern', name: 'a.pdf', typ: 'application/pdf', daten: 'QQ==' });
+  assert.deepEqual(zeiten, [600_000]);
+  h.frage('token-holen');
+  assert.equal(zeiten.at(-1), 5000, 'ohne dritten Parameter gilt die Wartezeit von fünf Sekunden');
+});
+
 test('Nachrichten vor verbinde kommen bei verbinde in Reihenfolge an, neue Arten über einen weiteren Empfänger', () => {
   const o = attrappe();
   const h = new Huelle(o, { zeitgeber: { setze: () => 0, loesche() {} } });

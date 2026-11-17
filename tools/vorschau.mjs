@@ -83,7 +83,7 @@ for (const wahl of [].concat(sz?.klick ?? [])) {
   while (!(knopf = document.querySelector(wahl)) && Date.now() - erst < 4000) await new Promise((r) => setTimeout(r, 100));
   if (!knopf) throw new Error('Knopf fehlt: ' + wahl);
   await new Promise((r) => setTimeout(r, 400));
-  knopf.click();
+  (document.querySelector(wahl) ?? knopf).click();   // neu suchen: ein Abgleich kann die Ansicht in der Pause neu gezeichnet haben
   await new Promise((r) => setTimeout(r, 400));
 }
 if (sz?.scroll) {

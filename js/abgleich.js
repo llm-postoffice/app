@@ -10,6 +10,8 @@
 // Abgleich ab, macht der nächste dort weiter. Erst wenn alle Dateien da sind, wird 'neu' zu 'stand', und was der Baum
 // nicht mehr nennt, fällt weg. Gelesen wird immer aus 'stand', der Zustand springt also nie halb um.
 
+import { ANHANG_MAX, anhangPfad } from './anhaenge.js';
+
 export const API = 'https://api.github.com';
 export const STAPEL = 250;
 export const PARALLEL = 4;
@@ -87,8 +89,9 @@ async function jsonVon(res) {
 }
 
 /**
- * Welche Pfade liest die App? projects.md und die Dateien der Eintragsordner (entries/XX/ID/DATEI). Anhänge
- * (entries/XX/ID/attachments/...) bleiben weg: App 1 zeigt sie nicht, und sie wären binär und groß.
+ * Welche Pfade liest die App sofort? projects.md und die Dateien der Eintragsordner (entries/XX/ID/DATEI). Anhänge
+ * (entries/XX/ID/attachments/...) bleiben weg: sie sind binär und groß. Der Baum nennt sie mit Name und Größe
+ * (baum.anhaenge); ihren Inhalt lädt die App erst, wenn der Nutzer einen Anhang öffnet (holeAnhang).
  */
 export const liestApp = (pfad) => pfad === 'projects.md' || (pfad.startsWith('entries/') && pfad.split('/').length <= 4);
 
@@ -105,7 +108,13 @@ async function holeBaum(ctx, etag) {
   const eintraege = j.tree
     .filter((t) => t.type === 'blob' && SHA_RE.test(t.sha) && liestApp(t.path))
     .map((t) => ({ pfad: t.path, sha: t.sha }));
-  return { sha: j.sha, etag: res.headers.get('etag'), eintraege };
+  const anhaenge = [];
+  for (const t of j.tree) {
+    if (t.type !== 'blob' || !SHA_RE.test(t.sha)) continue;
+    const a = anhangPfad(t.path);
+    if (a) anhaenge.push({ ...a, sha: t.sha, groesse: Number.isFinite(t.size) ? t.size : 0 });
+  }
+  return { sha: j.sha, etag: res.headers.get('etag'), eintraege, anhaenge };
 }
 
 /** Holt Blobs per GraphQL; liefert Map sha zu Text für alles, was ganz und als Text kam. */
@@ -178,15 +187,17 @@ export async function abgleichen({ fetch, db, quelle, jetzt = () => Date.now(), 
   bei({ phase: 'baum' });
   const stand = await db.lies('baum', 'stand');
   const neu = await db.lies('baum', 'neu');
-  const baum = await holeBaum(ctx, (neu ?? stand)?.etag ?? null);
+  // Ein Stand aus einer Fassung ohne Anhänge hat keine Liste davon: ohne ETag kommt der Baum noch einmal ganz
+  const vorher = neu ?? stand;
+  const baum = await holeBaum(ctx, Array.isArray(vorher?.anhaenge) ? vorher.etag ?? null : null);
   let ziel = neu ?? stand;
   if (baum) {
     if (stand && stand.sha === baum.sha) {
       // Derselbe Inhalt unter neuer Kennung (etwa nach einem Revert): nichts zu laden, nur die Kennung merken.
-      ziel = { ...stand, etag: baum.etag };
+      ziel = { ...stand, etag: baum.etag, anhaenge: baum.anhaenge };
       await db.aendere([{ speicher: 'baum', setze: ziel }, { speicher: 'baum', entferne: 'neu' }]);
     } else {
-      ziel = { name: 'neu', sha: baum.sha, etag: baum.etag, eintraege: baum.eintraege, vollstaendig: false, zeit: jetzt(), geprueft: null };
+      ziel = { name: 'neu', sha: baum.sha, etag: baum.etag, eintraege: baum.eintraege, anhaenge: baum.anhaenge, vollstaendig: false, zeit: jetzt(), geprueft: null };
       await db.schreibe('baum', ziel);
     }
   }
@@ -228,11 +239,14 @@ export async function abgleichen({ fetch, db, quelle, jetzt = () => Date.now(), 
   const art = ziel.name === 'stand' && !fehlend.length ? 'unveraendert' : 'aktualisiert';
   const jetztMs = jetzt();
   const gebraucht = new Set(proSha.keys());
+  const anhangShas = new Set((ziel.anhaenge ?? []).map((a) => a.sha));
   const fertigerStand = { ...ziel, name: 'stand', vollstaendig: true, zeit: ziel.name === 'stand' ? ziel.zeit : jetztMs, geprueft: jetztMs };
   await db.aendere([
     { speicher: 'baum', setze: fertigerStand },
     { speicher: 'baum', entferne: 'neu' },
     ...[...alle].filter((sha) => !gebraucht.has(sha)).map((sha) => ({ speicher: 'dateien', entferne: sha })),
+    // Geladene Anhänge, die der Baum nicht mehr nennt, fallen weg
+    ...(await db.schluessel('anhaenge')).filter((sha) => !anhangShas.has(sha)).map((sha) => ({ speicher: 'anhaenge', entferne: sha })),
   ]);
   bei({ phase: 'fertig', fertig: gesamt, gesamt });
   return { art, dateien: gesamt, neu: fehlend.length, anfragen: ctx.anfragen, limit: ctx.limit, serverzeit: ctx.serverzeit };
@@ -246,4 +260,21 @@ export async function leseStand(db) {
   const pfade = new Map();
   for (const e of baum.eintraege) if (nachSha.has(e.sha)) pfade.set(e.pfad, nachSha.get(e.sha));
   return { pfade, baum };
+}
+
+/**
+ * Lädt den Inhalt eines Anhangs über die Blob-Abfrage (Base64, GitHub setzt Zeilenumbrüche hinein) und gibt ihn als Base64
+ * ohne Umbrüche zurück. Fehler: AbgleichFehler (netz, token, limit, verboten, nicht-gefunden, antwort) und `zu-gross` für
+ * eine Datei über 1 MiB. Die Abfrage geht an api.github.com, das die CSP schon erlaubt.
+ */
+export async function holeAnhang({ fetch, quelle, sha, jetzt = () => Date.now(), signal }) {
+  const m = REPO_RE.exec(quelle?.repo ?? '');
+  if (!m || !SHA_RE.test(sha ?? '') || !quelle.token) throw new AbgleichFehler('einstellung', 'Repo, Token oder Anhang fehlt');
+  const ctx = { fetch, signal, jetzt, repo: quelle.repo, token: quelle.token, anfragen: { anhang: 0 }, limit: null, serverzeit: null };
+  const res = await anfrage(ctx, 'anhang', `${API}/repos/${ctx.repo}/git/blobs/${sha}`, { headers: kopf(ctx) });
+  if (!res.ok) throw await antwortFehler(res, jetzt);
+  const blob = await jsonVon(res);
+  if (blob.encoding !== 'base64' || typeof blob.content !== 'string') throw new AbgleichFehler('antwort', `Blob mit unbekannter Kodierung ${blob.encoding}`);
+  if (Number(blob.size) > ANHANG_MAX) throw new AbgleichFehler('zu-gross', 'Der Anhang ist größer als 1 MiB');
+  return blob.content.replace(/\s+/g, '');
 }

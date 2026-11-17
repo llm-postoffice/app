@@ -1,5 +1,15 @@
 # Änderungen
 
+## 20261117.06 (2026-11-17)
+
+Anhänge: Du siehst, speicherst und sendest Dateien zu Einträgen.
+
+- Ein **Eintrag** zeigt seine Anhänge in einem eigenen Abschnitt am Ende. Ein Tipp klappt die Zeile auf: Bilder und Text siehst du gleich, alles andere lädst du herunter.
+- Einen Anhang lädt die App erst beim Aufklappen und behält ihn danach auf dem Gerät. Ohne Netz sagt die Zeile, was hilft.
+- **Herunterladen** legt die Datei im Browser in den Download-Ordner, in der Android-App wählst du den Ort.
+- In **Erfassen** und beim **Antworten** hängt **Datei anhängen** bis zu 1 MiB je Datei an. Ein Geheimnis in einem Textanhang geht nie raus.
+- Die Android-App öffnet dafür die Dateiauswahl des Systems.
+
 ## 20261117.05 (2026-11-17)
 
 Die Android-App übernimmt die Farben deines Hintergrundbilds (Android-Einstellung Hintergrund und Stil).
