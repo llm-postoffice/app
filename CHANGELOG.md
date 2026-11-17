@@ -8,6 +8,7 @@ Die Android-App übernimmt die Farben deines Hintergrundbilds (Android-Einstellu
 - Wechselst du das Hintergrundbild, übernimmt die App die neuen Farben, sobald du sie wieder öffnest.
 - Arten (Frage, Freigabe, Abnahme, Auftrag, Nachricht) und Zustände (dringend, Warnung, ok) behalten ihre Farben.
 - Die Web-App im Browser behält ihre Farben.
+- Die Android-App nutzt eine veraltete Systemfunktion für die Ränder nur noch vor Android 15.
 
 ## 20261117.04 (2026-11-17)
 

@@ -52,6 +52,21 @@ accent2 und accent3 braucht kein Entwurf; sie kämen für Nachricht oder Chips i
 - Die Vorschau setzt die Werte über das CSSOM (`style.setProperty`, ein `CSSStyleSheet`); die CSP bleibt, wie sie ist. Im Bau gilt dasselbe für die Werte der Hülle.
 - Die Farbe der Statusleiste (`theme-color`) bleibt fest; in B müsste sie mitwandern.
 
-## Wahl
+## Wahl (2026-11-17)
 
-Steht aus. Die Frage liegt bei claude-post.
+Der Nutzer wählte **B**: auch Grund, Karten, Linien, Text und Hinweis aus dem System; Arten und Zustände bleiben fest. Den Grund nannte er
+nicht; B setzte auf „wie ein Teil des Systems“, mit leichtem Farbstich in jeder Fläche.
+
+Gebaut (Fassung 20261117.05): `Farben.kt` ordnet die Töne den Rollen zu (Tabelle oben) und schickt sie als Nachricht `farben` nach `bereit`
+und bei der Rückkehr in den Vordergrund; `js/farben.js` setzt sie über CSSOM auf `:root`, hell und dunkel getrennt. Pages und Browser
+ohne Hülle behalten die festen Farben. Der Hintergrund der Activity vor dem ersten Bild ist Ton 10 oder 900 von neutral1. Die Statusleiste
+und die Leiste unten sind durchsichtig und zeigen den Grund der Seite; `theme-color` wirkt in der WebView nicht und bleibt, wie es ist.
+
+## Kaltlesen
+
+Ein Leser ohne Kenntnis der App sah fünf Bilder (Wartet hell und dunkel, Eintrag, Antworten, Alle) in Orange. Er fand für alle drei
+Hauptaufgaben (was wartet und was dringend ist, eine Frage beantworten, filtern) sofort den Bedienteil und erkannte aktiven Reiter und
+Dringend an der Farbe. Nichts davon hängt an der neuen Farbe; die Rollen halten den Kontrast. Offene Punkte des Lesers, die schon vor B
+galten und hier nicht geändert wurden: in Antworten sind A und B nach der Wahl nicht unterscheidbar gefüllt, die Fragekarte im Blatt
+ist abgedunkelt, die Möglichkeiten sehen wie antippbare Karten aus, und Wörter wie Abnahme, Faden und Abgeglichen sind ohne Zusammenhang
+unklar. Sie gehen nicht in diese Änderung ein.
