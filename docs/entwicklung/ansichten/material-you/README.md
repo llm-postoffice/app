@@ -14,7 +14,7 @@ Entwurf zum Eintrag g4g-r2g, Schritte 1 und 2 der Schleife für eine neue Ansich
 
 Bilder in 448 × 923 CSS-Pixeln (hier auf halbe Breite verkleinert), Wartet und Eintrag (Frage), hell und dunkel, mit drei erfundenen Paletten
 (Grün, Orange, Violett). Die Paletten sind nachgebaut (`tests/hilfen/farbrollen.mjs`): Töne und Farbton wie bei Monet, Buntheit angenähert.
-Übersicht aller Varianten: `vergleich.png`.
+Übersicht: `vergleich.png` (A, B, C in Grün, ganze Bildschirme, hell und dunkel) und `paletten.png` (A und B in Orange und Violett).
 
 | Variante | Bilder | Wette |
 | --- | --- | --- |
