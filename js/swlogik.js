@@ -16,15 +16,3 @@ export const aktualisierungWartet = ({ waiting, controller }) => Boolean(waiting
 /** Der Nutzer will wechseln: nur die Nachricht „wechseln“ gibt den wartenden Service Worker frei. */
 export const WECHSELN = 'wechseln';
 export const gibtFrei = (daten) => daten === WECHSELN;
-
-// ---- Web-Push als Probe (Auftrag phzd86) ---------------------------------------------------------------------------------
-// Der Push trägt keinen Text; der Service Worker zeigt immer denselben Hinweis. Die Anzahl neuer Einträge kennt er nicht: der
-// Speicher auf dem Gerät hat nur den Stand des letzten Abgleichs, und das Token liegt dort, wo ein Push nicht abgleichen soll.
-// Titel höchstens 30 und Text höchstens 40 Zeichen (UMI-2); der Hinweis nennt nichts Vertrauliches (UMI-5).
-export const PUSH_HINWEIS = { titel: 'Postfach', text: 'Neue Einträge für dich', tag: 'postfach-neu', ziel: './#wartet' };
-
-/** Die Optionen für showNotification: ein neuer Push ersetzt den alten Hinweis (tag) und meldet sich wieder (renotify). */
-export const hinweisOptionen = (icon) => ({ body: PUSH_HINWEIS.text, tag: PUSH_HINWEIS.tag, renotify: true, icon, data: { ziel: PUSH_HINWEIS.ziel } });
-
-/** Welches offene Fenster holt ein Tipp auf den Hinweis nach vorn? Ein sichtbares, sonst das erste; null: ein neues öffnen. */
-export const fensterWaehlen = (fenster) => fenster.find((f) => f.visibilityState === 'visible') ?? fenster[0] ?? null;
