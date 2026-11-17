@@ -1,5 +1,15 @@
 # Änderungen
 
+## 20261117.05 (2026-11-17)
+
+Die Android-App übernimmt die Farben deines Hintergrundbilds (Android-Einstellung Hintergrund und Stil).
+
+- **Farben:** Knöpfe, Auswahl, Hintergrund, Karten, Text und Hinweise der Android-App folgen deinem Hintergrundbild, hell und dunkel.
+- Wechselst du das Hintergrundbild, übernimmt die App die neuen Farben, sobald du sie wieder öffnest.
+- Arten (Frage, Freigabe, Abnahme, Auftrag, Nachricht) und Zustände (dringend, Warnung, ok) behalten ihre Farben.
+- Die Web-App im Browser behält ihre Farben.
+- Die Android-App nutzt eine veraltete Systemfunktion für die Ränder nur noch vor Android 15.
+
 ## 20261117.04 (2026-11-17)
 
 Die App heißt jetzt LLM-Post, hat ein neues Symbol und kommt auch als Android-App.

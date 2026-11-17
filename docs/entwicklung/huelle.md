@@ -22,6 +22,13 @@ Werkzeuge liegen unter `$XDG_DATA_HOME` (ohne: `~/.local/share`): `android-sdk` 
 - `HauptActivity.kt` lädt die App über `WebViewAssetLoader`; Links nach draußen öffnet der Browser. Die Brücke `llmpost`
   steht vor dem ersten Skript (Protokoll im Kopf von `js/huelle.js`). `Ziel.kt` liest Intents (`llmpost://eintrag/ID`,
   Teilen als Entwurf), `Tresor.kt` hält das Token im Android Keystore.
+- Farben (Material You): `Farben.kt` ordnet Töne der Systempalette (`system_accent1_600` und so weiter, aus den Ressourcen von
+  Android gelesen) den Rollen von `app.css` zu und baut die Nachricht `farben` (hell und dunkel in einer Nachricht, Protokoll im Kopf
+  von `js/huelle.js`). `HauptActivity.kt` schickt sie nach `bereit` und bei der Rückkehr in den Vordergrund, wenn sie sich geändert hat;
+  `js/farben.js` setzt die Rollen auf `:root`. Die Tabelle steht gleich in `tests/hilfen/farbrollen.mjs` (Vorschau,
+  `tests/farbrollen.test.mjs` vergleicht beide). Der Hintergrund der Activity vor dem ersten Bild ist Ton 10 (hell) oder 900 (dunkel)
+  der Palette neutral1. Nicht auf dem Handy belegt: ob ein Wechsel des Hintergrundbilds die Activity neu aufbaut oder nur die Rückkehr
+  die Farben nachholt; beide Wege sind abgedeckt.
 - Ändert sich eine Abhängigkeit (Apache-2.0), ändert sich `android/app/BIBLIOTHEKEN.txt` mit.
 
 ## Release

@@ -12,6 +12,7 @@ import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
 import { ladeWelt, ortVon } from './welt.js';
 import { adresseAusHuelle, mitGeteiltem } from './huelle.js';
+import { systemfarbenVon } from './farben.js';
 import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 
 const $ = (id) => document.getElementById(id);
@@ -71,9 +72,12 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   starten((o) => { neuBand.ansicht(o.ansicht); return anzeigen(o); }, { woher: (id) => ortVon(welt0, id) });
 
   // Android-Hülle: Links llmpost://… und Text aus anderen Apps kommen über die Brücke (huelle.js).
-  // Spätere Werte der Hülle (etwa Systemfarben) bekommen hier einen weiteren Empfänger.
+  // Die Systemfarben (Material You) setzen die Rollen von app.css auf :root (farben.js); ein weiterer Wert der Hülle bekommt hier
+  // einen weiteren Empfänger.
   if (huelle) {
+    const farben = systemfarbenVon();
     huelle.verbinde({
+      farben: (m) => { farben?.uebernimm(m); },
       oeffnen: (m) => { if (navigationOrt().ansicht !== 'anmelden') gehe(adresseAusHuelle(m.adresse)); },
       teilen: async (m) => {
         const alt = (await liesEntwurf(db, schluessel.erfassen)) ?? {};

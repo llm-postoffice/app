@@ -7,10 +7,23 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { JETZT, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
+import { farbenNachricht } from '../tests/hilfen/farbrollen.mjs';
 
 const wurzel = new URL('../', import.meta.url).pathname;
 const TYP = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.json': 'application/json' };
+
+/** Szenarien mit `farben` (Name einer Beispielpalette): die Nachricht, die die Hülle schickte, geht vor dem Start durch denselben Weg
+ *  wie in der App (js/farben.js). Sie steht im Einstieg selbst, damit sie auch ohne Netz da ist. */
+function farbenCode(name) {
+  const f = SZENARIEN[name]?.farben;
+  if (!f) return '';
+  return `{
+  const { systemfarbenVon } = await import('./farben.js');
+  systemfarbenVon()?.uebernimm(${JSON.stringify(farbenNachricht(f))});
+}
+`;
+}
 
 /** Der Einstieg eines Szenarios als Quelltext eines Moduls (liegt unter /SZENARIO/js/start.js). */
 export function einstieg(name) {
@@ -23,7 +36,7 @@ import { SPEICHER, oeffneOderRueckfall, setzeEinstellung } from './speicher.js';
 
 const NAME = ${JSON.stringify(name)};
 const JETZT = ${JETZT};
-const db = await oeffneOderRueckfall();
+${farbenCode(name)}const db = await oeffneOderRueckfall();
 let fetchen = () => Promise.reject(new TypeError('Failed to fetch'));
 let sz = null;
 if (navigator.onLine) {

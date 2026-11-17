@@ -4,10 +4,13 @@
 //   Seite an Hülle: { art: 'bereit' } (die App läuft, die Hülle schickt, was ansteht);
 //                   { nr, art: 'token-holen' }, Antwort { nr, art: 'token', token: Text oder null };
 //                   { nr, art: 'token-setzen', token: Text oder null }, Antwort { nr, art: 'ok' } oder { nr, art: 'fehler' }.
-//   Hülle an Seite: { art: 'oeffnen', adresse: '#…' } (ein Link llmpost://…); { art: 'teilen', titel, text } (für Erfassen).
+//   Hülle an Seite: { art: 'oeffnen', adresse: '#…' } (ein Link llmpost://…); { art: 'teilen', titel, text } (für Erfassen);
+//                   { art: 'farben', hell: { ROLLE: '#rrggbb', … }, dunkel: { … } } (Systemfarben, Material You; die Rollen heißen
+//                   wie die Variablen in app.css ohne `--`, die Liste steht in farben.js; die Hülle schickt sie nach bereit und
+//                   erneut, wenn sich die Systemfarben ändern; ungültige Werte und unbekannte Rollen übergeht die Seite).
 // Jede Nachricht der Hülle ohne nr ist eine Art mit beliebigen Feldern: Die App meldet für jede Art einen Empfänger an
-// (verbinde); Arten ohne Empfänger werden übergangen. Ein neuer Wert der Hülle (etwa Systemfarben) braucht so nur einen
-// weiteren Empfänger in der App. Die Hülle übergeht Arten der Seite, die sie nicht kennt.
+// (verbinde); Arten ohne Empfänger werden übergangen. Ein neuer Wert der Hülle braucht so nur einen weiteren Empfänger in der
+// App. Die Hülle übergeht Arten der Seite, die sie nicht kennt.
 // Das Token liegt in der Hülle (Android Keystore), nie in IndexedDB: mitTresor leitet nur die Anmeldung dorthin um.
 import { parse } from './adressen.js';
 
