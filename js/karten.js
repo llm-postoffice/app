@@ -31,7 +31,7 @@ export function vonZeile(von, klasse = 'von') {
   return el('span', { class: klasse }, 'von ', wer, a.wo ? `${a.trenner}${a.wo}` : '');
 }
 
-/** Projektname fett, Zusatz („an rechner-a“, „Rang 3“) leichter; ohne Projekt „ohne Projekt“ in Nebenfarbe. */
+/** Projektname fett, Zusatz („an rechner-a“, „Niedrig“) leichter; ohne Projekt „ohne Projekt“ in Nebenfarbe. */
 export function projektSpan(projekt, rest = null) {
   if (!projekt) return el('span', { class: 'projekt keins' }, 'ohne Projekt', rest ? ` · ${rest}` : '');
   return el('span', { class: 'projekt' }, projekt, rest ? el('span', { class: 'rest' }, ` · ${rest}`) : '');
@@ -148,7 +148,7 @@ export function auswahl({ name, gruppen, wert = '', platzhalter = null }) {
   return s;
 }
 
-/** Chips zur Auswahl (Radio): Art in Erfassen mit Haken im gewählten, Rang ohne Symbol. */
+/** Chips zur Auswahl (Radio): Art in Erfassen mit Haken im gewählten, Priorität ohne Symbol. */
 export function chipAuswahl({ name, optionen, wert, arten = false }) {
   return el('div', { class: `chips${arten ? ' arten' : ''}` }, optionen.map((o) => el('label', { class: `chip ${o.klasse ?? ''}`.trim() },
     el('input', { type: 'radio', name, value: o.wert, checked: o.wert === wert }),

@@ -121,7 +121,7 @@ test('Eintrag: Kopfkarte mit Art, ID, Projekt; Frage mit Möglichkeiten, Annahme
   const { r } = await aktion('r2d4vn');
   const text = t(r.inhalt);
   assert.match(text, /Frage[\s\S]*r2d-4vn/);
-  assert.match(text, /beta\s*·\s*Rang 2/);
+  assert.match(text, /beta\s*·\s*Priorität Normal/);
   assert.match(text, /von session:cb56d77f auf rechner-a/);
   assert.match(text, /Ohne deine Antwort arbeitet die Sitzung mit Annahme A weiter\./);
   assert.match(text, /A\s*Standardbibliothek\s*Empfehlung/);
@@ -192,7 +192,7 @@ test('Schritt: Aktion, Befehl, Erwartetes und vier Urteile; Ergebnis mit Folgeau
   assert.equal(finde(e.aktion, 'button')[0].disabled, true);
 });
 
-test('Erfassen: Formular mit Art, Titel, An, Text, Rang, Dringend; Entwurf bleibt; Prüfung des Titels', async () => {
+test('Erfassen: Formular mit Art, Titel, An, Text, Priorität, Dringend; Entwurf bleibt; Prüfung des Titels', async () => {
   const k = await kontext();
   const e = await M.erfassen.erfassenAnsicht(welt(), z(), k);
   assert.equal(finde(e.inhalt, 'input[name="art"]').length, 4);

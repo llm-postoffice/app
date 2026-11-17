@@ -13,6 +13,13 @@ Die App heißt jetzt LLM-Post, hat ein neues Symbol und kommt auch als Android-A
 - **Mehr** zeigt in der Android-App keinen Abschnitt **App installieren** und keine Zeile **Neue Fassung geladen**; Updates kommen über Obtainium.
 - Für Entwickler: `make apk`, `make apk-test`, `make signatur`, `make apk-release` und `make symbole`; Bau und Release in `docs/entwicklung/huelle.md`.
 
+## 20261117.03 (2026-11-17)
+
+Die Priorität heißt überall Hoch, Normal, Niedrig.
+
+- In **Erfassen** wählst du die **Priorität** mit Hoch, Normal oder Niedrig statt mit 1, 2 oder 3. Entwürfe bleiben erhalten.
+- Ein **Eintrag** nennt die Priorität mit denselben Wörtern statt „Rang 2“.
+
 ## 20261117.02 (2026-11-17)
 
 Die Probe für Web-Push in **Mehr** ist weg. Hinweise kommen weiter über ntfy.
