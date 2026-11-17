@@ -10,6 +10,12 @@
 //                   Der Dialog wartet auf den Nutzer, darum braucht frage('speichern', …) eine lange Wartezeit (3. Parameter).
 //                   Dateien für <input type=file> (Datei anhängen) wählt die Hülle selbst (WebChromeClient), ohne Nachricht.
 //   Hülle an Seite: { art: 'oeffnen', adresse: '#…' } (ein Link llmpost://…); { art: 'teilen', titel, text } (für Erfassen);
+//                   zu Dateien aus dem Teilen (Foto, PDF, eine oder mehrere) kommen dazu `dateien` und `mehr`: dateien ist eine Liste
+//                   von { name, typ, groesse, daten } (daten ist Base64, höchstens 1 MiB) oder { name, typ, groesse, fehler }
+//                   mit fehler 'zu-gross' (über 1 MiB: kein Inhalt, nur Name und Größe), 'unlesbar' oder 'kein-zugriff' (der
+//                   Intent gab keine Lesefreigabe, oder die Adresse ist kein content://; name ist dann 'Datei'); groesse ist null,
+//                   wenn sie unbekannt ist. Höchstens 10 Dateien, `mehr` zählt die weiteren. Text und Titel fehlen, wenn nur
+//                   Dateien geteilt werden (dann leer);
 //                   { art: 'farben', hell: { ROLLE: '#rrggbb', … }, dunkel: { … } } (Systemfarben, Material You; die Rollen heißen
 //                   wie die Variablen in app.css ohne `--`, die Liste steht in farben.js; die Hülle schickt sie nach bereit und
 //                   erneut, wenn sich die Systemfarben ändern; ungültige Werte und unbekannte Rollen übergeht die Seite).
@@ -18,6 +24,7 @@
 // App. Die Hülle übergeht Arten der Seite, die sie nicht kennt.
 // Das Token liegt in der Hülle (Android Keystore), nie in IndexedDB: mitTresor leitet nur die Anmeldung dorthin um.
 import { parse } from './adressen.js';
+import { teileAuf } from './anhaenge.js';
 
 export const BRUECKE = 'llmpost';
 export const WARTEZEIT_MS = 5000;
@@ -157,3 +164,15 @@ export function mitGeteiltem(entwurf, { titel = '', text = '' } = {}) {
 
 /** Die Adresse aus einem Link der Hülle; eine unbekannte Adresse öffnet Wartet. */
 export const adresseAusHuelle = (adresse) => parse(String(adresse ?? ''))?.adresse ?? '#wartet';
+
+/**
+ * Legt geteilte Dateien (Feld `dateien` der Nachricht `teilen`) in den Entwurf der Anhänge. `alt` ist der bisherige Entwurf
+ * (oder null). Ergebnis: der neue Entwurf { anhaenge, meldung, meldungFehler } oder null, wenn nichts geteilt wurde. Die Meldung
+ * nennt abgelehnte Dateien und Hinweise in Sätzen; Anhangwahl zeigt sie einmal.
+ */
+export function mitGeteiltenDateien(alt, { dateien, mehr } = {}) {
+  if (!(Array.isArray(dateien) && dateien.length) && !(Number.isInteger(mehr) && mehr > 0)) return null;
+  const r = teileAuf(alt?.anhaenge ?? [], dateien, mehr);
+  const meldung = [...r.fehler, ...r.hinweise].join(' ');
+  return { anhaenge: r.liste, meldung, meldungFehler: r.fehler.length > 0 };
+}

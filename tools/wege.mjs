@@ -936,6 +936,15 @@ try {
   const geteilterEntwurf = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'erfassen'); db.schliesse(); return e; })()`);
   melde(geteilt && geteilterEntwurf?.titel === 'Geteilte Seite' && geteilterEntwurf?.text === 'Text aus einer anderen App',
     'geteilter Text öffnet Erfassen mit Titel und Text, beides steht im Entwurf', `${await p.stand()}, ${JSON.stringify(geteilterEntwurf)}`);
+  // Dateien aus dem Teilen: eine kommt an, eine war zu groß (nur Name und Größe), ein Duplikat des Namens wird abgelehnt
+  await p.werte(`__huelleSchicke({ art: 'teilen', titel: '', text: '', dateien: [{ name: 'Foto.jpg', typ: 'image/jpeg', groesse: 3, daten: 'AQID' },
+    { name: 'bericht.pdf', typ: 'application/pdf', groesse: 3000000, fehler: 'zu-gross' }], mehr: 1 })`);
+  const mitDateien = await p.warte(`document.querySelector('.gewaehlt li')?.textContent.startsWith('Foto.jpg') && document.querySelector('.anhangwahl [role=status]')?.textContent.includes('bericht.pdf ist 2,9 MiB groß')`, 4000);
+  const dateiEntwurf = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse(); return e; })()`);
+  melde(mitDateien && dateiEntwurf?.anhaenge?.length === 1 && dateiEntwurf.anhaenge[0].name === 'Foto.jpg' && dateiEntwurf.anhaenge[0].typ === 'image/jpeg' && dateiEntwurf.anhaenge[0].daten === 'AQID',
+    'geteilte Dateien hängen in Erfassen an, eine zu große und die über der Grenze nennt ein Satz, der Titel und Text bleiben', `${await p.stand()}, ${JSON.stringify(dateiEntwurf)}`);
+  melde(await p.werte(`document.querySelector('[name=titel]').value === 'Geteilte Seite' && document.querySelector('.anhangwahl [role=status]').textContent.includes('1 weitere Datei ist nicht dabei')`),
+    'Titel und Text des früheren Teilens bleiben, der Satz nennt auch die Datei über der Grenze', await p.werte(`document.querySelector('.anhangwahl [role=status]')?.textContent`));
   await p.werte(`__huelleSchicke({ art: 'oeffnen', adresse: '#eintrag/R2D-4VN' })`);
   const geoeffnet = await p.warte(`location.hash === '#eintrag/r2d4vn'`, 4000);
   await p.zurueck();

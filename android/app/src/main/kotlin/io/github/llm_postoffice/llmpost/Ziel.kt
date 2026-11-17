@@ -4,7 +4,14 @@ package io.github.llm_postoffice.llmpost
 sealed interface Ziel {
     data class Eintrag(val id: String) : Ziel
     data object Wartet : Ziel
-    data class Teilen(val titel: String, val text: String) : Ziel
+    /** `quellen` sind die noch zu lesenden content://-Adressen, `dateien` die gelesenen oder abgelehnten, `mehr` die Zahl der Dateien über der Grenze. */
+    data class Teilen(
+        val titel: String,
+        val text: String,
+        val quellen: List<String> = emptyList(),
+        val dateien: List<Datei> = emptyList(),
+        val mehr: Int = 0,
+    ) : Ziel
 }
 
 const val SCHEMA = "llmpost"
@@ -13,11 +20,24 @@ private val ID = Regex("[0-9A-Za-z-]{1,32}")
 private val URI = Regex("^([A-Za-z][A-Za-z0-9+.-]*):(.*)$", RegexOption.DOT_MATCHES_ALL)
 private val EINTRAG = Regex("^eintrag/([^/]+)$", RegexOption.IGNORE_CASE)
 
-/** aktion = Intent.action, daten = Intent.dataString, typ = Intent.type, text = EXTRA_TEXT, betreff = EXTRA_SUBJECT */
-fun zielVon(aktion: String?, daten: String?, typ: String?, text: String?, betreff: String?): Ziel? = when (aktion) {
+/**
+ * aktion = Intent.action, daten = Intent.dataString, typ = Intent.type, text = EXTRA_TEXT, betreff = EXTRA_SUBJECT,
+ * streams = die Adressen aus EXTRA_STREAM, freigabe = ob der Intent FLAG_GRANT_READ_URI_PERMISSION trägt.
+ * Beim Teilen zählt der Text bei text/plain oder zu Dateien (eine Bildunterschrift); Dateien allein genügen.
+ */
+fun zielVon(
+    aktion: String?, daten: String?, typ: String?, text: String?, betreff: String?,
+    streams: List<String> = emptyList(), freigabe: Boolean = false,
+): Ziel? = when (aktion) {
     "android.intent.action.VIEW" -> adresseAus(daten)
-    "android.intent.action.SEND" ->
-        if (typ == "text/plain" && !text.isNullOrBlank()) Ziel.Teilen((betreff ?: "").take(TEXT_MAX), text.take(TEXT_MAX)) else null
+    "android.intent.action.SEND", "android.intent.action.SEND_MULTIPLE" -> {
+        val mitText = !text.isNullOrBlank() && (typ == "text/plain" || streams.isNotEmpty())
+        if (!mitText && streams.isEmpty()) null
+        else {
+            val a = streamAdressen(streams, freigabe)
+            Ziel.Teilen((betreff ?: "").take(TEXT_MAX), if (mitText) text!!.take(TEXT_MAX) else "", a.lesbar, a.abgelehnt, a.mehr)
+        }
+    }
     else -> null
 }
 
@@ -39,7 +59,7 @@ fun adresseVon(ziel: Ziel): String = when (ziel) {
 
 /** Die Nachricht an die Seite (Protokoll im Kopf von js/huelle.js). */
 fun nachrichtVon(ziel: Ziel): String = when (ziel) {
-    is Ziel.Teilen -> """{"art":"teilen","titel":${jsonText(ziel.titel)},"text":${jsonText(ziel.text)}}"""
+    is Ziel.Teilen -> """{"art":"teilen","titel":${jsonText(ziel.titel)},"text":${jsonText(ziel.text)}${dateienJson(ziel)}}"""
     else -> """{"art":"oeffnen","adresse":${jsonText(adresseVon(ziel))}}"""
 }
 

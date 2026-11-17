@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261117.10 (2026-11-17)
+
+Die Android-App nimmt Dateien aus anderen Apps an: Teile ein Foto, ein PDF oder mehrere Dateien an LLM-Post, dann öffnet sich **Erfassen** mit einem Entwurf, an dem sie hängen.
+
+- Bis zu 10 Dateien je Teilen, jede bis 1,0 MiB. Eine zu große Datei nennt ein Satz mit Name und Größe, die übrigen hängen trotzdem an.
+
 ## 20261117.09 (2026-11-17)
 
 Was noch nicht gesendet ist, siehst du jetzt, und ohne Netz sagt die App, was geschieht.
