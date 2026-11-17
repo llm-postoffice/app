@@ -3,7 +3,7 @@
 //   antwort/ID        freier Text im Blatt Deine Antwort
 //   einsortieren/ID   Ziel und Satz im Blatt Einsortieren
 //   urteil/ID         Urteile je Schritt einer Abnahme und die Anmerkung: { schritte: { N: { wort, satz } }, anmerkung }
-//   erfassen          Art, Titel, An, Text, Rang und Dringend in Erfassen
+//   erfassen          Art, Titel, An, Text, Priorität und Dringend in Erfassen
 // Ein leerer Entwurf wird gelöscht; so bleibt kein Rest, der „Entwurf“ vortäuscht.
 
 export const schluessel = {

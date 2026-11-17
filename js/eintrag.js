@@ -4,7 +4,8 @@
 // bietet zehn Sekunden Rückgängig an, danach geht sie raus. Fehlt die Schreibschicht (Tests), bleiben die Knöpfe gesperrt und
 // ein Satz sagt warum. Nichts täuscht einen Erfolg vor: gesendet heißt nur, was GitHub angenommen hat.
 import { el, ico } from './dom.js';
-import { annahmeVon, fadenVon, handlungenVon, karteVon, moeglichkeiten, offenSatz, ortVon, abnahmeSchritte, sendungZu } from './welt.js';
+import { annahmeVon, fadenVon, handlungenVon, karteVon, moeglichkeiten, offenSatz, ortVon, abnahmeSchritte, sendungZu, stufeVon } from './welt.js';
+import { PRIO_WORTE } from './ansichtstexte.js';
 import { idMitStrich } from './format.js';
 import { vertrauen } from './zustand.js';
 import { markdown } from './markdown.js';
@@ -120,7 +121,7 @@ export function eintragAnsicht(welt, z, k, o) {
   const m = karteVon(welt, eintrag, { ohneNetz: z.ohneNetz });
   const kind = e.head.get('Kind');
   const extern = vertrauen(e.head) === 'external';
-  const teile = [fehlerBand(welt, z, k), kopfkarte(m, { rangText: `Rang ${st.priority}` })];
+  const teile = [fehlerBand(welt, z, k), kopfkarte(m, { rangText: `Priorität ${PRIO_WORTE.find((p) => p.wert === stufeVon(st)).text}` })];
   teile.push(sendungBand(welt, e, k));
   const erledigen = handlungenVon(welt, eintrag).includes('erledigt') ? absender(() => k.schreiben.erledigen(e.id), () => k.ersetze('#wartet')) : null;
   if (erledigen) teile.push(erledigen.platz);

@@ -63,7 +63,7 @@ export async function erfassenAnsicht(welt, _z, k) {
     const neu = textFeld(null); text.replaceWith(neu); text = neu;   // die Beschriftung sagt, ob der Text Pflicht ist
     sichern();
   });
-  const rang = chipAuswahl({ name: 'rang', wert: w.rang, optionen: ['1', '2', '3'].map((r) => ({ wert: r, text: r })) });
+  const rang = chipAuswahl({ name: 'rang', wert: w.rang, optionen: [['1', 'Hoch'], ['2', 'Normal'], ['3', 'Niedrig']].map(([wert, text]) => ({ wert, text })) });
   rang.addEventListener('change', (e) => { w.rang = e.target.value; sichern(); });
   const dringend = el('input', { type: 'checkbox', name: 'dringend' });
   dringend.checked = w.dringend;
@@ -81,7 +81,7 @@ export async function erfassenAnsicht(welt, _z, k) {
     titel,
     feld({ beschriftung: 'An', steuerung: an, hinweis: welt.projektNamen.length ? null : 'Projekte fehlen noch. Gleiche in Mehr ab.' }),
     text,
-    el('fieldset', { class: 'feld' }, el('legend', {}, 'Rang (1 ist am wichtigsten)'), rang),
+    el('fieldset', { class: 'feld' }, el('legend', {}, 'Priorität'), rang),
     el('label', { class: 'haken' }, dringend, 'Dringend: meldet auch zwischen 22 und 7 Uhr'));
   inhalt.addEventListener('submit', (e) => e.preventDefault());
 

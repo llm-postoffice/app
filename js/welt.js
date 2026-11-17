@@ -170,7 +170,7 @@ export function zaehler(w) {
 
 // ---- Alle: alle offenen Einträge, gefiltert, sortiert und gruppiert
 
-const stufeVon = (st) => (st.priority <= 1 ? 'hoch' : st.priority === 2 ? 'normal' : 'niedrig');
+export const stufeVon = (st) => (st.priority <= 1 ? 'hoch' : st.priority === 2 ? 'normal' : 'niedrig');
 const statusVon = (e, st) => (wartetAufDich(e, st) ? 'dich' : st.status === 'in_progress' ? 'arbeit' : st.status === 'waiting' ? 'andere' : 'offen');
 const OHNE_PROJEKT = 'ohne Projekt';
 
