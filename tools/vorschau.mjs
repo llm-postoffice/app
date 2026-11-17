@@ -85,10 +85,33 @@ if (sz?.neu) {
   aktualisierung = new Aktualisierung({ container: { controller: {}, addEventListener() {} }, laden: () => {} });
   aktualisierung.beobachte({ waiting: { postMessage() {} }, addEventListener() {} });
 }
+// Szenario „Web-Push“: ein nachgebauter Browser (Registrierung, Berechtigung, Zwischenablage); der Renderer hat weder Google Play
+// Services noch einen Push-Dienst. 'fehler' lässt subscribe so scheitern, wie es ohne Push-Dienst scheitert; 'ohne' ist ein Browser
+// ohne PushManager. Ohne das Feld webpush hat die Vorschau keine Probe, damit kein anderes Szenario den Abschnitt zeigt.
+let webpush = null;
+if (sz?.webpush) {
+  const { WebPushProbe } = await import('./webpush.js');
+  const ENDPUNKT = 'https:' + '//fcm.googleapis.com/fcm/send/erfunden';
+  const abo = { endpoint: ENDPUNKT, toJSON: () => ({ endpoint: ENDPUNKT, keys: { p256dh: 'x', auth: 'y' } }), unsubscribe: async () => true };
+  let aktuell = sz.webpush === 'an' ? abo : null;
+  const manager = {
+    getSubscription: async () => aktuell,
+    subscribe: async () => {
+      if (sz.webpush === 'fehler') throw Object.assign(new Error('Registration failed - push service error'), { name: 'AbortError' });
+      aktuell = abo; return abo;
+    },
+  };
+  webpush = new WebPushProbe({
+    dienst: { getRegistration: async () => ({ pushManager: manager }) },
+    benachrichtigung: { permission: 'granted', requestPermission: async () => 'granted' },
+    zwischenablage: { writeText: async () => {} }, hatPush: sz.webpush !== 'ohne',
+    schluessel: { lies: async () => sz.schluessel ?? '', schreibe: async () => {} },
+  });
+}
 // Die Vorschau sendet nie von allein: der Zeitgeber der Schreibschicht und des Hinweises steht still, so bleibt jeder Zustand
 // (noch nicht gesendet, Hinweis mit Rückgängig) für das Bild stehen. Der Abgleich läuft mit seinem eigenen Zeitgeber.
 const app = await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert,
-  huelle: sz?.huelle ? { verbinde() {}, bereit() {} } : undefined });
+  huelle: sz?.huelle ? { verbinde() {}, bereit() {} } : undefined, webpush });
 // Sendungen, die erst nach dem Start in der Schlange liegen: der Start setzt „wird gesendet“ zurück (die App wurde beendet), ein
 // Szenario für „wird gesendet“ legt sie darum danach an
 if (sz?.nachStart) {

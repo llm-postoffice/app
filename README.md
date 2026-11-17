@@ -7,6 +7,7 @@ Du siehst, was auf dich wartet, beantwortest Fragen, beurteilst Abnahmen Schritt
 sortierst den Eingang ein und erfasst neue Einträge. Anhänge siehst du am Eintrag, speicherst du als Datei und hängst du beim Erfassen
 und Antworten an (bis 1 MiB je Datei, Fotos verkleinert die App selbst, Bildschirmfotos bleiben). Jede Eingabe wartet zehn Sekunden auf **Rückgängig** und geht dann
 als ein Commit raus; ohne Netz bleibt sie auf dem Gerät in der Warteschlange, ein Band oben in Wartet zeigt, was noch nicht gesendet ist.
+Hinweise auf Neues kommen über ntfy; im Browser kann **Mehr** sie als Probe auch über Web-Push zustellen.
 
 ## Installation
 

@@ -10,8 +10,10 @@ import { Aktualisierung, pruefeRegelmaessig, zeigeNeuBand } from './aktualisiere
 import { baueHinweis } from './hinweis.js';
 import { Anhangholer } from './anhangholer.js';
 import { Schreiber } from './schreiben.js';
+import { einstellung, setzeEinstellung } from './speicher.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
+import { browserProbe } from './webpush.js';
 import { ladeWelt, ortVon } from './welt.js';
 import { adresseAusHuelle, mitGeteiltem, mitGeteiltenDateien } from './huelle.js';
 import { verkleinereBild } from './verkleinern.js';
@@ -24,9 +26,11 @@ const $ = (id) => document.getElementById(id);
 /**
  * `aktualisierung` und `installiert` sind für die Vorschau da: sie zeigt die Zustände „neue Fassung wartet“ und „läuft als
  * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser. `huelle` ist die Brücke zur
- * Android-Hülle oder `null` im Browser.
+ * Android-Hülle oder `null` im Browser. `webpush` ersetzt die Probe mit Web-Push (js/webpush.js), etwa in der Vorschau; ohne sie baut
+ * die App die Probe im Browser und lässt sie in der Hülle weg (dort gibt es keinen Service Worker und kein Push); `null` lässt den
+ * Abschnitt in Mehr weg.
  */
-export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined, huelle = null }) {
+export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined, huelle = null, webpush = undefined }) {
   statusleiste();
   $('zurueck').addEventListener('click', zurueck);
 
@@ -49,8 +53,14 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   const dienst = !huelle && 'serviceWorker' in navigator ? navigator.serviceWorker : null;
   const eigene = aktualisierung === undefined;
   aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
+  if (webpush === undefined) {   // `null` ist gewollt (Vorschau, Test): kein Abschnitt
+    webpush = huelle ? null : browserProbe({
+      lies: async () => (await einstellung(db, 'webpush'))?.schluessel ?? '',
+      schreibe: (schluessel) => setzeEinstellung(db, 'webpush', { schluessel }),
+    });
+  }
   const k = {
-    db, steuerung, schreiben, jetzt, meldung: hinweis.meldung, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, huelle, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, meldung: hinweis.meldung, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, huelle, webpush, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },

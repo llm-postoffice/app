@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261118.02 (2026-11-18)
+
+Web-Push ist als Probe wieder da: **Mehr** kann im Browser Hinweise auch über den Push-Dienst von Google zustellen, ntfy bleibt der Standard.
+
+- In der Android-App fehlt der Abschnitt; dort kommen die Hinweise über ntfy. Ein Tipp auf den Web-Push-Hinweis öffnet **Wartet**.
+
 ## 20261118.01 (2026-11-18)
 
 Abgleich und wartende Sendungen zeigen ihren Stand: **Wartet** nennt, ob gerade abgeglichen wird und wann der nächste Abgleich kommt; das Band „Noch nicht gesendet“ und die Seite dazu sagen „wird gesendet …“, „nächster Versuch in etwa 40 s“ und „gesendet um 14:07“.

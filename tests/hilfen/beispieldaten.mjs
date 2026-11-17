@@ -142,6 +142,8 @@ export function dateien(liste = eintraege()) {
   return d;
 }
 
+/** Ein erfundener öffentlicher VAPID-Schlüssel: 65 Byte, das erste ist 4, base64url (nur für das Bild der Probe in Mehr). */
+const SCHLUESSEL = btoa(String.fromCharCode(4, ...Array.from({ length: 64 }, (_, i) => (i * 7 + 1) % 256))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 /** Ein erfundenes Token von GitHub für die Prüfung vor dem Senden; zur Laufzeit verkettet, damit kein Scanner es im Quelltext findet. */
 export const ERFUNDENES_TOKEN = ['gh', 'p_', 'A1b2C3d4'.repeat(4)].join('');
 
@@ -252,6 +254,12 @@ export const SZENARIEN = {
   'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
   'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
   'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
+  // Web-Push als Probe: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden. In der Hülle fehlt der Abschnitt.
+  'mehr-webpush': { daten: dateien(), seed: true, live: 'ok', webpush: 'aus', schluessel: SCHLUESSEL, scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-an': { daten: dateien(), seed: true, live: 'ok', webpush: 'an', scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-fehler': { daten: dateien(), seed: true, live: 'ok', webpush: 'fehler', schluessel: SCHLUESSEL, klick: '#webpush-an', scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-ohne': { daten: dateien(), seed: true, live: 'ok', webpush: 'ohne', scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, webpush: 'aus', scroll: 'Mitteilungen' },
   // Android-Hülle: die Vorschau setzt eine Brücke ohne Wirkung ein (tools/vorschau.mjs)
   huelle: { daten: dateien(), seed: true, live: 'ok', huelle: true },
   'mehr-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, scroll: 'Mitteilungen' },
@@ -347,6 +355,11 @@ export const ADRESSEN = {
   'mehr-fassung': ['mehr'],
   'mehr-installieren': ['mehr'],
   'mehr-mitteilungen': ['mehr'],
+  'mehr-webpush': ['mehr'],
+  'mehr-webpush-an': ['mehr'],
+  'mehr-webpush-fehler': ['mehr'],
+  'mehr-webpush-ohne': ['mehr'],
+  'mehr-webpush-huelle': ['mehr'],
   huelle: ['wartet', 'mehr'],
   'mehr-huelle': ['mehr'],
   ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, ['wartet', 'alle', 'erfassen', 'mehr', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten']])),

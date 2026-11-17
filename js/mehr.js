@@ -1,4 +1,4 @@
-// Mehr: die ruhigen Ziele (Eingang, Ideensammlung, Suche), die Anmeldung, die Mitteilungen über ntfy, die Installation und
+// Mehr: die ruhigen Ziele (Eingang, Ideensammlung, Suche), die Anmeldung, die Mitteilungen über ntfy, im Browser die Probe mit Web-Push, die Installation und
 // der Abschnitt Dieses Gerät mit Name, Speicher, Fassung und Stand des Abgleichs. Die Ansicht ist eine Funktion von Welt
 // und Zustand des Abgleichs; anzeigen.js zeichnet sie neu, wenn sich etwas ändert. Alle Texte kommen aus texte.js oder
 // stehen hier; Daten gehen nur über el() in den Baum (USI-1). In der Android-Hülle fehlt der Abschnitt App installieren:
@@ -7,7 +7,7 @@ import { el } from './dom.js';
 import { TAKTE } from './steuerung.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
 import { UHR_WARNUNG_MS, abweichungText } from './erzeugen.js';
-import { MITTEILUNGEN, MITTEILUNGEN_HUELLE, NEUE_FASSUNG, NEU_STARTET, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
+import { MITTEILUNGEN, MITTEILUNGEN_HUELLE, NEUE_FASSUNG, NEU_STARTET, WEBPUSH, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
 import { VERSION } from './version.js';
 import { band, feld, knopf, linkKnopf, ruhigeKarte } from './karten.js';
 import { zaehler } from './welt.js';
@@ -46,6 +46,38 @@ function stand(z, k) {
 /** Text mit **fett** als Knoten: die Beschriftungen der Oberfläche stehen fett (DOB-1). */
 const mitFett = (text) => text.split('**').map((teil, i) => (i % 2 ? el('strong', {}, teil) : teil));
 
+const ERGEBNIS_BAND = { ok: { ton: 'ok', symbol: 'check_circle' }, info: { ton: 'info', symbol: 'info-f' }, fehler: { ton: 'fehler', symbol: 'error-f' } };
+
+/** Der Abschnitt Web-Push (Probe): Schlüssel eingeben, einschalten, Abo kopieren, beenden. Der genaue Fehlertext des Browsers steht
+ *  sichtbar unter dem Band, denn die Probe soll zeigen, woran es scheitert. Ohne `k.webpush` (Android-Hülle) fehlt der Abschnitt. */
+function webpushAbschnitt(w, k) {
+  const stand = !w.unterstuetzt ? WEBPUSH.stand.nichtUnterstuetzt : w.berechtigung === 'denied' ? WEBPUSH.stand.gesperrt : w.host ? WEBPUSH.stand.an(w.host) : WEBPUSH.stand.aus;
+  const danach = (aktion) => async () => { await aktion(); k.neuZeichnen(); };
+  const e = w.ergebnis;
+  const ergebnis = e ? band({ ...ERGEBNIS_BAND[e.ton], titel: e.titel, satz: e.satz }) : null;
+  if (ergebnis && e.einzelheiten) ergebnis.querySelector('div').append(el('pre', {}, e.einzelheiten));
+  let bedienung = [];
+  if (w.unterstuetzt && w.host) {
+    bedienung = [el('div', { class: 'zeilenknoepfe' },
+      knopf(WEBPUSH.knoepfe.kopieren, { id: 'webpush-kopieren', klasse: 'tonal', an: danach(() => k.webpush.kopieren()) }),
+      knopf(WEBPUSH.knoepfe.beenden, { id: 'webpush-beenden', klasse: 'text', an: danach(() => k.webpush.beenden()) }))];
+  } else if (w.unterstuetzt) {
+    const eingabe = el('input', { type: 'text', name: 'webpush-schluessel', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' });
+    eingabe.value = w.schluessel;
+    eingabe.addEventListener('input', () => k.webpush.merke(eingabe.value));   // überlebt das Neuzeichnen und das Beenden durch das System
+    bedienung = [feld({ beschriftung: WEBPUSH.feld.beschriftung, steuerung: eingabe, hinweis: WEBPUSH.feld.hinweis }),
+      el('div', { class: 'zeilenknoepfe' }, knopf(WEBPUSH.knoepfe.an, { id: 'webpush-an', klasse: 'gefuellt', an: danach(() => k.webpush.einschalten(eingabe.value)) }))];
+  }
+  // Ohne Unterstützung steht nur der Stand (ein Satz): die Anleitung hülfe hier nicht
+  if (!w.unterstuetzt) return abschnitt(WEBPUSH.titel, el('p', { id: 'webpush-stand' }, stand));
+  return abschnitt(WEBPUSH.titel,
+    ...WEBPUSH.absaetze.map((a) => el('p', {}, mitFett(a))),
+    el('details', {}, el('summary', {}, WEBPUSH.schritte.titel), el('ol', { class: 'ablauf-schritte' }, WEBPUSH.schritte.liste.map((t) => el('li', {}, mitFett(t))))),
+    el('p', { id: 'webpush-stand' }, stand),
+    ...bedienung, ergebnis,
+    ...WEBPUSH.neben.map((a) => el('p', { class: 'neben' }, mitFett(a))));
+}
+
 /** Die Ansicht Mehr. */
 export async function mehrAnsicht(welt, z, k) {
   const c = zaehler(welt);
@@ -68,6 +100,7 @@ export async function mehrAnsicht(welt, z, k) {
   const uhrBand = uhr && Math.abs(uhr.abweichung) >= UHR_WARNUNG_MS
     ? band({ ton: 'warn', symbol: 'schedule', titel: 'Die Uhr dieses Geräts geht falsch', satz: `Sie geht ${abweichungText(uhr.abweichung)}. Neue Einträge tragen die Zeit von GitHub, damit sie richtig geordnet sind. Stelle die Uhr in den Einstellungen des Geräts auf automatisch.` })
     : null;
+  const webpush = k.webpush && !k.huelle ? webpushAbschnitt(await k.webpush.zustand(), k) : [];
   const installiert = k.installiert ?? globalThis.matchMedia?.('(display-mode: standalone)').matches ?? false;
   const inst = installationAnzeige(installiert);
   const mit = k.huelle ? MITTEILUNGEN_HUELLE : MITTEILUNGEN;
@@ -94,6 +127,7 @@ export async function mehrAnsicht(welt, z, k) {
       ...mit.absaetze.map((a) => el('p', {}, mitFett(a))),
       el('details', {}, el('summary', {}, mit.abo.titel), el('ol', { class: 'ablauf-schritte' }, mit.abo.schritte.map((t) => el('li', {}, mitFett(t))))),
       ...mit.neben.map((a) => el('p', { class: 'neben' }, mitFett(a)))),
+    ...webpush,
     ...(k.huelle ? [] : abschnitt('App installieren',
       el('p', {}, inst.satz),
       inst.schritte.length ? el('ol', { class: 'ablauf-schritte' }, inst.schritte.map((t) => el('li', {}, mitFett(t)))) : null,

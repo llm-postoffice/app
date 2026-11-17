@@ -189,3 +189,55 @@ export const MITTEILUNGEN_HUELLE = {
   ...MITTEILUNGEN,
   absaetze: ['Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet den Eintrag in dieser App, wenn das Postsystem die Adresse dazu mitschickt; sonst öffnet er ntfy.', MITTEILUNGEN.absaetze[1]],
 };
+
+// ---- Web-Push als Probe ---------------------------------------------------------------------------------------------------
+// Nur im Browser mit Service Worker; in der Android-Hülle fehlt der Abschnitt (kein Service Worker, kein Push), dort sagt
+// MITTEILUNGEN_HUELLE, dass die Hinweise über ntfy kommen. Text mit **fett** markiert Beschriftungen und Befehle; Sätze in
+// Bändern sind reiner Text.
+
+export const WEBPUSH = {
+  titel: 'Web-Push (Probe)',
+  absaetze: [
+    'Eine Probe: Hinweise ohne ntfy, über den Push-Dienst von Google. Das geht im Browser, wenn die Google Play Services auf diesem Gerät laufen. ntfy bleibt der Standard.',
+  ],
+  schritte: { titel: 'So schaltest du es ein', liste: [
+    'Führe auf dem Rechner **claude-post webpush setup** aus und kopiere den Schlüssel, den es zeigt.',
+    'Füge den Schlüssel hier ein und tippe **Einschalten**.',
+    'Erlaube Mitteilungen, wenn der Browser fragt.',
+    'Tippe **Abo kopieren**, führe **claude-post webpush setup** noch einmal aus und füge das Abo ein.',
+    'Prüfe es mit **claude-post webpush test**.',
+  ] },
+  neben: ['Der Push trägt keinen Text: der Hinweis lautet immer „Neue Einträge für dich“. Ein Tipp darauf öffnet **Wartet**.'],
+  stand: {
+    aus: 'Web-Push ist aus.',
+    an: (host) => `Web-Push ist an. Push-Dienst: ${host}.`,
+    nichtUnterstuetzt: 'Dieser Browser kann kein Web-Push. Hinweise kommen über ntfy.',
+    gesperrt: 'Mitteilungen sind für diese Seite gesperrt. Erlaube sie in den Einstellungen des Browsers.',
+  },
+  feld: { beschriftung: 'Öffentlicher Schlüssel', hinweis: 'Aus dem Befehl claude-post webpush setup auf dem Rechner, 87 Zeichen.' },
+  knoepfe: { an: 'Einschalten', kopieren: 'Abo kopieren', beenden: 'Abo beenden' },
+  ok: { titel: 'Eingeschaltet', satz: (host) => `Das Abo besteht beim Push-Dienst ${host}. Tippe jetzt auf Abo kopieren und füge es am Rechner ein.` },
+  kopiert: { titel: 'Abo kopiert', satz: 'Füge es am Rechner bei claude-post webpush setup ein. Es enthält die Adresse zum Zustellen: gib es nicht weiter.' },
+  beendet: {
+    titel: 'Abo beendet', keins: 'Es gab kein Abo',
+    satz: 'Der Rechner sendet weiter, bis du claude-post webpush off ausführst. ntfy ist unverändert.',
+  },
+  fehler: {
+    schluesselTitel: 'Schlüssel nicht brauchbar',
+    schluesselFehlt: 'Füge zuerst den öffentlichen Schlüssel ein, den claude-post webpush setup auf dem Rechner zeigt.',
+    schluesselZeichen: 'Der Schlüssel enthält Zeichen, die es in base64url nicht gibt. Kopiere ihn noch einmal, ohne Leerzeichen und Zeilenumbrüche.',
+    schluesselForm: 'Das ist kein öffentlicher VAPID-Schlüssel: er muss 87 Zeichen lang sein. Kopiere die Zeile, die claude-post webpush setup zeigt, ganz.',
+    nichtDa: 'Web-Push fehlt',
+    nichtDaSatz: 'Dieser Browser hat keinen Service Worker, keine Mitteilungen oder keinen PushManager.',
+    erlaubnisTitel: 'Mitteilungen nicht erlaubt',
+    erlaubnisSatz: 'Ohne Erlaubnis gibt es kein Abo. Erlaube Mitteilungen in den Einstellungen des Browsers für diese Seite und tippe Einschalten noch einmal.',
+    einschaltenTitel: 'Einschalten gescheitert',
+    kopierenTitel: 'Kopieren gescheitert',
+    beendenTitel: 'Beenden gescheitert',
+    abfrage: 'Abo nicht lesbar',
+    keinAbo: 'Es gibt kein Abo',
+    keinAboSatz: 'Tippe zuerst auf Einschalten.',
+    keinWorker: 'Kein Service Worker registriert',
+    browser: 'Der Browser meldet:',
+  },
+};
