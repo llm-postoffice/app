@@ -6,7 +6,7 @@ Stand: im Aufbau, Teil F (Offline, Installation, Mitteilungen, Update). Die App 
 
 ## Installation
 
-Noch nicht möglich. Die App erscheint auf GitHub Pages, sobald Teil G sie veröffentlicht. Dann installierst du sie auf dem Handy (Vanadium oder Chrome auf Android) so:
+Als Android-App installierst du LLM-Post mit Obtainium: [docs/obtainium.md](docs/obtainium.md). Als Web-App noch nicht: Sie erscheint auf GitHub Pages, sobald Teil G sie veröffentlicht. Dann installierst du sie auf dem Handy (Vanadium oder Chrome auf Android) so:
 
 1. Öffne die Adresse der App im Browser.
 2. Öffne im Browser das Menü ⋮.
