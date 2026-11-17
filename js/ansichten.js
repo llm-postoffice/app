@@ -4,6 +4,7 @@
 import { el } from './dom.js';
 import { abnahmenNachRechner, eingangListe, ideenListe, karteVon, suche, wartetListe, zaehler } from './welt.js';
 import { abnahmen as abnahmenText, schritte as schritteText, um, zeitpunkt } from './ansichtstexte.js';
+import { schlangeBandKnoten } from './schlange.js';
 import { band, chipDringend, gruppentitel, karten, knopf, linkKnopf, platz, ruhigeKarte, uebersicht } from './karten.js';
 import { fehlerAnzeige, fortschrittAnzeige, uhrzeit } from './texte.js';
 
@@ -72,7 +73,7 @@ export function wartet(welt, z, k) {
   const c = zaehler(welt);
   const stand = standZeile(z, welt.jetzt);
   const unten = c.eingang ? [el('ul', { class: 'karten' }, eingangKarte(c.eingang))] : [];
-  const oben = [fehlerBand(welt, z, k)];
+  const oben = [fehlerBand(welt, z, k), schlangeBandKnoten(welt, z)];
   if (!liste.length) {
     return [...oben, platz({
       bild: 'ok', titel: 'Nichts für dich',

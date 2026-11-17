@@ -2,11 +2,12 @@
 
 ## 20261117.09 (2026-11-17)
 
-Ohne Netz sagt die App, was geschieht.
+Was noch nicht gesendet ist, siehst du jetzt, und ohne Netz sagt die App, was geschieht.
 
+- **Noch nicht gesendet:** Ein Band oben in **Wartet** nennt, wie viele Sendungen warten oder hängen. **Anzeigen** öffnet eine Seite mit allen, dort gehen **Erneut senden** und **Verwerfen**. Ein Eintrag, den du ohne Netz angelegt hast, öffnet dort, statt „nicht gefunden“ zu sagen.
 - Nach **Rückgängig** sagt ein Satz, dass die Sendung auf Netz wartet und rausgeht, sobald du online bist.
 - Der Hinweis nach einer Antwort nennt auch Text und Anhänge. Die Warnung in **Mehr** nennt in der Android-App keinen Browser und sagt, was nicht gesendet ist.
-- Nach der Dateiwahl steht sofort, dass die Datei geladen wird. Die Zeile **Ohne Netz** schiebt nichts mehr unter deinem Finger.
+- Nach der Dateiwahl steht sofort, dass die Datei geladen wird. Die Zeile **Ohne Netz** wartet mit dem Erscheinen, bis du den Bildschirm eine Sekunde nicht berührst, und schiebt so nichts mehr unter deinem Finger.
 - Ein Link auf einen neuen Eintrag zeigt „lädt“, bis der Abgleich fertig ist. Der Faden nennt einen eigenen Nachtrag von Anfang an „von user“.
 
 ## 20261117.08 (2026-11-17)

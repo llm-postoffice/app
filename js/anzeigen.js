@@ -10,6 +10,7 @@ import { erfassenAnsicht } from './erfassen.js';
 import { anmeldenAnsicht } from './anmelden.js';
 import { alleAnsicht, auswahlBlatt } from './uebersicht.js';
 import { geraetBlatt, mehrAnsicht } from './mehr.js';
+import { schlangeAnsicht } from './schlange.js';
 import { ladeWelt, zaehler } from './welt.js';
 
 const $ = (id) => document.getElementById(id);
@@ -56,6 +57,7 @@ async function ansicht(o, welt, z) {
     case 'eingang': return { inhalt: eingang(welt, z, k) };
     case 'ideen': return { inhalt: ideen(welt, z, k) };
     case 'suche': return { inhalt: sucheAnsicht(welt, z, k, sucheText) };
+    case 'schlange': return { inhalt: schlangeAnsicht(welt, z, k) };
     case 'eintrag': return eintragAnsicht(welt, z, k, o);
     case 'schritt': return schrittAnsicht(welt, z, k, o);
     case 'ergebnis': return ergebnisAnsicht(welt, z, k, o);

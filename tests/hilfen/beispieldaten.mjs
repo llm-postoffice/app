@@ -171,12 +171,13 @@ export function schlangeZustaende() {
   };
 }
 
-/** Sendungen für die Entwürfe der Warteschlange: drei warten auf Netz (eine davon ein neuer Eintrag, den GitHub noch nicht kennt), eine hängt. */
+/** Sendungen für die Warteschlange: drei warten auf Netz (eine davon ein neuer Eintrag, den GitHub noch nicht kennt), eine hängt. */
 export function schlangeOffline() {
   const z = JETZT - 3 * 60000;
   return [
     { id: 'w1', eintrag: 'r2d4vn', art: 'antwort', wahl: 'A', zustand: 'liegt', zeit: z, warteArt: 'netz' },
-    { id: 'w2', eintrag: 'n9x4kt', art: 'anlegen', neueArt: 'task', eintragTitel: 'Eingabefelder prüfen', zustand: 'liegt', zeit: z + 60000, warteArt: 'netz' },
+    { id: 'w2', eintrag: 'n9x4kt', art: 'anlegen', neueArt: 'task', eintragTitel: 'Eingabefelder prüfen', zustand: 'liegt', zeit: z + 60000, warteArt: 'netz',
+      dateien: [{ pfad: 'entries/n9/n9x4kt/0-entry.md', inhalt: kopf('Eingabefelder prüfen', [['Kind', 'task'], ['To', 'project:beta'], ['Project', 'beta'], ['From', NUTZER(z + 60000)]], 'Bitte bis Freitag. Die Eingabefelder beider Bibliotheken vergleichen.') }] },
     { id: 'w3', eintrag: 'k7m2qa', art: 'einsortieren', ziel: 'alpha', zustand: 'liegt', zeit: z + 90000, warteArt: 'netz' },
     { id: 'w4', eintrag: 'm7q2ke', art: 'antwort', zustand: 'fehler', zeit: z, grund: 'GitHub lehnt die Sendung ab (Validation Failed).' },
   ];
@@ -264,9 +265,10 @@ export const SZENARIEN = {
   'farben-antwort': { daten: dateien(), seed: true, live: 'ok', farben: 'orange', klick: '#blatt [data-wahl="B"]' },
   // Anhänge in einer Palette aus Material You (orange), erste Zeile aufgeklappt
   'farben-anhaenge': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: 'ok', farben: 'orange', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
-  // Entwürfe der Anzeige der Warteschlange (Varianten eins bis drei; Einstieg, Liste, Eintrag); nur zum Ansehen, nicht im Standardlauf
-  ...Object.fromEntries([1, 2, 3].flatMap((v) => ['einstieg', 'liste', 'eintrag'].map((seite) =>
-    [`warteschlange-${['', 'eins', 'zwei', 'drei'][v]}-${seite}`, { daten: dateien(), seed: true, live: 'netz', schlange: schlangeOffline(), warteschlange: { variante: v, seite } }]))),
+  // Warteschlange (js/schlange.js): drei Sendungen warten auf Netz, darunter ein neuer Eintrag; eine hängt. `schlange-leer` hat nichts offen.
+  'schlange-offline': { daten: dateien(), seed: true, live: 'netz', schlange: schlangeOffline() },
+  'schlange-online': { daten: dateien(), seed: true, live: 'ok', schlange: schlangeOffline().filter((s) => s.id === 'w4') },
+  'schlange-leer': { daten: dateien(), seed: true, live: 'ok' },
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
   'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
   'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
@@ -277,11 +279,7 @@ export const SZENARIEN = {
 
 /** Die Adressen, die die Vorschau je Szenario rendert. */
 export const ADRESSEN = {
-  ...Object.fromEntries(Object.keys(SZENARIEN).filter((n) => n.startsWith('warteschlange-')).map((n) => [n, [n.startsWith('warteschlange-zwei-') && n !== 'warteschlange-zwei-einstieg' ? 'mehr'
-    : n === 'warteschlange-drei-liste' ? 'eintrag/m7q2ke' : 'wartet']])),
-  anhaenge: ['eintrag/n5tz8d'], 'anhaenge-bild': ['eintrag/n5tz8d'], 'anhaenge-text': ['eintrag/n5tz8d'], 'anhaenge-datei': ['eintrag/n5tz8d'],
-  'anhaenge-offline': ['eintrag/n5tz8d'], 'anhaenge-fehler': ['eintrag/n5tz8d'], 'anhaenge-gross': ['eintrag/n5tz8d'], 'anhaenge-nachtrag': ['eintrag/r2d4vn'],
-  'erfassen-anhang': ['erfassen'], 'antworten-anhang': ['eintrag/r2d4vn/antworten'], 'farben-anhaenge': ['eintrag/n5tz8d'], 'farben-antwort': ['eintrag/r2d4vn/antworten'], 'farben-blatt': ['eintrag/r2d4vn/antworten'], 'farben-eintrag': ['eintrag/r2d4vn'], 'eintrag-frage': ['eintrag/r2d4vn'], 'antworten-leer': ['eintrag/r2d4vn/antworten'],
+  'schlange-offline': ['wartet', 'schlange', 'eintrag/n9x4kt', 'eintrag/r2d4vn'], 'schlange-online': ['wartet', 'schlange', 'eintrag/m7q2ke'], 'schlange-leer': ['schlange'],
   normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],

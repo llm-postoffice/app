@@ -1,6 +1,6 @@
 # Warteschlange sichtbar machen: Steckbrief und Varianten
 
-Eintrag mzw-pn5, Frage w8qxf8. Die Wahl des Nutzers steht aus; gebaut ist noch nichts davon.
+Eintrag mzw-pn5, Frage w8qxf8. Gewählt und gebaut ist Variante 1 (Wahl des Nutzers am 2026-11-17), Fassung 20261117.09. Die Entwürfe unten bleiben als Beleg.
 
 ## Steckbrief
 
@@ -22,10 +22,21 @@ Erfundene Daten (drei Sendungen warten auf Netz, darunter ein neuer Eintrag; ein
 
 Tipps bis zur Handlung (Erneut senden): Variante 1 drei (Band, Zeile bleibt, Knopf), Variante 2 zwei (Mehr, Knopf), Variante 3 drei (Karte, Eintrag, Knopf). Bis zum offline angelegten Eintrag: 2, 2, 1.
 
-Erwartet ist Variante 1.
+Erwartet war Variante 1, gewählt wurde Variante 1: Sichtbar, wenn es zählt; das Band verschwindet, sobald nichts wartet, und eine Seite verwaltet alles.
 
 ## Für alle drei
 
 - Der offline angelegte Eintrag öffnet als lokale Seite „Neuer Eintrag“ mit dem Band „Noch nicht gesendet“ und **Verwerfen**; heute sagt die Adresse `#eintrag/ID` „Eintrag nicht gefunden“.
 - Wartende Sendungen gehen von selbst raus (**Verwerfen** genügt); nur hängende (Token, Recht, Fehler) haben **Erneut senden**, wie in der Schreibschicht.
-- Der Entwurf ist `tools/warteschlange-entwurf.mjs` mit Stil `tools/warteschlange-entwurf.css`; die Szenarien heißen `warteschlange-eins|zwei|drei-einstieg|liste|eintrag`. Die App selbst bleibt unverändert.
+- Der Entwurf (ein Modul und ein Stil nur für die Vorschau, Szenarien `warteschlange-eins|zwei|drei-…`) steht im Commit der Entwürfe und ist nach der Wahl entfernt.
+
+## Gebaut: Variante 1
+
+- Wo: das Band steht oben in Wartet (`js/schlange.js`, `schlangeBandKnoten`), solange eine Sendung auf Netz wartet oder hängt; die Sendung in den zehn Sekunden von **Rückgängig** zählt nicht. **Anzeigen** öffnet `#schlange` (Titel „Noch nicht gesendet“, Zurück führt nach Wartet).
+- Seite: eine Karte je Sendung (was, Eintrag, Zustand, was hilft); hängende zuerst. Knöpfe nach Zustand: **Erneut senden** (Fehler), **Neues Token eintragen** (Token, Recht), **Trotzdem senden** oder **Als Nachtrag senden** (Konflikt), immer **Verwerfen**, das die Eingabe als Entwurf zurücklegt. Ohne Sendung steht dort „Alles gesendet“.
+- Offline angelegter Eintrag: `welt.js` legt einen neuen Eintrag in die Welt, sobald er in der Schlange liegt; seine Adresse öffnet ihn mit dem Band „Noch nicht gesendet“ und **Verwerfen** (danach Wartet). Er steht auch in Eingang und Listen.
+- Schritte (gezählt): sehen, dass etwas wartet 0 (Band steht oben); Erneut senden 2 (Anzeigen, Erneut senden); Verwerfen 2 (Anzeigen, Verwerfen); offline angelegten Eintrag öffnen 2 (Anzeigen, Zeile).
+- Wörter, die der Nutzer verstehen muss: Sendung, hängt, Anzeigen, Verwerfen, Erneut senden.
+- Bilder: `gebaut-band-hell`, `gebaut-band-dunkel`, `gebaut-seite-hell`, `gebaut-seite-dunkel`, `gebaut-eintrag-hell`, `gebaut-leer-hell`.
+- Kaltlesen (nur Bilder und Hauptaufgaben): alle vier Aufgaben lösbar. Befund und Folge: Verwerfen wirkte wie Löschen, darum sagt die Seite jetzt „Verwerfen nimmt eine Sendung zurück: deine Eingabe liegt dann wieder als Entwurf auf diesem Gerät“. Offen geblieben: das Band nennt nur Zahl und Zustand, nicht die Titel (gewollt, die Seite nennt sie); „Validation Failed“ ist der Wortlaut von GitHub.
+- Prüfung: Rendern von `schlange-offline`, `schlange-online`, `schlange-leer` hell, dunkel, Schrift 200 %, ohne Netz ohne Fehler; Wegetest (Band, Seite, Hinweis ohne Netz, Zurück nach Wartet).

@@ -4,8 +4,9 @@
 // bietet zehn Sekunden Rückgängig an, danach geht sie raus. Fehlt die Schreibschicht (Tests), bleiben die Knöpfe gesperrt und
 // ein Satz sagt warum. Nichts täuscht einen Erfolg vor: gesendet heißt nur, was GitHub angenommen hat.
 import { el, ico } from './dom.js';
-import { annahmeVon, fadenVon, handlungenVon, karteVon, moeglichkeiten, offenSatz, ortVon, abnahmeSchritte, sendungZu, stufeVon } from './welt.js';
-import { PRIO_WORTE } from './ansichtstexte.js';
+import { annahmeVon, fadenVon, handlungenVon, karteVon, moeglichkeiten, offenSatz, ortVon, abnahmeSchritte, sendungHaengt, sendungWartet, sendungZu, stufeVon } from './welt.js';
+import { PRIO_WORTE, sendungText, sendungZustand } from './ansichtstexte.js';
+import { verwerfenKnopf } from './schlange.js';
 import { idMitStrich } from './format.js';
 import { vertrauen } from './zustand.js';
 import { markdown } from './markdown.js';
@@ -66,10 +67,17 @@ function fadenListe(welt, e) {
 }
 
 /** Band zu einer Sendung dieses Geräts, die nicht durchging: Konflikt, Token, Recht oder Fehler (UOF-3); der Wortlaut kommt aus der Sendung. */
-function sendungBand(welt, e, k) {
+function sendungBand(welt, e, k, z) {
   const s = sendungZu(welt, e.id);
-  if (!s || !['konflikt', 'token', 'verboten', 'fehler'].includes(s.zustand)) return null;
-  const verwerfen = knopf('Verwerfen', { klasse: 'text', gesperrt: !kannSenden(k), an: async () => { await k.schreiben.verwerfen(s.id); k.neuZeichnen(); } });
+  if (!s) return null;
+  if (sendungWartet(welt, s, z.ohneNetz)) {
+    const w = sendungZustand(s, { ohneNetz: z.ohneNetz });
+    const satz = s.art === 'anlegen' ? 'Der Eintrag liegt auf diesem Gerät und geht raus, sobald du online bist.' : `${sendungText(s)} geht raus, sobald du online bist.`;
+    return band({ ton: 'warn', symbol: w.symbol, titel: 'Noch nicht gesendet', satz: s.warteArt === 'netz' || z.ohneNetz ? satz : (w.satz ?? 'Ein neuer Versuch folgt.'),
+      knoepfe: [verwerfenKnopf(s, k, { ziel: s.art === 'anlegen' ? '#wartet' : null })] });
+  }
+  if (!sendungHaengt(s)) return null;
+  const verwerfen = verwerfenKnopf(s, k, { ziel: s.art === 'anlegen' ? '#wartet' : null });
   if (s.zustand === 'token') {
     return band({ ton: 'warn', symbol: 'key-f', titel: 'Token abgelaufen oder widerrufen', satz: 'GitHub lehnt das Token ab. Deine Eingabe bleibt auf diesem Gerät in der Schlange und geht mit einem neuen Token raus.', knoepfe: [linkKnopf('Neues Token eintragen', '#anmelden')] });
   }
@@ -131,7 +139,7 @@ export function eintragAnsicht(welt, z, k, o) {
   const kind = e.head.get('Kind');
   const extern = vertrauen(e.head) === 'external';
   const teile = [fehlerBand(welt, z, k), kopfkarte(m, { rangText: `Priorität ${PRIO_WORTE.find((p) => p.wert === stufeVon(st)).text}` })];
-  teile.push(sendungBand(welt, e, k));
+  teile.push(sendungBand(welt, e, k, z));
   const erledigen = handlungenVon(welt, eintrag).includes('erledigt') ? absender(() => k.schreiben.erledigen(e.id), () => k.ersetze('#wartet')) : null;
   if (erledigen) teile.push(erledigen.platz);
   const wartetFrage = kind === 'question' && handlungenVon(welt, eintrag).includes('antworten');
