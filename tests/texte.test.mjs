@@ -89,7 +89,7 @@ test('kein Text der App hat Ausrufezeichen, Gedankenstrich, Sie-Anrede oder Fül
 });
 
 // ---- Teil F ----
-import { MITTEILUNGEN, NEUE_FASSUNG, NEU_STARTET, installationAnzeige } from '../js/texte.js';
+import { MITTEILUNGEN, MITTEILUNGEN_HUELLE, NEUE_FASSUNG, NEU_STARTET, installationAnzeige } from '../js/texte.js';
 
 const teilF = () => [
   NEUE_FASSUNG.satz, NEUE_FASSUNG.knopf, NEUE_FASSUNG.mehr.titel, NEUE_FASSUNG.mehr.satz, NEU_STARTET,
@@ -118,7 +118,7 @@ test('die Installation: nummerierte Schritte mit Ort vor Aktion, der Wortlaut de
 
 test('die installierte App sagt das und erklärt die Anmeldung der App gegenüber dem Browsertab', () => {
   const app = installationAnzeige(true);
-  assert.equal(app.satz, 'Das Postfach läuft als installierte App.');
+  assert.equal(app.satz, 'LLM-Post läuft als installierte App.');
   assert.deepEqual(app.schritte, []);
   assert.match(app.hinweise.join(' '), /Anmeldung der App, nicht die eines Browsertabs/);
   assert.match(installationAnzeige(false).hinweise.join(' '), /Anmeldung der App, nicht die eines Browsertabs/);
@@ -130,4 +130,13 @@ test('Mitteilungen: ID kopieren, Tipp öffnet ntfy, Abo über +, kein Verspreche
   assert.match(alles, /Tipp auf den Hinweis öffnet ntfy, nicht diese App/);
   assert.match(alles, /Tippe auf \*\*\+\*\*, nicht auf einen Link/);
   assert.doesNotMatch(alles, /öffnet (die|diese) App(?!\.)|öffnet dieses Fenster/);
+});
+
+test('Mitteilungen in der Android-Hülle: ein Tipp öffnet den Eintrag, wenn das Postsystem die Adresse mitschickt', () => {
+  const [erster, zweiter] = MITTEILUNGEN_HUELLE.absaetze;
+  assert.match(erster, /öffnet den Eintrag in dieser App, wenn das Postsystem die Adresse dazu mitschickt; sonst öffnet er ntfy\./);
+  assert.equal(zweiter, MITTEILUNGEN.absaetze[1]);
+  assert.equal(MITTEILUNGEN_HUELLE.abo, MITTEILUNGEN.abo);
+  assert.equal(MITTEILUNGEN_HUELLE.neben, MITTEILUNGEN.neben);
+  assert.doesNotMatch(erster, /!|—| – /);
 });

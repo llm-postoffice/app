@@ -1,12 +1,13 @@
 // Mehr: die ruhigen Ziele (Eingang, Ideensammlung, Suche), die Anmeldung, die Mitteilungen über ntfy, die Installation und
 // der Abschnitt Dieses Gerät mit Name, Speicher, Fassung und Stand des Abgleichs. Die Ansicht ist eine Funktion von Welt
 // und Zustand des Abgleichs; anzeigen.js zeichnet sie neu, wenn sich etwas ändert. Alle Texte kommen aus texte.js oder
-// stehen hier; Daten gehen nur über el() in den Baum (USI-1).
+// stehen hier; Daten gehen nur über el() in den Baum (USI-1). In der Android-Hülle fehlt der Abschnitt App installieren:
+// die App ist dort schon installiert.
 import { el } from './dom.js';
 import { TAKTE } from './steuerung.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
 import { UHR_WARNUNG_MS, abweichungText } from './erzeugen.js';
-import { MITTEILUNGEN, NEUE_FASSUNG, NEU_STARTET, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
+import { MITTEILUNGEN, MITTEILUNGEN_HUELLE, NEUE_FASSUNG, NEU_STARTET, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
 import { VERSION } from './version.js';
 import { band, feld, knopf, linkKnopf, ruhigeKarte } from './karten.js';
 import { zaehler } from './welt.js';
@@ -69,6 +70,7 @@ export async function mehrAnsicht(welt, z, k) {
     : null;
   const installiert = k.installiert ?? globalThis.matchMedia?.('(display-mode: standalone)').matches ?? false;
   const inst = installationAnzeige(installiert);
+  const mit = k.huelle ? MITTEILUNGEN_HUELLE : MITTEILUNGEN;
   // Wartet eine neue Fassung, steht das Band bei Fassung; es lädt nie von selbst neu (UOF-5)
   const neu = k.aktualisierung?.wartet
     ? band({ ton: 'info', symbol: 'info-f', titel: NEUE_FASSUNG.mehr.titel, satz: k.aktualisierung.startet ? NEU_STARTET : NEUE_FASSUNG.mehr.satz,
@@ -89,13 +91,13 @@ export async function mehrAnsicht(welt, z, k) {
       ruhigeKarte({ symbol: 'search', titel: 'Suche und Archiv', zeile: 'auch erledigte und verworfene Einträge', href: '#suche' })),
     ...abschnitt('Anmeldung', ...anmeldung),
     ...abschnitt('Mitteilungen',
-      ...MITTEILUNGEN.absaetze.map((a) => el('p', {}, mitFett(a))),
-      el('details', {}, el('summary', {}, MITTEILUNGEN.abo.titel), el('ol', { class: 'ablauf-schritte' }, MITTEILUNGEN.abo.schritte.map((t) => el('li', {}, mitFett(t))))),
-      ...MITTEILUNGEN.neben.map((a) => el('p', { class: 'neben' }, mitFett(a)))),
-    ...abschnitt('App installieren',
+      ...mit.absaetze.map((a) => el('p', {}, mitFett(a))),
+      el('details', {}, el('summary', {}, mit.abo.titel), el('ol', { class: 'ablauf-schritte' }, mit.abo.schritte.map((t) => el('li', {}, mitFett(t))))),
+      ...mit.neben.map((a) => el('p', { class: 'neben' }, mitFett(a)))),
+    ...(k.huelle ? [] : abschnitt('App installieren',
       el('p', {}, inst.satz),
       inst.schritte.length ? el('ol', { class: 'ablauf-schritte' }, inst.schritte.map((t) => el('li', {}, mitFett(t)))) : null,
-      ...inst.hinweise.map((h) => el('p', { class: 'neben' }, mitFett(h)))),
+      ...inst.hinweise.map((h) => el('p', { class: 'neben' }, mitFett(h))))),
     ...abschnitt('Dieses Gerät', werte, neu, el('div', { id: 'abgleich-stand' }, stand(z, k))),
     welt.hatStand ? el('p', { class: 'neben' }, `Auf diesem Gerät liegen ${eintraegeText(welt.eintraege.size)}.`) : null,
   ];

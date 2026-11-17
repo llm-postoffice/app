@@ -11,14 +11,17 @@ import { Schreiber } from './schreiben.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
 import { ladeWelt, ortVon } from './welt.js';
+import { adresseAusHuelle, mitGeteiltem } from './huelle.js';
+import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 
 const $ = (id) => document.getElementById(id);
 
 /**
  * `aktualisierung` und `installiert` sind für die Vorschau da: sie zeigt die Zustände „neue Fassung wartet“ und „läuft als
- * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser.
+ * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser. `huelle` ist die Brücke zur
+ * Android-Hülle oder `null` im Browser.
  */
-export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined }) {
+export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined, huelle = null }) {
   statusleiste();
   $('zurueck').addEventListener('click', zurueck);
 
@@ -37,11 +40,12 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
     schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), hinweis: hinweis.zeige, zeitgeber, beiAenderung: () => k.neuZeichnen() });
   }
   // Neue Fassung (UOF-5): ein ruhiges Band unten und in Mehr; die App lädt nie von selbst neu
-  const dienst = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+  // In der Hülle kein Service Worker: die Dateien liegen im APK, Updates kommen als APK
+  const dienst = !huelle && 'serviceWorker' in navigator ? navigator.serviceWorker : null;
   const eigene = aktualisierung === undefined;
   aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
   const k = {
-    db, steuerung, schreiben, jetzt, aktualisierung, installiert, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, aktualisierung, installiert, huelle, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },
@@ -65,6 +69,21 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   if (!(await steuerung.anmeldung())) history.replaceState({ tiefe: 0 }, '', '#anmelden');
   let neuBand = { ansicht() {} };
   starten((o) => { neuBand.ansicht(o.ansicht); return anzeigen(o); }, { woher: (id) => ortVon(welt0, id) });
+
+  // Android-Hülle: Links llmpost://… und Text aus anderen Apps kommen über die Brücke (huelle.js).
+  // Spätere Werte der Hülle (etwa Systemfarben) bekommen hier einen weiteren Empfänger.
+  if (huelle) {
+    huelle.verbinde({
+      oeffnen: (m) => { if (navigationOrt().ansicht !== 'anmelden') gehe(adresseAusHuelle(m.adresse)); },
+      teilen: async (m) => {
+        const alt = (await liesEntwurf(db, schluessel.erfassen)) ?? {};
+        await speichereEntwurf(db, schluessel.erfassen, mitGeteiltem(alt, { titel: m.titel, text: m.text }), false, jetzt());
+        const hier = navigationOrt().ansicht;
+        if (hier === 'erfassen') k.neuZeichnen(); else if (hier !== 'anmelden') gehe('#erfassen');
+      },
+    });
+    huelle.bereit();
+  }
 
   // Der Abgleich ändert den Stand: neu zeichnen, sobald sich Phase, Fehler, Netz oder Stand ändern; Fortschritt gedrosselt
   let letzter = JSON.stringify([steuerung.zustand.phase, steuerung.zustand.fehler?.art, steuerung.zustand.ohneNetz, steuerung.zustand.letzter?.geprueft]);

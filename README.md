@@ -1,20 +1,20 @@
-# Postfach
+# LLM-Post
 
-Postfach ist eine installierbare Web-App für das Handy, die zeigt, was auf dich wartet, und deine Antworten, Urteile und neuen Einträge an ein Postsystem auf GitHub sendet.
+LLM-Post ist eine installierbare Web-App für das Handy, die zeigt, was auf dich wartet, und deine Antworten, Urteile und neuen Einträge an ein Postsystem auf GitHub sendet.
 
 Stand: im Aufbau, Teil F (Offline, Installation, Mitteilungen, Update). Die App holt das Postsystem mit einem Token auf das Gerät, rechnet daraus den Zustand der Einträge und zeigt **Wartet**, **Alle** (alle offenen Einträge aller Projekte, auch die, die nicht auf dich warten, gefiltert und sortiert), **Abnahmen**, **Erfassen**, **Mehr**, den Eingang, die Ideensammlung, die Suche und jeden Eintrag. Sie schreibt auch: Du beantwortest Fragen, beurteilst Abnahmen Schritt für Schritt, erledigst Einträge, sortierst den Eingang ein und erfasst neue Einträge. Jede Eingabe wartet zehn Sekunden auf **Rückgängig**, geht dann als ein Commit je Sendung über die Git-Data-API von GitHub raus und steht bis dahin in Worten als „noch nicht gesendet“ am Eintrag. Ohne Netz bleibt sie in der Warteschlange auf dem Gerät. Teil F ist dazu gekommen: Die App startet ohne Netz, erklärt in **Mehr** die Installation und die Mitteilungen über ntfy und wartet mit einer neuen Fassung, bis du **Neu starten** tippst. Noch nicht veröffentlicht und noch nicht nutzbar: die Veröffentlichung folgt in Teil G.
 
 ## Installation
 
-Noch nicht möglich. Die App erscheint auf GitHub Pages, sobald Teil G sie veröffentlicht. Dann installierst du sie auf dem Handy (Vanadium oder Chrome auf Android) so:
+Als Android-App installierst du LLM-Post mit Obtainium: [docs/obtainium.md](docs/obtainium.md). Als Web-App noch nicht: Sie erscheint auf GitHub Pages, sobald Teil G sie veröffentlicht. Dann installierst du sie auf dem Handy (Vanadium oder Chrome auf Android) so:
 
 1. Öffne die Adresse der App im Browser.
 2. Öffne im Browser das Menü ⋮.
 3. Tippe im Menü auf **Install and create shortcut**. Bei deutscher Oberfläche heißt der Eintrag vermutlich **App installieren** (nicht geprüft).
 4. Bestätige die Frage des Browsers.
-5. Öffne das Postfach danach vom Startbildschirm.
+5. Öffne LLM-Post danach vom Startbildschirm.
 
-Nach der Installation gilt die Anmeldung der App, nicht die eines Browsertabs. Links aus anderen Apps öffnen das Postfach in einem Tab ohne diese Anmeldung; öffne es zum Arbeiten vom Startbildschirm. Eine neue Fassung wartet, bis du in der Zeile unten oder in **Mehr** auf **Neu starten** tippst.
+Nach der Installation gilt die Anmeldung der App, nicht die eines Browsertabs. Links aus anderen Apps öffnen LLM-Post in einem Tab ohne diese Anmeldung; öffne die App zum Arbeiten vom Startbildschirm. Eine neue Fassung wartet, bis du in der Zeile unten oder in **Mehr** auf **Neu starten** tippst.
 
 ## Entwickeln
 
@@ -102,4 +102,4 @@ https://github.com/llm-postoffice/app/issues
 
 GPL-3.0-or-later, siehe [LICENSE](LICENSE).
 
-Die Symbole in `index.html` sind Material Symbols Rounded von Google (Apache-2.0, Text in [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt), Quelle https://github.com/google/material-design-icons). Die App-Symbole in `symbole/` sind Platzhalter aus dem Beispiel von p94-hig unter GPL-3.0-or-later.
+Die Symbole in `index.html` sind Material Symbols Rounded von Google (Apache-2.0, Text in [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt), Quelle https://github.com/google/material-design-icons). Die App-Symbole in `symbole/` sind Platzhalter aus dem Beispiel von p94-hig unter GPL-3.0-or-later. Das Android-APK enthält Apache-2.0-Bibliotheken; Liste und Lizenztext liegen darin unter `lizenzen/` (Bau: [docs/entwicklung/huelle.md](docs/entwicklung/huelle.md)).

@@ -96,7 +96,7 @@ export async function anzeigen(o, { automatisch = false } = {}) {
   const z = k.steuerung.zustand;
   const r = await ansicht(o, welt, z);
   if (mein !== nummer) return;
-  document.title = 'Postfach';
+  document.title = 'LLM-Post';
   if (r.titel) $('titel').textContent = r.titel;
   plakette(welt);
   $('inhalt').replaceChildren(...r.inhalt.flat().filter(Boolean));

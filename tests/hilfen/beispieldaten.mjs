@@ -221,6 +221,9 @@ export const SZENARIEN = {
   'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
   'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
   'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
+  // Android-Hülle: die Vorschau setzt eine Brücke ohne Wirkung ein (tools/vorschau.mjs)
+  huelle: { daten: dateien(), seed: true, live: 'ok', huelle: true },
+  'mehr-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, scroll: 'Mitteilungen' },
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
   'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
   'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
@@ -268,4 +271,6 @@ export const ADRESSEN = {
   'mehr-fassung': ['mehr'],
   'mehr-installieren': ['mehr'],
   'mehr-mitteilungen': ['mehr'],
+  huelle: ['wartet', 'mehr'],
+  'mehr-huelle': ['mehr'],
 };

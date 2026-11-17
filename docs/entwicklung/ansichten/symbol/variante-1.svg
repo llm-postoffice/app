@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+<!-- Variante 1: Umschlag mit LLM. Adaptives Symbol, 108 x 108, sichtbar innen 72 x 72, Motiv im Kreis r 33. Die Maske ist das Motiv: weiß bleibt, schwarz ist ausgespart; dieselbe Form ist die einfarbige Ebene. -->
+<defs><mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108"><rect x="29" y="34" width="50" height="40" rx="5" fill="white"/><path d="M33 38L54 53L75 38" fill="none" stroke="black" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M40.45 59.20L40.45 68.30L43.92 68.30 M50.08 59.20L50.08 68.30L53.55 68.30 M59.70 68.30L59.70 59.20L63.62 65.25L67.55 59.20L67.55 68.30" fill="none" stroke="black" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<rect width="108" height="108" fill="#0B57D0"/>
+<rect width="108" height="108" fill="#FFFFFF" mask="url(#m1)"/>
+</svg>

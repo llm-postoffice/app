@@ -25,8 +25,8 @@ const html = await lies('index.html');
 
 test('das Manifest nennt alles, was Chromium zum Installieren verlangt (UPL-2)', async () => {
   const m = JSON.parse(await lies('manifest.webmanifest'));
-  assert.equal(m.name, 'Postfach');
-  assert.equal(m.short_name, 'Postfach');
+  assert.equal(m.name, 'LLM-Post');
+  assert.equal(m.short_name, 'LLM-Post');
   assert.equal(m.display, 'standalone');
   assert.equal(m.id, './');
   assert.equal(m.scope, './');

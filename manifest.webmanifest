@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Postfach",
-  "short_name": "Postfach",
+  "name": "LLM-Post",
+  "short_name": "LLM-Post",
   "description": "Zeigt, was auf dich wartet, und sendet deine Antworten, Urteile und neuen Einträge.",
   "lang": "de",
   "start_url": "./#wartet",

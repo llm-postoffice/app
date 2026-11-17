@@ -1,5 +1,17 @@
 # Änderungen
 
+## 20261117.04 (2026-11-17)
+
+Die App heißt jetzt LLM-Post, hat ein neues Symbol und kommt auch als Android-App.
+
+- **LLM-Post** ist der neue Name der App. Deine Daten und deine Anmeldung bleiben.
+- **Neues Symbol** für Android-App und Web-App: LLM und ein Brief.
+- **Android-App:** dieselbe App ohne Browser, startet auch ohne Netz. Installation und Updates mit Obtainium, Schritte in `docs/obtainium.md`.
+- Links der Form `llmpost://eintrag/ID` öffnen den Eintrag in der Android-App, jede andere Adresse mit `llmpost://` öffnet **Wartet**.
+- **Teilen** aus einer anderen App legt den Text als Entwurf in **Erfassen**.
+- In der Android-App meldest du dich einmal an; das Token liegt dort im Schlüsselspeicher von Android, nicht in der Datenbank der App.
+- **Mehr** zeigt in der Android-App keinen Abschnitt **App installieren** und keine Zeile **Neue Fassung geladen**; Updates kommen über Obtainium.
+
 ## 20261117.03 (2026-11-17)
 
 Die Priorität heißt überall Hoch, Normal, Niedrig.
