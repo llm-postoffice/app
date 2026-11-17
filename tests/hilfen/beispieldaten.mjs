@@ -226,6 +226,9 @@ export const SZENARIEN = {
   'mehr-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, scroll: 'Mitteilungen' },
   // Material You: die Vorschau gibt eine erfundene Systempalette (Monet) durch denselben Weg wie die Hülle (tests/hilfen/farbrollen.mjs)
   ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, { daten: dateien(), seed: true, live: 'ok', farben: n }])),
+  // Entwürfe der Anzeige von Anhängen (Varianten 1 bis 3, Liste, Bild und Text geöffnet); nur zum Ansehen, nicht im Standardlauf
+  ...Object.fromEntries([1, 2, 3].flatMap((v) => [['liste', 'liste'], ['bild', 'bild'], ['text', 'text']].map(([n, offen]) =>
+    [`anhaenge-${['', 'eins', 'zwei', 'drei'][v]}-${n}`, { daten: dateien(), seed: true, live: 'ok', anhaenge: { variante: v, offen: v === 3 || n !== 'liste' ? offen : null } }]))),
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
   'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
   'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
@@ -236,6 +239,7 @@ export const SZENARIEN = {
 
 /** Die Adressen, die die Vorschau je Szenario rendert. */
 export const ADRESSEN = {
+  ...Object.fromEntries(Object.keys(SZENARIEN).filter((n) => n.startsWith('anhaenge-')).map((n) => [n, ['eintrag/r2d4vn']])),
   normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],

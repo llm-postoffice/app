@@ -1,0 +1,44 @@
+/* Entwurf der Anzeige von Anhängen, nur für die Vorschau (tools/anhaenge-entwurf.mjs). Farben und Maße von app.css. */
+.anh, .anh-karte, .anh-zeile, .anh-voll { scroll-margin-top: 150px; }
+.anh { margin: 0 0 16px; }
+.anh-titel { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; color: var(--neben); }
+.anh-titel .ico { width: 20px; height: 20px; }
+.anh section, section.anh { margin: 0 0 16px; }
+.anh-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.anh > .anh-karte + .anh-karte { margin-top: 8px; }
+
+.anh-karte { border-radius: 12px; background: var(--flaeche); overflow: hidden; }
+.anh-reihe { display: flex; align-items: center; }
+.anh-kopf { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 56px; width: 100%; padding: 8px 12px; border: 0; background: none; text-align: left; color: inherit; }
+.anh-reihe .anh-kopf { width: auto; }
+.anh-sym { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tonal); color: var(--auf-tonal); }
+.anh-name { flex: 1; min-width: 0; display: grid; }
+.anh-name b { font-size: 0.9375rem; line-height: 1.375rem; font-weight: 600; overflow-wrap: anywhere; }
+.anh-name span { font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); }
+.anh-ik { flex: none; min-width: 48px; min-height: 48px; margin-right: 4px; display: grid; place-items: center; border: 0; border-radius: 24px; background: none; color: var(--akzent); }
+.anh-ik:active { background: var(--grund); }
+
+.anh-bild { display: block; width: 100%; height: 168px; object-fit: cover; object-position: top; background: var(--grund); border-top: 1px solid var(--linie); }
+.offen .anh-bild { height: auto; object-fit: contain; }
+.anh-text { margin: 0; padding: 8px 12px; white-space: pre-wrap; overflow-wrap: anywhere; border-top: 1px solid var(--linie); background: var(--grund); }
+.anh-weiter { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; min-height: 48px; border: 0; border-top: 1px solid var(--linie); background: none; color: var(--akzent); font-size: 0.875rem; font-weight: 500; }
+.offen .anh-weiter .ico { transform: rotate(180deg); }
+
+/* Variante 2: Zeilen, die sich aufklappen */
+.anh-pfeil { color: var(--neben); }
+.offen .anh-pfeil { transform: rotate(180deg); }
+.anh-inhalt { display: none; padding: 0 0 12px; }
+.offen .anh-inhalt { display: block; }
+.anh-inhalt .anh-bild { height: auto; object-fit: contain; border-top: 1px solid var(--linie); }
+.anh-laden { display: inline-flex; align-items: center; gap: 8px; margin: 12px 12px 0; }
+
+/* Variante 3: Zeile mit Zahl unter der Kopfkarte, Seite je Anhang */
+.anh-zeile { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; margin: 0 0 16px; padding: 8px 12px; border: 0; border-radius: 12px; background: var(--flaeche); text-align: left; color: inherit; }
+.anh-voll { position: fixed; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--grund); }
+.anh-voll-kopf { display: flex; align-items: center; gap: 4px; min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 4px 0; }
+.anh-voll-kopf .anh-name { margin-left: 4px; }
+.anh-voll-koerper { flex: 1; overflow: auto; padding: 8px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+.anh-voll .anh-bild { height: auto; border: 0; border-radius: 12px; object-fit: contain; }
+.anh-voll .anh-text { border: 0; border-radius: 12px; background: var(--flaeche); padding: 12px 16px; }
+.blatt .anh-titel:first-child { margin-top: 0; }
+.blatt .anh-karte { background: var(--grund); }
