@@ -304,9 +304,9 @@ details[open] > summary::after { transform: rotate(180deg); }
 .zitat > :last-child { margin-bottom: 0; }
 .fremd-hinweis { margin: 0 0 4px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); }
 .moeglichkeiten { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
-.moeglichkeiten li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--flaeche); }
-.buchstabe { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 16px; background: var(--k-cont, var(--tonal)); color: var(--k-on, var(--auf-tonal)); font-weight: 700; flex: none; }
-.moeglichkeiten .was { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.moeglichkeiten li { display: flex; align-items: flex-start; gap: 12px; padding: 4px 0; }
+.buchstabe { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 1rem; background: var(--k-cont, var(--tonal)); color: var(--k-on, var(--auf-tonal)); font-weight: 700; flex: none; }
+.moeglichkeiten .was { flex: 1; min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
 .faden { margin: 0 0 16px; padding: 0; list-style: none; }
 .faden li { padding: 8px 0 8px 12px; border-left: 3px solid var(--linie); margin: 0 0 8px; }
 .faden .kopf-zeile { display: block; font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
@@ -385,25 +385,18 @@ fieldset.feld legend { padding: 0; margin-bottom: 4px; font-weight: 500; }
 .haken { display: flex; gap: 12px; align-items: flex-start; min-height: 48px; padding: 12px 0; font-size: 0.875rem; font-weight: 500; }
 .haken input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--akzent); }
 .haken .ico { color: var(--f-acc); }
-/* Auswahl im Blatt Einsortieren: Zeile als Ganzes ein Ziel (UZI-4), Haken und Rand beim gewählten (UFA-11) */
-.wahlliste { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
-.wahl { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--linie); background: var(--grund); }
-.wahl input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 12px; background: none; opacity: 0; }
-.wahl > .ico { color: var(--neben); }
-.wahl .an { display: none; color: var(--akzent); }
-.wahl input:checked ~ .an { display: block; }
-.wahl input:checked ~ .aus { display: none; }
+/* Möglichkeiten im Blatt Deine Antwort: Auswahl (Radio) mit Zeile als Ganzem als Ziel; ungewählt Fläche und Linie, gewählt tonal mit Haken und Rand */
+.antworten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0 0 12px; }
+.wahl { position: relative; display: flex; align-items: flex-start; gap: 12px; min-height: 56px; padding: 12px 16px; border-radius: 16px; border: 1px solid var(--linie); background: var(--flaeche); color: var(--text); }
+.wahl input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 16px; background: none; opacity: 0; }
+.wahl .buchstabe { background: var(--tonal); color: var(--auf-tonal); }
+.wahl .was { flex: 1; min-width: 0; display: grid; gap: 4px; justify-items: start; overflow-wrap: anywhere; }
+.wahl .an { display: none; flex: none; color: var(--auf-tonal); }
 .wahl:has(input:checked) { background: var(--tonal); color: var(--auf-tonal); border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
-.wahl:has(input:checked) > .ico, .wahl:has(input:checked) .an { color: var(--auf-tonal); }
+.wahl:has(input:checked) .buchstabe { background: var(--grund); color: var(--text); }
+.wahl:has(input:checked) .an { display: block; }
 .wahl:has(input:focus-visible) { outline: 3px solid var(--akzent); outline-offset: 2px; }
-.wahl .wahl-text { flex: 1; min-width: 0; display: grid; }
-.wahl .wahl-text b { font-weight: 600; font-size: 1rem; line-height: 1.5rem; }
-.wahl .wahl-text span { font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
-.wahl:has(input:checked) .wahl-text span { color: var(--auf-tonal); }
-.antworten { display: grid; gap: 8px; margin: 0 0 12px; }
-.antworten .tonal { display: flex; align-items: flex-start; gap: 12px; text-align: left; border-radius: 16px; padding: 12px 20px; }
-.antworten .tonal .buchstabe { background: var(--grund); }
-.antworten .tonal .was { display: grid; gap: 4px; justify-items: start; }
+.wahl:has(input:disabled) { opacity: 0.6; }
 
 /* Hinweis unten (Snackbar, URM-2) */
 .hinweis { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; margin: 0 8px 8px; padding: 4px 8px 4px 16px; border-radius: 4px; background: var(--umgekehrt); color: var(--auf-umgekehrt); font-size: 0.875rem; line-height: 1.25rem; }

@@ -1,5 +1,9 @@
 # Änderungen
 
+## 20261117.07 (2026-11-17)
+
+Antworten: Im Blatt **Deine Antwort** wählt ein Tipp eine Möglichkeit (sie ist dann gefüllt und mit Haken markiert), und **Senden** schickt Wahl, eigenen Text und Anhänge zusammen.
+
 ## 20261117.06 (2026-11-17)
 
 Anhänge: Du siehst, speicherst und sendest Dateien zu Einträgen.

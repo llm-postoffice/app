@@ -168,46 +168,55 @@ function schrittZeile(welt, e, s, entw) {
 
 // ---- Blätter
 
-async function textFeld(k, key, name, beschriftung, hinweis = null) {
+async function textFeld(k, entwurf, name, beschriftung, bei) {
   const t = el('textarea', { name, rows: 3, autocapitalize: 'sentences' });
-  t.value = (await liesEntwurf(k.db, key))?.text ?? '';
-  const sichern = () => speichereEntwurf(k.db, key, { text: t.value }, !t.value.trim(), k.jetzt());
-  t.addEventListener('input', sichern);
-  return { feld: feld({ beschriftung, steuerung: t, hinweis }), t, sichern };
+  t.value = entwurf?.text ?? '';
+  t.addEventListener('input', bei);
+  return { feld: feld({ beschriftung, steuerung: t }), t };
 }
 
-/** Blatt Deine Antwort: die Möglichkeiten als Knöpfe, darunter ein freier Text. Gesperrt ohne Schreibschicht. */
+/** Blatt Deine Antwort: die Möglichkeiten als Auswahl, darunter ein freier Text; Senden schickt die gewählte Möglichkeit und den Text. Gesperrt ohne Schreibschicht. */
 export async function antwortBlatt(welt, k, o, schliessen) {
   const e = welt.eintraege.get(o.id);
   if (!e) return { koerper: [el('p', {}, 'Der Eintrag liegt nicht auf diesem Gerät.')], knoepfe: [knopf('Schließen', { klasse: 'text', an: schliessen })] };
   const gesperrt = !kannSenden(k);
   const liste = moeglichkeiten(e);
+  const key = schluessel.antwort(e.id);
+  const entwurf = await liesEntwurf(k.db, key);
   const koerper = [eintragsZeile(karteVon(welt, { e, st: welt.buch.zustand(e) }).art.wort, e.id)];
   if (gesperrt) koerper.push(band({ ton: 'info', symbol: 'info-f', satz: SENDEN_FEHLT }));
-  let wahl = null;
-  let textSchluessel = null;
-  const anhang = await anhangWahl(k, schluessel.antwort(e.id), { gesperrt });
+  let wahl = liste.some((m) => m.schluessel === entwurf?.wahl) ? entwurf.wahl : null;
+  let text = null;
+  const wert = () => ({ text: text.t.value, ...(wahl ? { wahl } : {}) });
+  const fehlt = el('p', { class: 'neben satz', hidden: gesperrt }, liste.length ? 'Wähle eine Möglichkeit oder schreibe eine eigene Antwort.' : 'Schreibe eine Antwort.');
+  let senden = null;
+  const merken = () => {
+    const leer = !text.t.value.trim() && !wahl;
+    if (senden) senden.disabled = gesperrt || leer;
+    fehlt.hidden = gesperrt || !leer;
+    return speichereEntwurf(k.db, key, wert(), leer, k.jetzt());
+  };
+  const anhang = await anhangWahl(k, key, { gesperrt });
   const { platz: ablehnung, los } = absender(
-    (opt) => (wahl
-      ? k.schreiben.antworten(e.id, { wahl, anhaenge: anhang.liste(), entwurf: { schluessel: schluessel.antwort(e.id), wert: textSchluessel.t.value.trim() ? { text: textSchluessel.t.value } : null }, ...opt })
-      : k.schreiben.antworten(e.id, { text: textSchluessel.t.value.trim(), anhaenge: anhang.liste(), entwurf: { schluessel: schluessel.antwort(e.id), wert: { text: textSchluessel.t.value } }, ...opt })),
+    (opt) => k.schreiben.antworten(e.id, { wahl, text: text.t.value.trim(), anhaenge: anhang.liste(), entwurf: { schluessel: key, wert: wert() }, ...opt }),
     () => schliessen());
   if (liste.length) {
-    koerper.push(el('div', { class: 'antworten' }, liste.map((m) => {
-      const b = el('button', { type: 'button', class: 'tonal', disabled: gesperrt, 'data-wahl': m.schluessel },
+    koerper.push(el('div', { class: 'antworten', role: 'radiogroup', 'aria-label': 'Möglichkeiten' }, liste.map((m) => {
+      const r = el('input', { type: 'radio', name: 'moeglichkeit', value: m.schluessel, 'data-wahl': m.schluessel, checked: wahl === m.schluessel, disabled: gesperrt });
+      r.addEventListener('change', () => { wahl = m.schluessel; merken(); });
+      return el('label', { class: 'wahl' }, r,
         el('span', { class: 'buchstabe' }, m.schluessel),
-        el('span', { class: 'was' }, m.text, m.empfehlung ? el('span', { class: 'chip-rat' }, ico('check_circle-f'), 'Empfehlung') : null));
-      b.addEventListener('click', () => { wahl = m.schluessel; return los(false, b); });
-      return b;
+        el('span', { class: 'was' }, m.text, m.empfehlung ? el('span', { class: 'chip-rat' }, ico('check_circle-f'), 'Empfehlung') : null),
+        ico('check_circle-f', 'an'));
     })));
   }
-  textSchluessel = await textFeld(k, schluessel.antwort(e.id), 'antwort', liste.length ? 'Eigene Antwort' : 'Deine Antwort');
-  koerper.push(textSchluessel.feld, anhang.platz, ablehnung);
-  const senden = knopf('Senden', { klasse: 'gefuellt', gesperrt, an: async (ev) => {
-    if (!textSchluessel.t.value.trim()) { textSchluessel.t.focus(); return; }
-    wahl = null;
+  text = await textFeld(k, entwurf, 'antwort', liste.length ? 'Eigene Antwort' : 'Deine Antwort', merken);
+  koerper.push(text.feld, anhang.platz, fehlt, ablehnung);
+  senden = knopf('Senden', { klasse: 'gefuellt', gesperrt: gesperrt || (!wahl && !text.t.value.trim()), an: async (ev) => {
+    if (!wahl && !text.t.value.trim()) return;
     await los(false, ev.currentTarget);
   } });
+  fehlt.hidden = gesperrt || !senden.disabled;
   return { koerper, knoepfe: [knopf('Abbrechen', { klasse: 'text', an: schliessen }), senden] };
 }
 

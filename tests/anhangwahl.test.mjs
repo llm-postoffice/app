@@ -100,17 +100,18 @@ test('Erfassen: der Abschnitt steht zwischen Text und Priorität, und Anlegen gi
   assert.deepEqual(aufrufe[0].anhaenge.map((a) => a.name), ['log.txt']);
 });
 
-test('Antworten: der Abschnitt steht unter dem Textfeld, und ein Tipp auf eine Möglichkeit sendet die Anhänge mit', async () => {
+test('Antworten: der Abschnitt steht unter dem Textfeld, und Senden mit einer gewählten Möglichkeit schickt die Anhänge mit', async () => {
   const aufrufe = [];
   const schreiben = { antworten: async (id, o) => { aufrufe.push({ id, ...o }); return { ok: true, id: 'y' }; } };
   const k = kontext({ schreiben });
   const welt = M.welt.baueWelt({ pfade: dateien(), jetzt: JETZT });
   const blatt = await M.eintrag.antwortBlatt(welt, k, { id: 'r2d4vn' }, () => {});
-  const wahlen = finde(blatt.koerper, 'button[data-wahl]');
+  const wahlen = finde(blatt.koerper, 'input[data-wahl]');
   assert.ok(wahlen.length >= 2);
   assert.equal(finde(blatt.koerper, '.anhangwahl').length, 1);
   await waehle(blatt.koerper, datei('log.txt', new TextEncoder().encode('Zeile 1')));
-  await wahlen[0].klick();
+  for (const f of wahlen[0].horcher.change) await f();
+  await finde(blatt.knoepfe, 'button').find((b) => b.textContent.trim() === 'Senden').klick();
   assert.equal(aufrufe[0].wahl, 'A');
   assert.deepEqual(aufrufe[0].anhaenge.map((a) => a.name), ['log.txt']);
 });
