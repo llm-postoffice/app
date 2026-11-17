@@ -1024,6 +1024,7 @@ try {
       'ohne Netz sagt ein noch nie geladener Anhang, was hilft', await p.werte(`document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent`));
     melde(await p.werte(`!!document.querySelector('.anhaenge li:nth-child(1) img.anhang-bild') && !document.querySelector('.anhaenge li:nth-child(1) .anhang-inhalt').hidden`), 'ein schon geladener Anhang bleibt ohne Netz sichtbar', 'Bild weg');
     netzAn = true; await p.netz(true);
+    await p.warte(`!!document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt button')`, 8000);
     await p.tippe('.anhaenge li:nth-child(2) .anhang-inhalt button');
     melde(await p.warte(`[...document.querySelectorAll('.anhaenge li:nth-child(2) button')].some((b) => b.textContent === 'Herunterladen')`, 8000), 'Erneut versuchen lädt den Anhang, sobald Netz da ist', 'kein Herunterladen');
     const m1 = (await p.werte('window.__melde')) ?? [];
