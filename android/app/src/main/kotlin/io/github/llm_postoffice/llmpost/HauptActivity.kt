@@ -104,19 +104,52 @@ class HauptActivity : Activity() {
         // Ein Link oder geteilter Text beim Start; nach Neuaufbau oder Start aus den letzten Apps gilt der alte Intent nicht
         val neu = savedInstanceState == null && (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0
         val ziel = if (neu) zielAus(intent) else null
-        if (ziel is Ziel.Teilen) anstehend = ziel
+        if (ziel is Ziel.Teilen) liefere(ziel)
         if (savedInstanceState == null || w.restoreState(savedInstanceState) == null) w.loadUrl(START + (ziel?.let(::adresseVon) ?: ""))
     }
 
     private fun zielAus(intent: Intent?): Ziel? = intent?.let {
-        zielVon(it.action, it.dataString, it.type, it.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(), it.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString())
+        zielVon(
+            it.action, it.dataString, it.type, it.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(), it.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString(),
+            streamsAus(it), (it.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0,
+        )
+    }
+
+    // Die Adressen der geteilten Dateien: EXTRA_STREAM (eine oder eine Liste), sonst die ClipData; ein fehlerhaftes Extra zählt als leer
+    private fun streamsAus(intent: Intent): List<String> {
+        val adressen = try {
+            when (intent.action) {
+                Intent.ACTION_SEND -> listOfNotNull(intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java))
+                Intent.ACTION_SEND_MULTIPLE -> intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+                else -> emptyList()
+            }
+        } catch (_: RuntimeException) { emptyList() }
+        if (adressen.isNotEmpty() || (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE)) return adressen.map { it.toString() }
+        val klammer = intent.clipData ?: return emptyList()
+        return (0 until klammer.itemCount).mapNotNull { klammer.getItemAt(it).uri?.toString() }
+    }
+
+    // Liest die Dateien eines Teilens abseits der Oberfläche und liefert dann; die Freigabe des Intents gilt, solange die Activity lebt
+    private fun liefere(ziel: Ziel.Teilen) {
+        if (ziel.quellen.isEmpty()) { zustelle(ziel); return }
+        val quelle = InhaltsQuelle(contentResolver)
+        arbeiter.execute {
+            val fertig = mitDateien(ziel, quelle)
+            runOnUiThread { if (!isDestroyed) zustelle(fertig) }
+        }
+    }
+
+    // Auf der Oberfläche: an die Seite, sobald sie bereit ist (bereit holt `anstehend` nach)
+    private fun zustelle(ziel: Ziel.Teilen) {
+        val p = antwort
+        if (p != null) p.postMessage(nachrichtVon(ziel)) else anstehend = ziel
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val ziel = zielAus(intent) ?: return
-        val p = antwort
-        if (p != null) p.postMessage(nachrichtVon(ziel)) else anstehend = ziel
+        if (ziel is Ziel.Teilen) liefere(ziel)
+        else { val p = antwort; if (p != null) p.postMessage(nachrichtVon(ziel)) else anstehend = ziel }
     }
 
     private fun verarbeite(text: String, proxy: JavaScriptReplyProxy) {

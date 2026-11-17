@@ -154,6 +154,41 @@ export function nimmAuf(liste, neu) {
   return { ok: true, liste: [...liste, { name, groesse: neu.groesse, typ: neu.typ || typVon(name), daten: neu.daten }], hinweis };
 }
 
+/** So viele Dateien nimmt Erfassen aus einem Teilen der Hülle (DATEIEN_MAX in Teilen.kt). */
+export const ANHAENGE_TEILEN_MAX = 10;
+
+/**
+ * Nimmt die Dateien aus der Nachricht `teilen` der Hülle in die Liste auf, über dieselbe Prüfung wie Datei anhängen (nimmAuf).
+ * `dateien` sind { name, typ, groesse, daten } oder { name, typ, groesse, fehler } (Protokoll im Kopf von huelle.js), `mehr`
+ * die Zahl der Dateien, die die Hülle über ihrer Grenze ausließ. Ergebnis: { liste, fehler: [Satz], hinweise: [Satz] }.
+ */
+export function teileAuf(liste, dateien, mehr = 0) {
+  const fehler = [];
+  const hinweise = [];
+  const alle = Array.isArray(dateien) ? dateien : [];
+  let aus = liste;
+  for (const d of alle.slice(0, ANHAENGE_TEILEN_MAX)) {
+    if (!d || typeof d !== 'object') continue;
+    const name = typeof d.name === 'string' && d.name !== '' ? saeubereName(d.name) : 'Datei';
+    const bekannt = typeof d.groesse === 'number' && d.groesse >= 0;
+    if (d.fehler === 'zu-gross') {
+      fehler.push(bekannt ? `${name} ist ${groessenWort(d.groesse)} groß; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und teile sie noch einmal.`
+        : `${name} ist größer als ${groessenWort(ANHANG_MAX)}; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und teile sie noch einmal.`);
+      continue;
+    }
+    if (d.fehler === 'kein-zugriff') { fehler.push('Eine Datei ließ sich nicht öffnen, weil die andere App sie nicht freigab. Teile sie noch einmal.'); continue; }
+    if (d.fehler || typeof d.daten !== 'string') { fehler.push(`${name} lässt sich nicht lesen. Teile sie noch einmal.`); continue; }
+    let bytes;
+    try { bytes = basisZuBytes(d.daten); } catch { fehler.push(`${name} lässt sich nicht lesen. Teile sie noch einmal.`); continue; }
+    const typ = typeof d.typ === 'string' && /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i.test(d.typ) && d.typ !== 'application/octet-stream' ? d.typ.toLowerCase() : '';
+    const r = nimmAuf(aus, { name, groesse: bytes.length, typ, daten: bytesZuBasis(bytes) });
+    if (r.ok) { aus = r.liste; if (r.hinweis) hinweise.push(r.hinweis); } else fehler.push(r.fehler.replace('wähle sie noch einmal', 'teile sie noch einmal'));
+  }
+  const ausgelassen = Math.max(0, alle.length - ANHAENGE_TEILEN_MAX) + (Number.isInteger(mehr) && mehr > 0 ? mehr : 0);
+  if (ausgelassen) fehler.push(`${ausgelassen} ${ausgelassen === 1 ? 'weitere Datei ist' : 'weitere Dateien sind'} nicht dabei; je Teilen gehen höchstens ${ANHAENGE_TEILEN_MAX}.`);
+  return { liste: aus, fehler, hinweise };
+}
+
 /** Die Texte der Textanhänge für die Prüfung auf Geheimnisse und Personendaten: [{ wo, text }]. */
 export function anhangTexte(liste) {
   const aus = [];

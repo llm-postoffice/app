@@ -7,7 +7,7 @@ class Speichern(val name: String, val typ: String, val daten: ByteArray)
 
 /** So viele Bytes darf ein Anhang haben (1 MiB, wie im Postwerkzeug); größere legt die Hülle nicht ab. */
 const val ANHANG_MAX = 1024 * 1024
-private val MIME = Regex("^[a-z0-9][a-z0-9.+-]{0,60}/[a-z0-9][a-z0-9.+-]{0,100}$")
+internal val MIME = Regex("^[a-z0-9][a-z0-9.+-]{0,60}/[a-z0-9][a-z0-9.+-]{0,100}$")
 private const val NAME_MAX = 100
 
 /**

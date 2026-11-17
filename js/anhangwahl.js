@@ -17,8 +17,11 @@ export const anhangSchluessel = (schluesselDesEntwurfs) => `anhaenge/${schluesse
  */
 export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null } = {}) {
   const key = anhangSchluessel(schluessel);
-  let liste = ((await liesEntwurf(k.db, key))?.anhaenge) ?? [];
-  const meldung = el('p', { class: 'neben', role: 'status' }, `Bis ${groessenWort(ANHANG_MAX)} je Datei.`);
+  const gemerkt = await liesEntwurf(k.db, key);
+  let liste = gemerkt?.anhaenge ?? [];
+  // Was beim Teilen aus einer anderen App abgelehnt wurde (huelle.js, mitGeteiltenDateien), steht einmal als Satz da
+  const geteilt = typeof gemerkt?.meldung === 'string' && gemerkt.meldung !== '' ? gemerkt : null;
+  const meldung = el('p', { class: geteilt?.meldungFehler ? 'neben fehler' : 'neben', role: 'status' }, geteilt?.meldung ?? `Bis ${groessenWort(ANHANG_MAX)} je Datei.`);
   const zeilen = el('ul', { class: 'gewaehlt' });
   const eingabe = el('input', { type: 'file', multiple: true, hidden: true, tabindex: '-1', 'aria-hidden': 'true' });
   const sichern = () => speichereEntwurf(k.db, key, { anhaenge: liste }, liste.length === 0, k.jetzt());
@@ -58,5 +61,10 @@ export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null 
   const waehlen = knopf('Datei anhängen', { klasse: 'tonal', symbol: 'attach_file', gesperrt, an: () => eingabe.click() });
   const platz = el('div', { class: 'anhangwahl' }, waehlen, eingabe, zeilen, meldung);
   zeichne();
+  if (geteilt) {
+    sichern();   // die Meldung kommt nicht wieder, die Dateien bleiben
+    // Ein Satz zu einer abgelehnten Datei steht sonst unter dem Rand des Bildschirms; die Ansicht setzt `platz` erst nach diesem Aufruf ein
+    if (geteilt.meldungFehler) setTimeout(() => platz.scrollIntoView?.({ block: 'center' }), 150);
+  }
   return { platz, liste: () => liste, leer: () => { liste = []; zeichne(); return sichern(); } };
 }

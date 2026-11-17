@@ -12,9 +12,10 @@ import { Schreiber } from './schreiben.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
 import { ladeWelt, ortVon } from './welt.js';
-import { adresseAusHuelle, mitGeteiltem } from './huelle.js';
+import { adresseAusHuelle, mitGeteiltem, mitGeteiltenDateien } from './huelle.js';
 import { systemfarbenVon } from './farben.js';
 import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
+import { anhangSchluessel } from './anhangwahl.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -82,7 +83,9 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
       oeffnen: (m) => { if (navigationOrt().ansicht !== 'anmelden') gehe(adresseAusHuelle(m.adresse)); },
       teilen: async (m) => {
         const alt = (await liesEntwurf(db, schluessel.erfassen)) ?? {};
-        await speichereEntwurf(db, schluessel.erfassen, mitGeteiltem(alt, { titel: m.titel, text: m.text }), false, jetzt());
+        const dateien = mitGeteiltenDateien(await liesEntwurf(db, anhangSchluessel(schluessel.erfassen)), m);
+        if (!dateien || m.titel || m.text) await speichereEntwurf(db, schluessel.erfassen, mitGeteiltem(alt, { titel: m.titel, text: m.text }), false, jetzt());
+        if (dateien) await speichereEntwurf(db, anhangSchluessel(schluessel.erfassen), dateien, false, jetzt());
         const hier = navigationOrt().ansicht;
         if (hier === 'erfassen') k.neuZeichnen(); else if (hier !== 'anmelden') gehe('#erfassen');
       },

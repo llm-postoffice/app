@@ -3,7 +3,7 @@
 // neue Arten über einen weiteren Empfänger, das Token nur in der Hülle, der geteilte Text im Entwurf, Adressen aus Links.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Huelle, huelleVon, mitTresor, mitGeteiltem, adresseAusHuelle } from '../js/huelle.js';
+import { Huelle, huelleVon, mitTresor, mitGeteiltem, mitGeteiltenDateien, adresseAusHuelle } from '../js/huelle.js';
 import { speicherDatenbank, einstellung, setzeEinstellung } from '../js/speicher.js';
 import { vertrag } from './hilfen/speichervertrag.mjs';
 
@@ -157,4 +157,30 @@ test('adresseAusHuelle normt bekannte Adressen, alles andere öffnet Wartet', ()
   assert.equal(adresseAusHuelle('#eintrag/K7M-2QA'), '#eintrag/k7m2qa');
   assert.equal(adresseAusHuelle('#erfassen'), '#erfassen');
   for (const a of ['', 'javascript:alert(1)', undefined]) assert.equal(adresseAusHuelle(a), '#wartet');
+});
+
+test('teilen mit Dateien erreicht den Empfänger unverändert; Dateien ohne Text sind eine Nachricht wie jede andere', () => {
+  const o = attrappe();
+  const h = new Huelle(o, { zeitgeber: { setze: () => 0, loesche() {} } });
+  const an = [];
+  h.verbinde({ teilen: (n) => an.push(n) });
+  const n = { art: 'teilen', titel: '', text: '', dateien: [{ name: 'a.pdf', typ: 'application/pdf', groesse: 1, daten: 'QQ==' }, { name: 'b.png', typ: 'image/png', groesse: 3000000, fehler: 'zu-gross' }], mehr: 1 };
+  o.schicke(n);
+  assert.deepEqual(an, [n]);
+});
+
+test('mitGeteiltenDateien: nichts geteilt gibt null, geteilt ergibt Anhänge und Meldung; ein vorhandener Entwurf bleibt', () => {
+  assert.equal(mitGeteiltenDateien(null, {}), null);
+  assert.equal(mitGeteiltenDateien({ anhaenge: [] }, { dateien: [], mehr: 0 }), null);
+  const eins = mitGeteiltenDateien(null, { dateien: [{ name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }] });
+  assert.deepEqual(eins.anhaenge.map((a) => a.name), ['a.txt']);
+  assert.equal(eins.meldung, '');
+  assert.equal(eins.meldungFehler, false);
+  const zwei = mitGeteiltenDateien(eins, { dateien: [{ name: 'b.txt', typ: 'text/plain', groesse: 1, daten: 'eQ==' }, { name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }], mehr: 0 });
+  assert.deepEqual(zwei.anhaenge.map((a) => a.name), ['a.txt', 'b.txt']);
+  assert.match(zwei.meldung, /Eine Datei mit dem Namen a\.txt ist schon angehängt/);
+  assert.equal(zwei.meldungFehler, true);
+  const nurMehr = mitGeteiltenDateien(null, { dateien: [], mehr: 4 });
+  assert.deepEqual(nurMehr.anhaenge, []);
+  assert.match(nurMehr.meldung, /4 weitere Dateien sind nicht dabei/);
 });
