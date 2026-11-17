@@ -20,7 +20,7 @@ test('Antwort auf eine Frage: ein Commit mit Nachtrag und Status, ohne force, Na
   const vorher = pfade(a.q);
   const r = await a.schreiber.antworten('r2d4vn', { wahl: 'A', text: 'Weil es einfacher ist.' });
   assert.equal(r.ok, true);
-  assert.equal(a.hinweise[0].text, 'Antwort „A“ gespeichert');
+  assert.equal(a.hinweise[0].text, 'Antwort „A“ mit Text gespeichert');
   await a.schreiber.lauf();
   assert.equal(eigene(a.q).length, 0, 'zehn Sekunden Rückgängig: noch nichts gesendet');
   await a.sende();
@@ -141,6 +141,30 @@ test('Ohne Netz bleibt die Sendung liegen und geht beim nächsten Lauf raus', as
   await a.schreiber.erledigen('m7q2ke');
   await a.sende();
   assert.equal((await schlange(a))[0].zustand, 'liegt');
+  netz = true;
+  await a.schreiber.weckeNetz();
+  assert.equal(eigene(a.q).length, 1);
+});
+
+test('Der Hinweis nach der Antwort nennt eigenen Text und Anhänge', async () => {
+  const a = await aufbau();
+  const bild = { name: 'a.png', groesse: 4, typ: 'image/png', daten: 'AAAA' };
+  await a.schreiber.antworten('r2d4vn', { wahl: 'A' });
+  await a.schreiber.antworten('r2d4vn', { wahl: 'B', text: 'Weil es einfacher ist.', anhaenge: [bild] });
+  await a.schreiber.antworten('r2d4vn', { text: 'Nur Text', anhaenge: [bild, { ...bild, name: 'b.png' }] });
+  assert.deepEqual(a.hinweise.map((h) => h.text), ['Antwort „A“ gespeichert', 'Antwort „B“ mit Text und 1 Anhang gespeichert', 'Antwort mit Text und 2 Anhängen gespeichert']);
+});
+
+test('Ohne Netz sagt die App nach dem Ende von Rückgängig einmal, dass die Sendung wartet', async () => {
+  let netz = false;
+  const a = await aufbau({ quelle: { amNetz: () => netz } });
+  netz = true; await a.abgleich(); netz = false;
+  await a.schreiber.erledigen('m7q2ke');
+  assert.deepEqual(a.meldungen, [], 'vor dem Ablauf von Rückgängig sagt der Hinweis mit Knopf alles');
+  await a.sende();
+  assert.deepEqual(a.meldungen, ['Erledigt wartet auf Netz und geht raus, sobald du online bist.']);
+  await a.sende(11_000);
+  assert.equal(a.meldungen.length, 1, 'die nächsten Versuche schweigen');
   netz = true;
   await a.schreiber.weckeNetz();
   assert.equal(eigene(a.q).length, 1);

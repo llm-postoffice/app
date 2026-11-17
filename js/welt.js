@@ -20,8 +20,21 @@ export async function ladeWelt(db, jetzt = Date.now()) {
   return baueWelt({ pfade: stand?.pfade ?? null, baum: stand?.baum ?? null, entwuerfe, schlange, jetzt });
 }
 
+/**
+ * Ein neuer Eintrag, den dieses Gerät angelegt hat, steht in der Welt, sobald er in der Warteschlange liegt: sonst wäre er bis zum
+ * Abgleich nirgends zu finden (die Adresse sagte „nicht gefunden“). Gesendet ist er, wenn der Abgleich dieselben Pfade bringt.
+ */
+function mitLokalen(pfade, schlange) {
+  const neue = schlange.filter((s) => s.art === 'anlegen' && Array.isArray(s.dateien));
+  if (!pfade || !neue.length) return pfade;
+  const alle = new Map(pfade);
+  for (const s of neue) for (const d of s.dateien) if (typeof d.inhalt === 'string' && !alle.has(d.pfad)) alle.set(d.pfad, d.inhalt);
+  return alle;
+}
+
 /** Baut die Welt aus den Dateien (Pfad zu Text). Ohne Dateien (kein Stand auf dem Gerät) ist `hatStand` falsch. */
 export function baueWelt({ pfade, baum = null, entwuerfe = [], schlange = [], jetzt = Date.now() }) {
+  pfade = mitLokalen(pfade, schlange);
   const eintraege = ladeEintraege(pfade ? dateienNachId(pfade) : new Map());
   const buch = new Hauptbuch(eintraege, jetzt);
   const liste = [...eintraege.values()].map((e) => ({ e, st: buch.zustand(e) }));
@@ -95,6 +108,18 @@ function geschlossenAm(e, status) {
 
 /** Offene Sendungen (nicht gesendet) zu einem Eintrag aus der Warteschlange; die jüngste gilt. */
 export const sendungZu = (w, id) => w.schlange.filter((s) => s.eintrag === id && s.zustand !== 'gesendet').sort((a, b) => (a.zeit ?? 0) - (b.zeit ?? 0)).at(-1) ?? null;
+
+const SENDUNG_STECKT = ['konflikt', 'token', 'verboten', 'fehler'];
+/** Hängt die Sendung, bis der Nutzer etwas tut? */
+export const sendungHaengt = (s) => SENDUNG_STECKT.includes(s.zustand);
+/** Wartet die Sendung außerhalb der zehn Sekunden Rückgängig: auf Netz oder auf einen neuen Versuch? */
+export const sendungWartet = (w, s, ohneNetz = false) => s.zustand === 'liegt' && (s.warteArt === 'netz' || ohneNetz || (s.nichtVor ?? 0) > w.jetzt);
+
+/** Sendungen, die noch nicht raus sind und die der Nutzer sehen soll: erst die hängenden, dann die wartenden, je nach Alter. */
+export function offeneSendungen(w, { ohneNetz = false } = {}) {
+  return w.schlange.filter((s) => sendungHaengt(s) || sendungWartet(w, s, ohneNetz))
+    .sort((a, b) => Number(sendungHaengt(b)) - Number(sendungHaengt(a)) || (a.zeit ?? 0) - (b.zeit ?? 0));
+}
 
 /**
  * Der Zustand in Worten: Symbol, Rolle der Farbe (s-…), Text und ob er fett steht. Eine Sendung aus der Warteschlange
@@ -314,7 +339,7 @@ export function fadenVon(w, e) {
     posten.push({ zeit: w.buch.zustand(k).created, kopf: `Folgeauftrag ${idMitStrich(k.id)} von ${absender(k.head) || '?'}`, wer: absender(k.head), zeilen: [], text: k.head.title ?? '', einzeilig: true, extern: false, ziel: k.id });
   }
   for (const s of w.schlange.filter((x) => x.eintrag === e.id && x.zustand === 'gesendet')) {
-    posten.push({ zeit: s.zeit ?? w.jetzt, kopf: `Nachtrag von ${s.von ?? 'diesem Gerät'}`, wer: s.von, zeilen: s.art === 'einsortieren' ? [`Neu adressiert an ${s.ziel === 'user' ? 'dich' : s.ziel}.`] : [], text: s.satz ?? '', gesendet: schlangeZeile(s, { jetzt: w.jetzt }).text, extern: false });
+    posten.push({ zeit: s.zeit ?? w.jetzt, kopf: 'Nachtrag von user', wer: 'user', zeilen: s.art === 'einsortieren' ? [`Neu adressiert an ${s.ziel === 'user' ? 'dich' : s.ziel}.`] : [], text: s.satz ?? '', gesendet: schlangeZeile(s, { jetzt: w.jetzt }).text, extern: false });
   }
   return posten.sort((a, b) => a.zeit - b.zeit);
 }

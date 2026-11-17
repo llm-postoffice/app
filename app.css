@@ -73,7 +73,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .symbol { min-width: 48px; min-height: 48px; display: grid; place-items: center; border: 0; border-radius: 24px; background: none; color: inherit; text-decoration: none; }
 .symbol:active { background: var(--flaeche); }
 
-/* Ruhige Zeile unter der Leiste: ohne Netz (UOF-4) */
+/* Ruhige Zeile unter der Leiste: ohne Netz (UOF-4); js/netz.js zeigt und verbirgt sie nie unter dem Finger */
 .stand .ico { margin-top: -2px; }
 .stand { margin: 0; padding: 8px max(var(--rand), env(safe-area-inset-right)) 8px max(var(--rand), env(safe-area-inset-left)); background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; display: flex; gap: 12px; align-items: flex-start; }
 
@@ -490,3 +490,14 @@ body:has(#leiste[hidden]) .aktion { padding-bottom: calc(8px + env(safe-area-ins
 .anhangwahl .neben { margin: 0; }
 .anhangwahl .neben:empty { display: none; }
 .anhangwahl .neben.fehler { color: var(--fehler); }
+
+/* Warteschlange: Seite „Noch nicht gesendet“, eine Karte je Sendung (js/schlange.js) */
+.sendungen { list-style: none; margin: 8px 0 16px; padding: 0; display: grid; gap: 12px; }
+.sendung { display: grid; gap: 8px; justify-items: start; padding: 12px 16px; border-radius: 16px; background: var(--flaeche); }
+.sendung.haengt { background: var(--f-cont); color: var(--f-on); }
+.sendung .zeilenknoepfe { margin: 0; }
+.sendung-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; width: 100%; min-height: 48px; color: inherit; text-decoration: none; }
+.sendung-kopf b { flex: 1; min-width: 0; font-size: 1rem; line-height: 1.5rem; font-weight: 600; overflow-wrap: anywhere; }
+.sendung-was { flex-basis: 100%; font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); }
+.haengt .sendung-was { color: var(--f-on); }
+.sendung-satz { margin: 0; font-size: 0.875rem; line-height: 1.25rem; }

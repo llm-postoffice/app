@@ -46,15 +46,33 @@ export function fortschrittAnzeige(fortschritt) {
 /** Der Hinweis unter dem Fortschritt des ersten Abgleichs: er geht beim nächsten Öffnen weiter. */
 export const WEITER_BEIM_OEFFNEN = 'Wenn der Abgleich abbricht, geht er beim nächsten Öffnen dort weiter, wo er aufgehört hat.';
 
-/** Zeile Speicher in Mehr und eine Warnung, wenn Antworten in der Schlange liegen und der Speicher nicht gesichert ist. */
-export function speicherAnzeige(speicher, art, schlange) {
+const SENDUNG_WORT = {
+  antwort: ['eine Antwort', 'Antworten'], urteil: ['ein Urteil', 'Urteile'], anlegen: ['ein neuer Eintrag', 'neue Einträge'],
+  erledigt: ['eine Erledigung', 'Erledigungen'], einsortieren: ['eine Einsortierung', 'Einsortierungen'],
+};
+
+/** „eine Antwort und 2 neue Einträge“: was noch nicht gesendet ist, nach Art der Sendung (`sendungen` sind Sendungen oder ihre Arten). */
+export function wartendText(sendungen) {
+  const zahl = new Map();
+  for (const s of sendungen) { const a = typeof s === 'string' ? s : s.art; zahl.set(a, (zahl.get(a) ?? 0) + 1); }
+  const teile = [...zahl].map(([a, n]) => { const w = SENDUNG_WORT[a] ?? ['eine Sendung', 'Sendungen']; return n === 1 ? w[0] : `${n} ${w[1]}`; });
+  return teile.length > 1 ? `${teile.slice(0, -1).join(', ')} und ${teile.at(-1)}` : (teile[0] ?? '');
+}
+
+/**
+ * Zeile Speicher in Mehr und eine Warnung, wenn Sendungen in der Schlange liegen und der Speicher nicht gesichert ist.
+ * `schlange` sind die Sendungen, die noch nicht gesendet sind; `huelle` ist wahr in der Android-App (dort gibt es keinen Browser).
+ */
+export function speicherAnzeige(speicher, art, schlange = [], huelle = false) {
+  const wartet = wartendText(schlange);
   if (art === 'arbeitsspeicher') {
-    return { zeile: 'nur im Arbeitsspeicher', warnung: 'Dieser Browser erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.' };
+    return { zeile: 'nur im Arbeitsspeicher', warnung: `${huelle ? 'Die App' : 'Dieser Browser'} erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.` };
   }
   const dauerhaft = speicher?.dauerhaft;
-  const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? 'vom Browser verwaltet' : 'nicht geprüft';
-  const warnung = dauerhaft !== true && schlange > 0
-    ? 'Der Browser kann den Speicher räumen. Noch nicht gesendete Antworten könnten verloren gehen.' : null;
+  const verwaltet = huelle ? 'von der App verwaltet' : 'vom Browser verwaltet';
+  const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? verwaltet : 'nicht geprüft';
+  const warnung = dauerhaft !== true && wartet
+    ? `${huelle ? 'Der Speicher der App ist nicht gesichert.' : 'Der Browser kann den Speicher räumen.'} Noch nicht gesendet: ${wartet}. Das könnte verloren gehen.` : null;
   return { zeile, warnung };
 }
 

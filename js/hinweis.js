@@ -5,6 +5,7 @@
 import { RUECKGAENGIG_MS } from './schreiben.js';
 
 const DANACH_MS = 5_000;
+const MELDUNG_MS = 8_000;
 
 /**
  * Baut die Anzeige auf die Elemente der Seite und gibt `zeige({ text, rueckgaengig })` zurück. `rueckgaengig` ist die
@@ -35,5 +36,19 @@ export function baueHinweis({ zeitgeber = { setze: (f, ms) => setTimeout(f, ms),
     };
     timer = zeitgeber.setze(weg, ms);
   };
-  return { zeige, weg };
+  /**
+   * Ein Satz ohne Knopf, etwa „wartet auf Netz“. Steht gerade ein Hinweis mit Rückgängig, bleibt er; dann gibt es `false`
+   * zurück und der Aufrufer meldet später noch einmal.
+   */
+  const meldung = (satz) => {
+    if (aktuell && !knopf.hidden) return false;
+    zeitgeber.loesche(timer);
+    aktuell = {};
+    text.textContent = satz;
+    knopf.hidden = true;
+    kasten.hidden = false;
+    timer = zeitgeber.setze(weg, MELDUNG_MS);
+    return true;
+  };
+  return { zeige, weg, meldung };
 }

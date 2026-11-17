@@ -24,7 +24,7 @@ export class Abgleichsteuerung {
     this.timer = null;
     this.faellig = false;
     this.laufend = null;
-    this.zustand = { phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: null, naechster: null };
+    this.zustand = { phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: null, naechster: null, fertig: false };
   }
 
   /** Meldet jede Änderung des Zustands; gibt eine Funktion zurück, die den Horcher entfernt. */
@@ -69,7 +69,7 @@ export class Abgleichsteuerung {
     this.faellig = false;
     const quelle = await this.anmeldung();
     if (!quelle) {
-      this.setze({ phase: 'ohne-anmeldung', fortschritt: null, fehler: null, ohneNetz: false, naechster: null });
+      this.setze({ phase: 'ohne-anmeldung', fortschritt: null, fehler: null, ohneNetz: false, naechster: null, fertig: true });
       return null;
     }
     this.setze({ phase: 'laeuft', fortschritt: { phase: 'baum' }, fehler: null });
@@ -77,14 +77,14 @@ export class Abgleichsteuerung {
       const r = await abgleichen({ fetch: this.fetch, db: this.db, quelle, jetzt: this.jetzt, bei: (f) => this.setze({ fortschritt: f }) });
       await merkeUhr(this.db, r.serverzeit, this.jetzt());   // Uhr des Geräts gegen den Date-Kopf (Teil E ordnet Dateien nach ihr)
       const geprueft = (await this.db.lies('baum', 'stand'))?.geprueft ?? this.jetzt();
-      this.setze({ phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: { geprueft, dateien: r.dateien } });
+      this.setze({ phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: { geprueft, dateien: r.dateien }, fertig: true });
       await this.plane();
       return r;
     } catch (e) {
       // Ein Fehler im eigenen Code zeigt sich wie jeder andere, statt eine Zusage unbemerkt abzulehnen
       const fehler = e instanceof AbgleichFehler ? e : new AbgleichFehler('intern', String(e?.message ?? e));
       // Eine Antwort des Servers, auch eine Ablehnung, hebt "ohne Netz" auf (UOF-4)
-      this.setze({ phase: 'fehler', fortschritt: null, fehler, ohneNetz: fehler.art === 'netz' });
+      this.setze({ phase: 'fehler', fortschritt: null, fehler, ohneNetz: fehler.art === 'netz', fertig: true });
       await this.plane();
       return null;
     }

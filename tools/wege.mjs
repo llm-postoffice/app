@@ -444,7 +444,7 @@ try {
   //     Ein Blatt zählt als eigene Stufe über der Ansicht, ein tiefer Link baut den Stapel darunter.
   const TABELLE = [
     ['#wartet', []], ['#alle', ['#wartet']], ['#alle/projekt', ['#alle', '#wartet']], ['#abnahmen', ['#wartet']], ['#erfassen', ['#wartet']], ['#mehr', ['#wartet']], ['#mehr/geraet', ['#mehr', '#wartet']],
-    ['#eingang', ['#wartet']], ['#ideen', ['#mehr', '#wartet']], ['#suche', ['#wartet']],
+    ['#eingang', ['#wartet']], ['#ideen', ['#mehr', '#wartet']], ['#suche', ['#wartet']], ['#schlange', ['#wartet']],
     [`#eintrag/${ID}`, ['#wartet']], [`#eintrag/${ID}/antworten`, [`#eintrag/${ID}`, '#wartet']],
     [`#eintrag/${EINGANG}`, ['#eingang', '#wartet']], [`#eintrag/${EINGANG}/einsortieren`, [`#eintrag/${EINGANG}`, '#eingang', '#wartet']],
     ['#eintrag/b3cyxm', ['#ideen', '#mehr', '#wartet']],
@@ -704,6 +704,16 @@ try {
   melde(await p.warte('/noch nicht gesendet, wartet auf Netz/.test(document.querySelector("main .kopfkarte")?.innerText ?? "")', 30000),
     'ohne Netz steht am Eintrag „noch nicht gesendet, wartet auf Netz“', await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
   melde(eigeneCommits().length === vorOffline, 'ohne Netz geht nichts raus', `${eigeneCommits().length - vorOffline} Commits`);
+  melde(await p.warte('/wartet auf Netz und geht raus/.test(document.getElementById("hinweis-text")?.textContent ?? "")', 30000),
+    'nach dem Ende von Rückgängig sagt der Hinweis ohne Netz, dass die Sendung wartet', await hinweis(p));
+  // Das Band oben in Wartet nennt die wartende Sendung, die Seite „Noch nicht gesendet“ zeigt sie mit Verwerfen
+  await p.werte(`location.hash = '#wartet'`);
+  melde(await p.warte('/noch nicht gesendet/.test(document.querySelector("main .band")?.innerText ?? "")', 30000), 'ohne Netz nennt ein Band oben in Wartet die wartende Sendung', await p.werte('document.querySelector("main")?.innerText.slice(0, 200)'));
+  await p.tippe('main .band a[href="#schlange"]');
+  melde(await p.hash() === '#schlange' && await p.werte('document.getElementById("titel").textContent') === 'Noch nicht gesendet'
+    && await p.werte('document.querySelectorAll("main .sendung").length') === 1 && await p.werte('!!document.querySelector("main .sendung [data-handlung=verwerfen]")'),
+    'Anzeigen öffnet die Seite mit einer Zeile und dem Knopf Verwerfen', `${await p.hash()}, ${await p.werte('document.querySelector("main")?.innerText.slice(0, 200)')}`);
+  await p.zurueck();
   netzAn = true; await p.netz(true);
   melde(await p.warte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const n = await db.zaehle('schlange'); db.schliesse(); return n === 0; })()`, 50000)
     && eigeneCommits().length === vorOffline + 1, 'mit Netz geht die Antwort von allein raus und die Schlange leert sich', `${eigeneCommits().length - vorOffline} Commits, ${JSON.stringify((await schlangeJetzt(p)).map((s) => s.zustand))}`);
@@ -1014,6 +1024,7 @@ try {
       'ohne Netz sagt ein noch nie geladener Anhang, was hilft', await p.werte(`document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent`));
     melde(await p.werte(`!!document.querySelector('.anhaenge li:nth-child(1) img.anhang-bild') && !document.querySelector('.anhaenge li:nth-child(1) .anhang-inhalt').hidden`), 'ein schon geladener Anhang bleibt ohne Netz sichtbar', 'Bild weg');
     netzAn = true; await p.netz(true);
+    await p.warte(`!!document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt button')`, 8000);
     await p.tippe('.anhaenge li:nth-child(2) .anhang-inhalt button');
     melde(await p.warte(`[...document.querySelectorAll('.anhaenge li:nth-child(2) button')].some((b) => b.textContent === 'Herunterladen')`, 8000), 'Erneut versuchen lädt den Anhang, sobald Netz da ist', 'kein Herunterladen');
     const m1 = (await p.werte('window.__melde')) ?? [];

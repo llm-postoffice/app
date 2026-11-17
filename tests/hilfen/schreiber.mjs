@@ -28,13 +28,14 @@ export async function aufbau({ daten = dateien(), quelle: qo = {}, schreiber: so
   // Eine Uhr für den Abstand der schreibenden Anfragen: warten rückt sie vor, jede Anfrage steht im Protokoll
   const takt = schreibTakt({ uhr: () => uhrwerk.monoton, warte: async (ms) => { uhrwerk.wartezeiten.push(ms); uhrwerk.monoton += ms; } });
   const hinweise = [];
+  const meldungen = [];
   const schreiber = new Schreiber({
     db, fetch: async (url, init) => { if ((init?.method ?? 'GET') !== 'GET') uhrwerk.schreibzeiten = [...(uhrwerk.schreibzeiten ?? []), uhrwerk.monoton]; return q.fetch(url, init); },
-    jetzt, abgleich, anmeldung: async () => anm, hinweis: (h) => hinweise.push(h),
+    jetzt, abgleich, anmeldung: async () => anm, hinweis: (h) => hinweise.push(h), meldung: (t) => { meldungen.push(t); return true; },
     zeitgeber: { setze: () => 0, loesche: () => {} }, takt, ...so,
   });
   await abgleich();
   /** Lässt die zehn Sekunden Rückgängig verstreichen und sendet. */
   const sende = async (ms = 10_001) => { uhrwerk.jetzt += ms; await schreiber.lauf(); };
-  return { db, q, schreiber, uhrwerk, hinweise, abgleich, sende, jetzt, quelle: anm };
+  return { db, q, schreiber, uhrwerk, hinweise, meldungen, abgleich, sende, jetzt, quelle: anm };
 }

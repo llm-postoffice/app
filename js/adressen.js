@@ -8,7 +8,7 @@ export const BEREICHE = ['wartet', 'alle', 'abnahmen', 'erfassen', 'mehr'];
 
 const TITEL = {
   wartet: 'Wartet auf dich', alle: 'Alle offenen', abnahmen: 'Abnahmen', erfassen: 'Erfassen', mehr: 'Mehr',
-  eingang: 'Eingang', eintrag: 'Eintrag', ideen: 'Ideensammlung', suche: 'Suche', anmelden: 'Anmelden', ergebnis: 'Ergebnis',
+  eingang: 'Eingang', schlange: 'Noch nicht gesendet', eintrag: 'Eintrag', ideen: 'Ideensammlung', suche: 'Suche', anmelden: 'Anmelden', ergebnis: 'Ergebnis',
 };
 const BLATT_TITEL = { einsortieren: 'Einsortieren', geraet: 'Gerätename', antworten: 'Deine Antwort' };
 /** Die Auswahlen des Blatts in Alle: Adresse `#alle/NAME` und Titel. */
@@ -19,7 +19,7 @@ export const AUSWAHL_TITEL = { status: 'Status', projekt: 'Projekt', art: 'Art',
 // Eintrag kennt (bereichVonArt).
 const BEREICH_VON = {
   wartet: 'wartet', alle: 'alle', abnahmen: 'abnahmen', erfassen: 'erfassen', mehr: 'mehr',
-  eingang: 'wartet', eintrag: 'wartet', schritt: 'wartet', ergebnis: 'wartet', ideen: 'mehr', suche: 'wartet', anmelden: null,
+  eingang: 'wartet', schlange: 'wartet', eintrag: 'wartet', schritt: 'wartet', ergebnis: 'wartet', ideen: 'mehr', suche: 'wartet', anmelden: null,
 };
 
 /**
@@ -39,7 +39,7 @@ export const bereichVonArt = (kind) => (kind === 'test' ? 'abnahmen' : kind === 
 
 const ID = '([0-9A-Za-z-]{1,32})';
 const MUSTER = [
-  [/^#(wartet|alle|abnahmen|erfassen|mehr|eingang|ideen|suche|anmelden)$/, (m) => ({ ansicht: m[1] })],
+  [/^#(wartet|alle|abnahmen|erfassen|mehr|eingang|ideen|suche|anmelden|schlange)$/, (m) => ({ ansicht: m[1] })],
   [/^#alle\/(status|projekt|art|prio|sortieren)$/, (m) => ({ ansicht: 'alle', blatt: 'auswahl', welche: m[1] })],
   [/^#mehr\/geraet$/, () => ({ ansicht: 'mehr', blatt: 'geraet' })],
   [new RegExp(`^#eintrag/${ID}$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]) })],

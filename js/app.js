@@ -39,7 +39,7 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
     return fehler ? { ok: false, fehler } : { ok: true };
   };
   if (!schreiben && fetch) {
-    schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), hinweis: hinweis.zeige, zeitgeber, beiAenderung: () => k.neuZeichnen() });
+    schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), hinweis: hinweis.zeige, meldung: hinweis.meldung, zeitgeber, beiAenderung: () => k.neuZeichnen() });
   }
   // Neue Fassung (UOF-5): ein ruhiges Band unten und in Mehr; die App lädt nie von selbst neu
   // In der Hülle kein Service Worker: die Dateien liegen im APK, Updates kommen als APK
@@ -47,7 +47,7 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   const eigene = aktualisierung === undefined;
   aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
   const k = {
-    db, steuerung, schreiben, jetzt, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, huelle, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, meldung: hinweis.meldung, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, huelle, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },

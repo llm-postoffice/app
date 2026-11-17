@@ -24,7 +24,7 @@
 //            Entwurf anhaenge/SCHLÜSSEL, den Rückgängig zurücklegt
 // Die Dateien einer Sendung stehen beim Einreihen fest (Stempel, ULIDs, ID): ein zweiter Versuch schreibt dieselben
 // Pfade mit demselben Inhalt, ist also harmlos, falls der erste ankam und die App vor der Antwort endete.
-import { adressText, um } from './ansichtstexte.js';
+import { adressText, sendungText, um } from './ansichtstexte.js';
 import { anhangPfadVon } from './anhaenge.js';
 import { anlegenDateien, antwortDateien, erledigtDateien, kurz, moeglichkeitenRoh, pruefeSendung, routeDateien, urteilDateien } from './dateien.js';
 import { korrigierteZeit, merkeUhr, stempel, ulidErzeuger, zufallsbytes } from './erzeugen.js';
@@ -119,14 +119,15 @@ export class Schreiber {
    * @param {()=>Promise<{ok:boolean, fehler?:object}>} o.abgleich   gleicht ab (bedingte Anfrage) und meldet das Ergebnis
    * @param {()=>Promise<object|null>} o.anmeldung   { repo, token } oder null
    * @param {(h:{text:string, rueckgaengig:()=>void})=>void} [o.hinweis]  zeigt den Hinweis mit Rückgängig
+   * @param {(text:string)=>boolean} [o.meldung]  zeigt einen Satz ohne Knopf; `false` heißt: gerade nicht möglich, später noch einmal
    * @param {()=>void} [o.beiAenderung]   sagt der Anzeige, dass sich die Warteschlange geändert hat
    * @param {object} [o.zeitgeber]   { setze(f, ms), loesche(t) }
    * @param {object} [o.takt]        schreibTakt(): Abstand der schreibenden Anfragen
    * @param {(n:number)=>Uint8Array} [o.zufall]
    */
-  constructor({ db, fetch, jetzt = () => Date.now(), abgleich, anmeldung, hinweis = () => {}, beiAenderung = () => {},
+  constructor({ db, fetch, jetzt = () => Date.now(), abgleich, anmeldung, hinweis = () => {}, meldung = () => true, beiAenderung = () => {},
     zeitgeber = { setze: (f, ms) => setTimeout(f, ms), loesche: (t) => clearTimeout(t) }, takt = schreibTakt(), zufall = zufallsbytes, rueckgaengigMs = RUECKGAENGIG_MS }) {
-    Object.assign(this, { db, fetch, jetzt, abgleich, anmeldung, hinweis, beiAenderung, zeitgeber, takt, zufall, rueckgaengigMs });
+    Object.assign(this, { db, fetch, jetzt, abgleich, anmeldung, hinweis, meldung, beiAenderung, zeitgeber, takt, zufall, rueckgaengigMs });
     this.timer = null;
     this.laeuft = null;
     this.nochmal = false;
@@ -185,8 +186,10 @@ export class Schreiber {
       const sendung = antwortDateien(ctx, e, { wahl, text, anhaenge });
       const roh = wahl ? moeglichkeitenRoh(e).find((m) => m.wahl.toLowerCase() === String(wahl).toLowerCase()) : null;
       const bild = roh ? ` „${roh.wahl}“` : '';
+      const n = anhaenge.length;
+      const dazu = [String(text ?? '').trim() ? 'Text' : null, n ? `${n} ${n === 1 ? 'Anhang' : 'Anhängen'}` : null].filter(Boolean).join(' und ');
       return this.einreihen({ eintrag: e.id, art: 'antwort', wahl: roh?.wahl ?? null, text: String(text ?? '').trim(), anhaenge, von: ctx.geraet },
-        sendung, { entwurf, personenErlaubt, hinweisText: `Antwort${bild} gespeichert` });
+        sendung, { entwurf, personenErlaubt, hinweisText: `Antwort${bild}${dazu ? ` mit ${dazu}` : ''} gespeichert` });
     });
   }
 
@@ -346,7 +349,12 @@ export class Schreiber {
     const liegen = async (teil) => { await this.setze(s, { zustand: 'liegt', warteArt: undefined, ...teil }); return 'halt'; };
     // Fehler des Abgleichs und des Sendens: netz und limit bleiben liegen, 401 wird zum Token, der Rest steht in der Zeile
     const behandle = async (f) => {
-      if (f.art === 'netz' || f.art === 'abgebrochen') return liegen({ nichtVor: this.jetzt() + NETZ_WIEDER_MS, warteArt: 'netz' });
+      if (f.art === 'netz' || f.art === 'abgebrochen') {
+        // Einmal je Sendung sagen, dass sie auf Netz wartet: nach Ablauf von Rückgängig verschwindet sonst jedes Zeichen von ihr
+        const wer = sendungText(s) || 'Die Sendung';
+        const gesagt = s.netzGemeldet || this.meldung(`${wer} wartet auf Netz und geht raus, sobald du online bist.`) !== false;
+        return liegen({ nichtVor: this.jetzt() + NETZ_WIEDER_MS, warteArt: 'netz', netzGemeldet: gesagt });
+      }
       if (f.art === 'limit') return liegen({ nichtVor: f.bis ?? this.jetzt() + WIEDER_MS });
       if (f.art === 'token') { await this.setze(s, { zustand: 'token' }); return 'halt'; }
       if (f.art === 'verboten') { await this.setze(s, { zustand: 'verboten' }); return 'halt'; }

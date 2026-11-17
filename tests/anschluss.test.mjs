@@ -337,6 +337,18 @@ test('Hinweis: läuft die Frist ab, verschwindet er; ein neuer Hinweis ersetzt d
   assert.equal(knoten.hinweis.hidden, true);
 });
 
+test('Hinweis: eine Meldung steht ohne Knopf, weicht aber einem offenen Rückgängig nicht', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const zg = zeitgeber();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zg, wurzel });
+  assert.equal(h.meldung('Antwort wartet auf Netz.'), true);
+  assert.equal(knoten.text.textContent, 'Antwort wartet auf Netz.');
+  assert.equal(knoten.knopf.hidden, true);
+  h.zeige({ text: 'Eintrag gespeichert', rueckgaengig: async () => true });
+  assert.equal(h.meldung('Etwas anderes'), false, 'der Hinweis mit Rückgängig bleibt');
+  assert.equal(knoten.text.textContent, 'Eintrag gespeichert');
+});
+
 test('Hinweis: ist die Sendung schon unterwegs, sagt er es, statt Erfolg vorzutäuschen', async () => {
   const { knoten, wurzel } = attrappeSeite();
   const h = M.hinweis.baueHinweis({ zeitgeber: zeitgeber(), wurzel });

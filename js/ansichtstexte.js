@@ -120,6 +120,33 @@ export function schlangeZeile(s, { ohneNetz = false, jetzt = Date.now() } = {}) 
   }
 }
 
+/**
+ * Der Zustand einer Sendung auf der Seite „Noch nicht gesendet“ und im Eintrag: Symbol, Rolle, Text und ein Satz, der sagt,
+ * was geschieht oder was hilft. `neu` ist wahr, wenn die Sendung ein neuer Eintrag ist.
+ */
+export function sendungZustand(s, { ohneNetz = false } = {}) {
+  switch (s.zustand) {
+    case 'token': return { symbol: 'error-f', rolle: 's-fehler', text: 'Nicht gesendet: GitHub lehnt das Token ab', satz: 'Trage ein neues Token ein, dann geht sie raus. Deine Eingabe bleibt auf diesem Gerät.' };
+    case 'verboten': return { symbol: 'error-f', rolle: 's-fehler', text: 'Nicht gesendet: dem Token fehlt das Recht zum Schreiben', satz: 'Trage ein Token mit dem Recht Contents mit Lesen und Schreiben ein. Deine Eingabe bleibt auf diesem Gerät.' };
+    case 'fehler': return { symbol: 'error-f', rolle: 's-fehler', text: 'Nicht gesendet: GitHub nimmt die Sendung nicht an', satz: `${s.grund ?? 'GitHub hat die Sendung nicht angenommen.'} Deine Eingabe bleibt auf diesem Gerät.` };
+    case 'konflikt': return { symbol: 'warning-f', rolle: 's-warn', text: `Nicht gesendet: ${KONFLIKT_KURZ[s.titel] ?? 'schon bearbeitet'}`, satz: s.grund ?? 'Ein anderes Gerät war schneller. Deine Eingabe wurde nicht gesendet.' };
+    default:
+      if (s.warteArt === 'netz' || ohneNetz) return { symbol: 'cloud_upload-f', rolle: 's-warn', text: 'Wartet auf Netz, geht raus, sobald du online bist', satz: null };
+      return { symbol: 'schedule', rolle: 's-warn', text: 'Wartet auf einen neuen Versuch', satz: s.grund ?? null };
+  }
+}
+
+/** Das Band oben in Wartet: Zahl und was geschieht. `wartend` und `haengend` sind Zahlen; `netz` heißt: die wartenden warten auf Netz. */
+export function schlangeBand({ wartend, haengend, netz }) {
+  const n = wartend + haengend;
+  const titel = n === 1 ? 'Eine Sendung noch nicht gesendet' : `${n} Sendungen noch nicht gesendet`;
+  const wartet = netz ? 'auf Netz und gehen raus, sobald du online bist' : 'auf einen neuen Versuch';
+  const teile = [];
+  if (wartend) teile.push(wartend === 1 ? `Eine wartet ${wartet.replace('gehen', 'geht')}.` : `${wartend} warten ${wartet}.`);
+  if (haengend) teile.push(haengend === 1 ? 'Eine hängt und braucht dich.' : `${haengend} hängen und brauchen dich.`);
+  return { titel, satz: teile.join(' ') };
+}
+
 /** Zeile für einen Entwurf einer Abnahme: „Entwurf: 5 von 12 Schritten beurteilt, noch nicht gesendet“. */
 export const entwurfZeile = (beurteilt, gesamt) => ({
   symbol: 'edit_note-f', rolle: 's-warn',
