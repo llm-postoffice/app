@@ -31,7 +31,13 @@ export const istLeer = (w) => !w.titel.trim() && !w.text.trim() && !w.an && w.ar
 export async function erfassenAnsicht(welt, _z, k) {
   const w = { ...VORGABE, ...((await liesEntwurf(k.db, schluessel.erfassen)) ?? {}) };
   delete w.schluessel; delete w.zeit;
-  const sichern = () => speichereEntwurf(k.db, schluessel.erfassen, { ...w }, istLeer(w), k.jetzt());
+  // Entwurf verwerfen: der Knopf steht rechts von Anlegen und nur da, wo etwas im Entwurf steht (Text, Wahl oder Anhänge)
+  let angehaengt = 0;
+  const verwerfen = knopf('Entwurf verwerfen', { klasse: 'text', gesperrt: !kannSenden(k), an: async () => { globalThis.document?.activeElement?.blur?.(); await k.schreiben.verwirfEntwurf(schluessel.erfassen); } });
+  verwerfen.dataset.handlung = 'entwurf-verwerfen';
+  const zeigeVerwerfen = () => { verwerfen.hidden = istLeer(w) && !angehaengt; };
+  zeigeVerwerfen();
+  const sichern = () => { zeigeVerwerfen(); return speichereEntwurf(k.db, schluessel.erfassen, { ...w }, istLeer(w), k.jetzt()); };
   const titelFeld = (fehler) => {
     const i = el('input', { type: 'text', name: 'titel', autocomplete: 'off', autocapitalize: 'sentences', maxlength: 200, placeholder: 'Ein Satz, der sagt, worum es geht', 'aria-invalid': fehler ? 'true' : false });
     i.value = w.titel;
@@ -70,7 +76,7 @@ export async function erfassenAnsicht(welt, _z, k) {
   dringend.checked = w.dringend;
   dringend.addEventListener('change', () => { w.dringend = dringend.checked; sichern(); });
 
-  const anhang = await anhangWahl(k, schluessel.erfassen, { gesperrt: !kannSenden(k) });
+  const anhang = await anhangWahl(k, schluessel.erfassen, { gesperrt: !kannSenden(k), nach: (liste) => { angehaengt = liste.length; zeigeVerwerfen(); } });
 
   // Eine Ablehnung steht oben im Formular, damit sie ohne Suchen im Blick ist
   const { platz: ablehnung, los } = absender(
@@ -101,5 +107,5 @@ export async function erfassenAnsicht(welt, _z, k) {
     await los(false, ev.currentTarget);
   } });
   anlegen.dataset.handlung = 'anlegen';
-  return { inhalt: [inhalt], aktion: gesperrt ? [anlegen, el('p', { class: 'neben satz' }, SENDEN_FEHLT)] : [anlegen] };
+  return { inhalt: [inhalt], aktion: gesperrt ? [anlegen, verwerfen, el('p', { class: 'neben satz' }, SENDEN_FEHLT)] : [anlegen, verwerfen] };
 }

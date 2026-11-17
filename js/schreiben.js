@@ -118,7 +118,7 @@ export class Schreiber {
    * @param {()=>number} [o.jetzt]   Uhr des Geräts in ms
    * @param {()=>Promise<{ok:boolean, fehler?:object}>} o.abgleich   gleicht ab (bedingte Anfrage) und meldet das Ergebnis
    * @param {()=>Promise<object|null>} o.anmeldung   { repo, token } oder null
-   * @param {(h:{text:string, rueckgaengig:()=>void})=>void} [o.hinweis]  zeigt den Hinweis mit Rückgängig
+   * @param {(h:{text:string, rueckgaengig:()=>void, nicht?:string})=>void} [o.hinweis]  zeigt den Hinweis mit Rückgängig
    * @param {(text:string)=>boolean} [o.meldung]  zeigt einen Satz ohne Knopf; `false` heißt: gerade nicht möglich, später noch einmal
    * @param {()=>void} [o.beiAenderung]   sagt der Anzeige, dass sich die Warteschlange geändert hat
    * @param {object} [o.zeitgeber]   { setze(f, ms), loesche(t) }
@@ -244,6 +244,32 @@ export class Schreiber {
     await this.db.entferne('schlange', id);
     this.beiAenderung();
     return true;
+  }
+
+  /**
+   * Entwurf verwerfen (Erfassen): Text und Anhänge des Entwurfs `schluessel` werden gelöscht, der Hinweis bietet zehn Sekunden
+   * Rückgängig an. Rückgängig stellt beides wieder her, es sei denn, im Entwurf steht inzwischen wieder etwas.
+   */
+  async verwirfEntwurf(schluessel) {
+    const anhangKey = `anhaenge/${schluessel}`;
+    const text = await this.db.lies('entwuerfe', schluessel);
+    const anhang = await this.db.lies('entwuerfe', anhangKey);
+    if (!text && !anhang) return { ok: false };
+    await this.db.entferne('entwuerfe', schluessel);
+    await this.db.entferne('entwuerfe', anhangKey);
+    this.beiAenderung();
+    this.hinweis({
+      text: 'Entwurf verworfen',
+      nicht: 'Seitdem steht wieder etwas im Entwurf. Er bleibt, wie er ist.',
+      rueckgaengig: async () => {
+        if ((await this.db.lies('entwuerfe', schluessel)) || (await this.db.lies('entwuerfe', anhangKey))) return false;
+        if (text) await this.db.schreibe('entwuerfe', text);
+        if (anhang) await this.db.schreibe('entwuerfe', anhang);
+        this.beiAenderung();
+        return true;
+      },
+    });
+    return { ok: true };
   }
 
   /** Rückgängig: solange die Sendung noch nicht unterwegs ist. */
