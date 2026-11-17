@@ -9,7 +9,7 @@ const DATEIEN = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './js/abgleich.js', './js/ablauf.js', './js/aktualisieren.js', './js/abnahme.js', './js/absenden.js', './js/adressen.js', './js/anmelden.js', './js/anmeldung.js',
   './js/ansichten.js', './js/ansichtstexte.js', './js/anzeigen.js', './js/app.js', './js/dateien.js', './js/dom.js', './js/eintrag.js',
-  './js/entwuerfe.js', './js/erfassen.js', './js/erzeugen.js', './js/format.js', './js/hinweis.js', './js/karten.js', './js/markdown.js',
+  './js/entwuerfe.js', './js/erfassen.js', './js/erzeugen.js', './js/format.js', './js/hinweis.js', './js/huelle.js', './js/karten.js', './js/markdown.js',
   './js/mehr.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/schreiben.js', './js/senden.js',
   './js/speicher.js', './js/start.js', './js/statusleiste.js',
   './js/steuerung.js', './js/swlogik.js', './js/texte.js', './js/uebersicht.js', './js/urteil.js', './js/version.js', './js/welt.js', './js/zustand.js',
