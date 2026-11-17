@@ -1,5 +1,12 @@
 # Änderungen
 
+## 20261117.03 (2026-11-17)
+
+Die Priorität heißt überall Hoch, Normal, Niedrig.
+
+- In **Erfassen** wählst du die **Priorität** mit Hoch, Normal oder Niedrig statt mit 1, 2 oder 3. Entwürfe bleiben erhalten.
+- Ein **Eintrag** nennt die Priorität mit denselben Wörtern statt „Rang 2“.
+
 ## 20261117.02 (2026-11-17)
 
 Die Probe für Web-Push in **Mehr** ist weg. Hinweise kommen weiter über ntfy.
