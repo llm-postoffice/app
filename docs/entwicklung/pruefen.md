@@ -30,6 +30,11 @@ einem eigenen Chromium (je Job bis etwa 1,2 GB). Die Vorgabe ist die Hälfte der
 Jobs, wie in den freien Speicher passen (`MemAvailable`); `--jobs 1` rendert nacheinander. `lauf.txt` steht in der
 Reihenfolge der Szenarien, nicht der Fertigstellung.
 
+`make render` prüft nach dem Renderer jedes Bild (`tools/bilder.mjs`): ein leeres oder fehlendes Bild und dasselbe Bild für zwei Adressen
+eines Szenarios sind ein FAIL in `lauf.txt` mit Adresse und Variante. Der Renderer selbst meldet PASS, wenn der Start der Seite abbricht
+und nur die leere Hülle bleibt. Die Vorschau legt dafür alle Dateien, die der Einstieg über `tests/hilfen/` lädt, in den Service Worker des
+Szenarios; der Renderer trennt ihn nach der ersten Adresse vom Netz, und alles, was fehlt, bricht ab Adresse zwei den Start ab.
+
 Vorschau mit erfundenen Daten: `node tools/vorschau.mjs` startet die App mit erfundenen Einträgen, ohne Token und Netz, ein Szenario je Adresse (`/leer/`).
 `node tools/rendern.mjs --hig PFAD -o bilder leer fehler` rendert einzelne; `--liste` nennt alle.
 
