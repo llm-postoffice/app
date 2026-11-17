@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -39,7 +40,9 @@ class HauptActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setDecorFitsSystemWindows(false)
+        // Ab Android 15 gilt Rand zu Rand für targetSdk 35 und höher ohnehin; nur Android 13 und 14 brauchen den Aufruf
+        @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) window.setDecorFitsSystemWindows(false)
         val rahmen = FrameLayout(this)
         // Die App zeichnet unter die Leisten; der Rahmen hält die WebView frei von Leisten, Aussparung und Tastatur
         rahmen.setOnApplyWindowInsetsListener { v, insets ->
