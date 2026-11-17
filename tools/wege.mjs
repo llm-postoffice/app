@@ -700,6 +700,21 @@ try {
   melde(await p.warte('/^Eintrag [a-z0-9]{3}-[a-z0-9]{3} gespeichert$/.test(document.getElementById("hinweis").hidden ? "" : document.getElementById("hinweis-text").textContent)', 3000) && await p.warte('document.querySelector("[name=titel]")?.value === ""', 3000)
     && await p.werte(db('(db) => db.lies("entwuerfe", "erfassen")')) == null, 'Eintrag anlegen zeigt den Hinweis, leert das Formular und löscht den Entwurf', `${await hinweis(p)}, Titel „${await p.werte('document.querySelector("[name=titel]")?.value')}“`);
   melde(await p.werte(db('async (db) => (await db.alle("schlange")).map((s) => s.zustand).join()')) !== '', 'die Sendung liegt in der Schlange', 'Schlange leer');
+  // Entwurf verwerfen: der Knopf steht nur mit Inhalt da, leert Titel und Entwurf, der Hinweis nimmt es mit Rückgängig zurück
+  const verwerfenSichtbar = () => p.werte('(() => { const b = document.querySelector("#aktion [data-handlung=entwurf-verwerfen]"); return Boolean(b && b.offsetParent !== null); })()');
+  const titelWert = () => p.werte('document.querySelector("[name=titel]")?.value');
+  melde(!(await verwerfenSichtbar()), 'Erfassen ohne Entwurf zeigt keinen Knopf „Entwurf verwerfen“', 'Knopf sichtbar');
+  await p.schreibe('[name=titel]', 'Wegetest: Entwurf verwerfen');
+  melde(await p.warte('document.querySelector("#aktion [data-handlung=entwurf-verwerfen]")?.offsetParent !== null', 2000), 'sobald im Entwurf etwas steht, erscheint „Entwurf verwerfen“ neben Anlegen', 'Knopf fehlt');
+  await p.tippe('#aktion [data-handlung=entwurf-verwerfen]');
+  melde(await p.warte('document.querySelector("[name=titel]")?.value === ""', 3000) && await p.werte(db('(db) => db.lies("entwuerfe", "erfassen")')) == null && !(await verwerfenSichtbar()),
+    'Entwurf verwerfen leert das Formular und löscht den Entwurf', `Titel „${await titelWert()}“`);
+  melde(/Entwurf verworfen/.test(await hinweis(p) ?? '') && await p.werte('document.getElementById("hinweis-knopf").offsetParent !== null'), 'der Hinweis „Entwurf verworfen“ bietet Rückgängig an', await hinweis(p));
+  await p.tippe('#hinweis-knopf');
+  melde(await p.warte('document.querySelector("[name=titel]")?.value === "Wegetest: Entwurf verwerfen"', 3000) && await verwerfenSichtbar() && await p.werte(db('(db) => db.lies("entwuerfe", "erfassen")')) != null,
+    'Rückgängig holt den Entwurf zurück', `Titel „${await titelWert()}“, ${await hinweis(p)}`);
+  await p.werte(db('(db) => db.entferne("entwuerfe", "erfassen")'));
+
   // Alle drei Sendungen sind in der Schlange; die Seite bleibt offen, bis sie angekommen sind
   const angekommen = async () => p.warte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const n = await db.zaehle('schlange'); db.schliesse(); return n === 0; })()`, 70000);
   const raus = await angekommen();
@@ -745,12 +760,18 @@ try {
   netzAn = false; await p.netz(false);
   await p.schreibe('#blatt textarea', 'Danke, ich kümmere mich darum.');
   await p.tippe('#blatt-knoepfe .gefuellt');
+  const gesendetUm = Date.now();
   melde(await p.warte('!document.getElementById("blatt").open') && /gespeichert/.test(await hinweis(p) ?? ''), 'ohne Netz speichert die Antwort und zeigt den Hinweis', `${await p.stand()}, ${await hinweis(p)}`);
-  melde(await p.warte('/noch nicht gesendet, wartet auf Netz/.test(document.querySelector("main .kopfkarte")?.innerText ?? "")', 30000),
-    'ohne Netz steht am Eintrag „noch nicht gesendet, wartet auf Netz“', await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
+  // Der Satz kommt, sobald die Frist von Rückgängig um ist und das Senden am Netz scheitert: ohne Neuöffnen und ohne zweiten
+  // Versuch (der käme erst nach weiteren 10 s). Obergrenze: Frist plus 3 s; p.warte wartet länger, darum zählt die Uhr.
+  const wartetSatz = await p.warte('/wartet auf Netz und geht raus/.test(document.getElementById("hinweis-text")?.textContent ?? "")', 14000);
+  const nachSatz = Date.now() - gesendetUm;
+  melde(wartetSatz && nachSatz <= 13000, `ohne Netz sagt der Hinweis gleich nach dem Ende von Rückgängig, dass die Sendung wartet (nach ${Math.round(nachSatz / 100) / 10} s, ohne Neuöffnen)`, await hinweis(p));
+  const wartetKarte = await p.warte('/noch nicht gesendet, wartet auf Netz/.test(document.querySelector("main .kopfkarte")?.innerText ?? "")', 1000);
+  const nachKarte = Date.now() - gesendetUm;
+  melde(wartetKarte && nachKarte <= 13000 && await p.werte('/geht raus, sobald du online bist/.test(document.querySelector("main .band")?.innerText ?? "")'),
+    `ohne Netz zeigen Kopfkarte und Band des Eintrags dasselbe (nach ${Math.round(nachKarte / 100) / 10} s, ohne Neuöffnen)`, await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
   melde(eigeneCommits().length === vorOffline, 'ohne Netz geht nichts raus', `${eigeneCommits().length - vorOffline} Commits`);
-  melde(await p.warte('/wartet auf Netz und geht raus/.test(document.getElementById("hinweis-text")?.textContent ?? "")', 30000),
-    'nach dem Ende von Rückgängig sagt der Hinweis ohne Netz, dass die Sendung wartet', await hinweis(p));
   // Das Band oben in Wartet nennt die wartende Sendung, die Seite „Noch nicht gesendet“ zeigt sie mit Verwerfen
   await p.werte(`location.hash = '#wartet'`);
   melde(await p.warte('/noch nicht gesendet/.test(document.querySelector("main .band")?.innerText ?? "")', 30000), 'ohne Netz nennt ein Band oben in Wartet die wartende Sendung', await p.werte('document.querySelector("main")?.innerText.slice(0, 200)'));

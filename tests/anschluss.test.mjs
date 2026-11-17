@@ -242,6 +242,31 @@ test('Erfassen: Titel ist Pflicht, eine Nachricht braucht Text; sonst geht alles
   assert.deepEqual(M.erfassen.pruefeEintrag({ art: 'note', titel: 'x', text: '' }), { ok: true });
 });
 
+test('Erfassen: Entwurf verwerfen steht rechts von Anlegen, nur mit Inhalt, und ruft die Schreibschicht', async () => {
+  const s = attrappe();
+  s.verwirfEntwurf = async (key) => { s.aufrufe.push(['verwirfEntwurf', key]); return { ok: true }; };
+  const k = await kontext(s);
+  const e = await M.erfassen.erfassenAnsicht(welt(), z(), k);
+  const verwerfen = finde(e.aktion, '[data-handlung="entwurf-verwerfen"]')[0];
+  assert.equal(t(verwerfen).trim(), 'Entwurf verwerfen');
+  assert.equal(verwerfen.hidden, true, 'ein leerer Entwurf hat nichts zu verwerfen');
+  assert.deepEqual(e.aktion.slice(0, 2).map((b) => b.dataset.handlung), ['anlegen', 'entwurf-verwerfen']);
+  const titel = finde(e.inhalt, 'input[name="titel"]')[0];
+  titel.value = 'Datei prüfen'; for (const f of titel.horcher.input) f();
+  assert.equal(verwerfen.hidden, false, 'mit Titel erscheint der Knopf');
+  titel.value = ''; for (const f of titel.horcher.input) f();
+  assert.equal(verwerfen.hidden, true, 'ein geleerter Titel nimmt ihn wieder weg');
+  const chips = finde(e.inhalt, 'div.chips')[0];
+  for (const f of chips.horcher.change) f({ target: { value: 'note' } });
+  assert.equal(verwerfen.hidden, false, 'auch eine andere Art ist ein Entwurf');
+  await verwerfen.klick();
+  assert.deepEqual(s.aufrufe, [['verwirfEntwurf', 'erfassen']]);
+  // Mit gemerktem Entwurf steht der Knopf von Anfang an da
+  await k.db.schreibe('entwuerfe', { schluessel: 'erfassen', titel: 'Alt', art: 'task', an: '', text: '', rang: '2', dringend: false, zeit: JETZT });
+  const e2 = await M.erfassen.erfassenAnsicht(welt(), z(), k);
+  assert.equal(finde(e2.aktion, '[data-handlung="entwurf-verwerfen"]')[0].hidden, false);
+});
+
 test('Erfassen: bei einer Idee ist An dich vorbelegt, bei einer anderen Art wieder der Eingang (N3)', async () => {
   const k = await kontext(attrappe());
   const e = await M.erfassen.erfassenAnsicht(welt(), z(), k);
@@ -345,8 +370,39 @@ test('Hinweis: eine Meldung steht ohne Knopf, weicht aber einem offenen Rückgä
   assert.equal(knoten.text.textContent, 'Antwort wartet auf Netz.');
   assert.equal(knoten.knopf.hidden, true);
   h.zeige({ text: 'Eintrag gespeichert', rueckgaengig: async () => true });
-  assert.equal(h.meldung('Etwas anderes'), false, 'der Hinweis mit Rückgängig bleibt');
-  assert.equal(knoten.text.textContent, 'Eintrag gespeichert');
+  assert.equal(h.meldung('Etwas anderes'), true, 'der Satz ist zugesagt');
+  assert.equal(knoten.text.textContent, 'Eintrag gespeichert', 'der Hinweis mit Rückgängig bleibt stehen');
+});
+
+test('Hinweis: eine Meldung während Rückgängig erscheint, sobald die Frist endet, ohne zweiten Anlauf', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const zg = zeitgeber();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zg, wurzel });
+  h.zeige({ text: 'Antwort „A“ gespeichert', rueckgaengig: async () => true });
+  assert.equal(h.meldung('Antwort wartet auf Netz und geht raus, sobald du online bist.'), true);
+  zg.liste[0].f();   // die Frist endet
+  assert.equal(knoten.hinweis.hidden, false);
+  assert.equal(knoten.text.textContent, 'Antwort wartet auf Netz und geht raus, sobald du online bist.');
+  assert.equal(knoten.knopf.hidden, true, 'ein Satz ohne Rückgängig');
+});
+
+test('Hinweis: Rückgängig verwirft die wartende Meldung', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const zg = zeitgeber();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zg, wurzel });
+  h.zeige({ text: 'Antwort gespeichert', rueckgaengig: async () => true });
+  h.meldung('Antwort wartet auf Netz.');
+  await knoten.knopf.onclick();
+  zg.liste.at(-1).f();
+  assert.equal(knoten.hinweis.hidden, true, 'nach Rückgängig gibt es nichts mehr zu sagen');
+});
+
+test('Hinweis: ein Satz mit eigener Antwort auf Rückgängig, die nicht gelingt', async () => {
+  const { knoten, wurzel } = attrappeSeite();
+  const h = M.hinweis.baueHinweis({ zeitgeber: zeitgeber(), wurzel });
+  h.zeige({ text: 'Entwurf verworfen', rueckgaengig: async () => false, nicht: 'Der Entwurf ist schon ersetzt.' });
+  await knoten.knopf.onclick();
+  assert.equal(knoten.text.textContent, 'Der Entwurf ist schon ersetzt.');
 });
 
 test('Hinweis: ist die Sendung schon unterwegs, sagt er es, statt Erfolg vorzutäuschen', async () => {

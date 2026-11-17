@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261117.11 (2026-11-17)
+
+Ohne Netz sagt die App nach dem Ende von **Rückgängig** sofort, dass die Antwort auf Netz wartet; vorher kam der Satz mitunter erst Sekunden später.
+
+- **Erfassen:** Neben **Eintrag anlegen** steht **Entwurf verwerfen**, sobald im Entwurf etwas steht. Es leert Titel, Text, Wahl und Anhänge; **Rückgängig** holt sie zehn Sekunden lang zurück.
+
 ## 20261117.10 (2026-11-17)
 
 Die Android-App nimmt Dateien aus anderen Apps an: Teile ein Foto, ein PDF oder mehrere Dateien an LLM-Post, dann öffnet sich **Erfassen** mit einem Entwurf, an dem sie hängen.

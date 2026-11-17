@@ -155,6 +155,31 @@ test('Der Hinweis nach der Antwort nennt eigenen Text und Anhänge', async () =>
   assert.deepEqual(a.hinweise.map((h) => h.text), ['Antwort „A“ gespeichert', 'Antwort „B“ mit Text und 1 Anhang gespeichert', 'Antwort mit Text und 2 Anhängen gespeichert']);
 });
 
+test('Entwurf verwerfen: Text und Anhänge sind weg, Rückgängig stellt sie wieder her, solange nichts Neues im Entwurf steht', async () => {
+  const a = await aufbau();
+  assert.deepEqual(await a.schreiber.verwirfEntwurf('erfassen'), { ok: false }, 'ohne Entwurf gibt es nichts zu verwerfen');
+  assert.equal(a.hinweise.length, 0);
+  const text = { schluessel: 'erfassen', titel: 'Datei prüfen', art: 'idea', an: 'user', text: 'Bis Freitag.', rang: '1', dringend: true, zeit: JETZT };
+  const anhang = { schluessel: 'anhaenge/erfassen', anhaenge: [{ name: 'a.txt', groesse: 3, typ: 'text/plain', daten: 'YWJj' }], zeit: JETZT };
+  await a.db.schreibe('entwuerfe', text);
+  await a.db.schreibe('entwuerfe', anhang);
+  assert.deepEqual(await a.schreiber.verwirfEntwurf('erfassen'), { ok: true });
+  assert.equal(await a.db.lies('entwuerfe', 'erfassen'), undefined);
+  assert.equal(await a.db.lies('entwuerfe', 'anhaenge/erfassen'), undefined);
+  assert.equal(a.hinweise.at(-1).text, 'Entwurf verworfen');
+  assert.equal(await a.hinweise.at(-1).rueckgaengig(), true);
+  assert.deepEqual(await a.db.lies('entwuerfe', 'erfassen'), text, 'Titel, Text, Wahl bleiben, wie sie waren');
+  assert.deepEqual(await a.db.lies('entwuerfe', 'anhaenge/erfassen'), anhang);
+  // Steht nach dem Verwerfen schon etwas Neues im Entwurf, bleibt es
+  await a.schreiber.verwirfEntwurf('erfassen');
+  const neu = { schluessel: 'erfassen', titel: 'Etwas anderes', art: 'task', an: '', text: '', rang: '2', dringend: false, zeit: JETZT };
+  await a.db.schreibe('entwuerfe', neu);
+  assert.equal(await a.hinweise.at(-1).rueckgaengig(), false);
+  assert.deepEqual(await a.db.lies('entwuerfe', 'erfassen'), neu);
+  assert.equal(eigene(a.q).length, 0);
+  assert.equal(schreibend(a.q).length, 0, 'ein Entwurf sendet nie etwas');
+});
+
 test('Ohne Netz sagt die App nach dem Ende von Rückgängig einmal, dass die Sendung wartet', async () => {
   let netz = false;
   const a = await aufbau({ quelle: { amNetz: () => netz } });
