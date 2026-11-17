@@ -36,6 +36,21 @@ test('Der Knopf Datei anhängen öffnet die Auswahl; die Eingabe erlaubt mehrere
   assert.deepEqual(w.liste(), []);
 });
 
+test('Nach der Wahl steht sofort, dass geladen wird, noch ehe die Datei gelesen ist', async () => {
+  const k = kontext();
+  const w = await M.wahl.anhangWahl(k, 'erfassen');
+  let frei;
+  const langsam = { name: 'gross.png', size: 5, type: 'image/png', arrayBuffer: () => new Promise((r) => { frei = () => r(Uint8Array.from([1, 2, 3, 4, 5]).buffer); }) };
+  const eingabe = finde(w.platz, 'input[type="file"]')[0];
+  eingabe.files = [langsam];
+  const fertig = Promise.all((eingabe.horcher.change ?? []).map((f) => f({ target: eingabe })));
+  assert.match(t(w.platz), /gross\.png wird geladen/);
+  frei();
+  await fertig;
+  assert.doesNotMatch(t(w.platz), /wird geladen/);
+  assert.equal(w.liste().length, 1);
+});
+
 test('Gewählte Dateien stehen mit Größe in der Liste, Entfernen nimmt eine heraus, der Entwurf folgt auf dem Gerät', async () => {
   const k = kontext();
   const w = await M.wahl.anhangWahl(k, 'erfassen');

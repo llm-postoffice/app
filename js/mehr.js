@@ -50,7 +50,7 @@ const mitFett = (text) => text.split('**').map((teil, i) => (i % 2 ? el('strong'
 export async function mehrAnsicht(welt, z, k) {
   const c = zaehler(welt);
   const a = await ladeAnmeldung(k.db);
-  const speicher = speicherAnzeige(await einstellung(k.db, 'speicher'), k.db.art, await k.db.zaehle('schlange'));
+  const speicher = speicherAnzeige(await einstellung(k.db, 'speicher'), k.db.art, (await k.db.alle('schlange')).filter((s) => s.zustand !== 'gesendet'), Boolean(k.huelle));
   const takt = await k.steuerung.takt();
   const taktWahl = el('select', { name: 'takt', id: 'takt' }, TAKTE.map((s) => el('option', { value: String(s), selected: s === takt }, TAKT_TEXT[s])));
   taktWahl.addEventListener('change', async () => {

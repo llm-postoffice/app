@@ -35,7 +35,13 @@ export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null 
   eingabe.addEventListener('change', async () => {
     const hinweise = [];
     const fehler = [];
-    for (const f of [...(eingabe.files ?? [])]) {
+    const gewaehlt = [...(eingabe.files ?? [])];
+    // Sofort sagen, dass geladen wird: das Lesen und Umwandeln großer Dateien dauert
+    if (gewaehlt.length) {
+      meldung.textContent = gewaehlt.length === 1 ? `${gewaehlt[0].name} wird geladen …` : `${gewaehlt.length} Dateien werden geladen …`;
+      meldung.setAttribute('class', 'neben');
+    }
+    for (const f of gewaehlt) {
       if (f.size > ANHANG_MAX) { fehler.push(`${f.name} ist ${groessenWort(f.size)} groß; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und wähle sie noch einmal.`); continue; }
       let daten;
       try { daten = bytesZuBasis(new Uint8Array(await f.arrayBuffer())); } catch { fehler.push(`${f.name} lässt sich nicht lesen. Wähle sie noch einmal.`); continue; }

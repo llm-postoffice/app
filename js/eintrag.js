@@ -29,6 +29,13 @@ const fehltEintrag = (welt, id) => platz({
   knoepfe: [linkKnopf('Suchen', '#suche', { symbol: 'search' })],
 });
 
+/** Ein Link auf einen Eintrag, den dieses Gerät noch nicht kennt, während der erste Abgleich dieser Sitzung läuft. */
+const ladeEintrag = () => platz({
+  bild: 'blau', titel: 'Eintrag wird geladen',
+  saetze: ['Die App gleicht gerade ab und sucht den Eintrag.'],
+  fortschritt: { max: null, wert: 0, text: 'Abgleich läuft …', beschriftung: 'Eintrag wird geladen' },
+});
+
 /** Text eines Eintrags oder Nachtrags als Markdown ohne HTML; von außen kommender Text steht als Zitat (USI-1). */
 export function textBlock(text, extern = false) {
   if (!String(text ?? '').trim()) return null;
@@ -117,7 +124,7 @@ export function eintragAnsicht(welt, z, k, o) {
   const e = welt.eintraege.get(o.id);
   const platzhalter = ohneStand(welt, z, k, { geladen: 'Eintrag wird geladen', nichtGeladen: 'Eintrag nicht geladen' });
   if (platzhalter) return { inhalt: platzhalter };
-  if (!e) return { inhalt: [fehltEintrag(welt, o.id)] };
+  if (!e) return { inhalt: [z.fertig === false ? ladeEintrag() : fehltEintrag(welt, o.id)] };
   const st = welt.buch.zustand(e);
   const eintrag = { e, st };
   const m = karteVon(welt, eintrag, { ohneNetz: z.ohneNetz });

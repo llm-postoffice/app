@@ -2,7 +2,7 @@
 // Handy, Text und Doku (TXT-3 Du, TXT-6 ISO-Zeiten und Ortszeit, TXT-8 kein Ausrufezeichen, TXT-9 kein Gedankenstrich, TXT-10 Plural, URM-3).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { abgleichZeile, dateien, fehlerAnzeige, fortschrittAnzeige, ohneNetzZeile, speicherAnzeige, tagUndUhr, uhrzeit } from '../js/texte.js';
+import { abgleichZeile, dateien, fehlerAnzeige, fortschrittAnzeige, ohneNetzZeile, speicherAnzeige, tagUndUhr, uhrzeit, wartendText } from '../js/texte.js';
 
 const ort = (jahr, monat, tag, std, min) => new Date(jahr, monat - 1, tag, std, min).getTime();
 
@@ -36,13 +36,24 @@ test('der Fortschritt hat nur mit echter Gesamtzahl einen Wert (URM-3)', () => {
 });
 
 test('Speicher: drei Zustände, Arbeitsspeicher und die Warnung nur mit wartenden Antworten', () => {
-  assert.deepEqual(speicherAnzeige({ dauerhaft: true }, 'indexeddb', 3), { zeile: 'dauerhaft gewährt', warnung: null });
-  assert.deepEqual(speicherAnzeige({ dauerhaft: false }, 'indexeddb', 0), { zeile: 'vom Browser verwaltet', warnung: null });
-  assert.match(speicherAnzeige({ dauerhaft: false }, 'indexeddb', 2).warnung, /Noch nicht gesendete Antworten/);
-  assert.equal(speicherAnzeige(undefined, 'indexeddb', 0).zeile, 'nicht geprüft');
-  const a = speicherAnzeige({ dauerhaft: true }, 'arbeitsspeicher', 0);
+  const antwort = { art: 'antwort' };
+  const neu = { art: 'anlegen' };
+  assert.deepEqual(speicherAnzeige({ dauerhaft: true }, 'indexeddb', [antwort]), { zeile: 'dauerhaft gewährt', warnung: null });
+  assert.deepEqual(speicherAnzeige({ dauerhaft: false }, 'indexeddb', []), { zeile: 'vom Browser verwaltet', warnung: null });
+  assert.equal(speicherAnzeige({ dauerhaft: false }, 'indexeddb', [antwort, antwort]).warnung,
+    'Der Browser kann den Speicher räumen. Noch nicht gesendet: 2 Antworten. Das könnte verloren gehen.');
+  assert.equal(speicherAnzeige(undefined, 'indexeddb', []).zeile, 'nicht geprüft');
+  const a = speicherAnzeige({ dauerhaft: true }, 'arbeitsspeicher', []);
   assert.equal(a.zeile, 'nur im Arbeitsspeicher');
   assert.ok(a.warnung, 'im Arbeitsspeicher gibt es immer eine Warnung');
+});
+
+test('Die Warnung nennt die Art der wartenden Sendung und in der Android-App keinen Browser', () => {
+  const h = speicherAnzeige({ dauerhaft: false }, 'indexeddb', [{ art: 'anlegen' }], true);
+  assert.equal(h.warnung, 'Der Speicher der App ist nicht gesichert. Noch nicht gesendet: ein neuer Eintrag. Das könnte verloren gehen.');
+  assert.equal(h.zeile, 'von der App verwaltet');
+  assert.equal(speicherAnzeige({ dauerhaft: false }, 'arbeitsspeicher', [], true).warnung.includes('Browser'), false);
+  assert.equal(wartendText([{ art: 'antwort' }, { art: 'anlegen' }, { art: 'anlegen' }, { art: 'einsortieren' }]), 'eine Antwort, 2 neue Einträge und eine Einsortierung');
 });
 
 test('die Zeile ohne Netz nennt den Stand, wenn es einen gibt (UOF-4)', () => {
@@ -79,7 +90,7 @@ test('kein Text der App hat Ausrufezeichen, Gedankenstrich, Sie-Anrede oder Fül
     const a = fehlerAnzeige({ art, message: 'm', bis: 1_800_000_000_000 }, ort(2026, 11, 14, 14, 2));
     texte.push(a.titel, a.satz);
   }
-  texte.push(ohneNetzZeile(1), speicherAnzeige({ dauerhaft: false }, 'indexeddb', 1).warnung, speicherAnzeige(null, 'arbeitsspeicher', 0).warnung,
+  texte.push(ohneNetzZeile(1), speicherAnzeige({ dauerhaft: false }, 'indexeddb', [{ art: 'antwort' }]).warnung, speicherAnzeige({ dauerhaft: false }, 'indexeddb', [{ art: 'urteil' }], true).warnung, speicherAnzeige(null, 'arbeitsspeicher', []).warnung,
     fortschrittAnzeige({ phase: 'dateien', fertig: 1, gesamt: 2 }).text);
   for (const t of texte) {
     assert.doesNotMatch(t, /!|—| – /, t);

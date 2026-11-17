@@ -55,8 +55,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .ico { width: 24px; height: 24px; flex: none; fill: currentColor; }
 :focus-visible { outline: 3px solid var(--akzent); outline-offset: 2px; }
 
-/* Feste Zeilen: ist .stand ausgeblendet, rückt die Leiste sonst in die 1fr-Zeile */
-.kopf { grid-row: 1; } .stand { grid-row: 2; } main { grid-row: 3; } .unten { grid-row: 4; }
+/* Feste Zeilen: die Zeile Ohne Netz steht in der Leiste (.kopf), die Zeile 2 bleibt leer */
+.kopf { grid-row: 1; } main { grid-row: 3; } .unten { grid-row: 4; }
 
 /* Obere Leiste (UNA-2): Titel der Ansicht, Zurück nur unterhalb der obersten Ebene, höchstens zwei Symbole */
 .kopf {
@@ -73,9 +73,14 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .symbol { min-width: 48px; min-height: 48px; display: grid; place-items: center; border: 0; border-radius: 24px; background: none; color: inherit; text-decoration: none; }
 .symbol:active { background: var(--flaeche); }
 
-/* Ruhige Zeile unter der Leiste: ohne Netz (UOF-4) */
-.stand .ico { margin-top: -2px; }
-.stand { margin: 0; padding: 8px max(var(--rand), env(safe-area-inset-right)) 8px max(var(--rand), env(safe-area-inset-left)); background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; display: flex; gap: 12px; align-items: flex-start; }
+/* Ohne Netz (UOF-4): ein ruhiges Zeichen in der Leiste statt einer Zeile darunter. Es nimmt keine Höhe, erscheint es, während der
+   Nutzer tippt, bleibt jede Karte, wo sie war. Die Zeit des letzten Abgleichs nennt die Liste selbst (Zuletzt abgeglichen …). */
+.stand { flex: none; display: inline-flex; align-items: center; gap: 4px; margin: 0 4px; padding: 4px 12px 4px 8px; border-radius: 8px; background: var(--flaeche); font-size: 0.8125rem; line-height: 1.25rem; font-weight: 600; white-space: nowrap; }
+.stand .ico { width: 1.25em; height: 1.25em; }
+.kopf .symbol { flex: none; }
+/* Bei großer Schrift bleibt dem Titel die Breite: das Zeichen zeigt dann nur das Symbol, der Satz steht im Namen */
+.kopf { container-type: inline-size; }
+@container (max-width: 20rem) { .stand span { display: none; } .stand { padding: 4px 8px; } }
 
 /* Inhalt: eine Spalte mit 16 px Rand (UAN-1) */
 main { padding: 0 max(var(--rand), env(safe-area-inset-right)) 16px max(var(--rand), env(safe-area-inset-left)); overflow-wrap: anywhere; }
@@ -452,14 +457,14 @@ body:has(#leiste[hidden]) .aktion { padding-bottom: calc(8px + env(safe-area-ins
 /* Ab 600 px Breite: Navigationsleiste an der Seite (UAN-5), eine Codebasis für schmal und breit (UEW-3) */
 @media (min-width: 600px) {
   body { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; }
-  .kopf, .stand, main, .boden { grid-column: 2; }
+  .kopf, main, .boden { grid-column: 2; }
   .unten { display: contents; }
   .boden { grid-row: 4; position: sticky; bottom: 0; z-index: 2; }
   .leiste { grid-column: 1; grid-row: 1 / 5; grid-template-columns: 1fr; align-content: start; padding-top: max(16px, env(safe-area-inset-top)); position: sticky; top: 0; height: 100dvh; z-index: 2; }
   main { max-width: 840px; }
   /* ohne Leiste (Anmeldung) bleibt keine leere Spalte */
   body:has(#leiste[hidden]) { grid-template-columns: minmax(0, 1fr); }
-  body:has(#leiste[hidden]) :is(.kopf, .stand, main, .boden) { grid-column: 1; }
+  body:has(#leiste[hidden]) :is(.kopf, main, .boden) { grid-column: 1; }
 }
 
 /* Anhänge: Zeilen am Ende des Eintrags, ein Tipp klappt sie auf (js/anhaengeansicht.js) */

@@ -314,7 +314,7 @@ export function fadenVon(w, e) {
     posten.push({ zeit: w.buch.zustand(k).created, kopf: `Folgeauftrag ${idMitStrich(k.id)} von ${absender(k.head) || '?'}`, wer: absender(k.head), zeilen: [], text: k.head.title ?? '', einzeilig: true, extern: false, ziel: k.id });
   }
   for (const s of w.schlange.filter((x) => x.eintrag === e.id && x.zustand === 'gesendet')) {
-    posten.push({ zeit: s.zeit ?? w.jetzt, kopf: `Nachtrag von ${s.von ?? 'diesem Gerät'}`, wer: s.von, zeilen: s.art === 'einsortieren' ? [`Neu adressiert an ${s.ziel === 'user' ? 'dich' : s.ziel}.`] : [], text: s.satz ?? '', gesendet: schlangeZeile(s, { jetzt: w.jetzt }).text, extern: false });
+    posten.push({ zeit: s.zeit ?? w.jetzt, kopf: 'Nachtrag von user', wer: 'user', zeilen: s.art === 'einsortieren' ? [`Neu adressiert an ${s.ziel === 'user' ? 'dich' : s.ziel}.`] : [], text: s.satz ?? '', gesendet: schlangeZeile(s, { jetzt: w.jetzt }).text, extern: false });
   }
   return posten.sort((a, b) => a.zeit - b.zeit);
 }

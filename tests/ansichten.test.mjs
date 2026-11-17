@@ -141,6 +141,14 @@ test('Unbekannter Eintrag und fehlender Stand haben einen Zustand statt eines le
   assert.match(t(M.eintrag.eintragAnsicht(ohne(), z({ phase: 'laeuft', letzter: null }), k, { id: 'r2d4vn' }).inhalt), /Eintrag wird geladen/);
 });
 
+test('Ein Link auf einen unbekannten Eintrag zeigt „lädt“, solange der erste Abgleich dieser Sitzung läuft', async () => {
+  const k = await kontext();
+  const laeuft = M.eintrag.eintragAnsicht(welt(), z({ phase: 'laeuft', fertig: false }), k, { id: 'zzzzzz' }).inhalt;
+  assert.match(t(laeuft), /Eintrag wird geladen/);
+  assert.doesNotMatch(t(laeuft), /nicht gefunden/);
+  assert.match(t(M.eintrag.eintragAnsicht(welt(), z({ phase: 'bereit', fertig: true }), k, { id: 'zzzzzz' }).inhalt), /Eintrag nicht gefunden/);
+});
+
 test('Fremder Text: Titel und Text sind nur Text, Rohes HTML bleibt sichtbar, Links nur mit https (USI-1)', async () => {
   const pfade = new Map(dateien());
   pfade.set('entries/ab/ab3cde/0-entry.md', '# <img src=x onerror=alert(1)> Titel\n\n- Kind: message\n- To: user\n- From: session:5fbc7a01, rechner-a, 2026-11-14T13:00Z\n\n<script>alert(1)</script> **fett** [Falle](javascript:alert(1)) [gut](https://localhost/x)\n');

@@ -1,5 +1,14 @@
 # Änderungen
 
+## 20261117.09 (2026-11-17)
+
+Ohne Netz sagt die App, was geschieht.
+
+- Nach **Rückgängig** sagt ein Satz, dass die Sendung auf Netz wartet und rausgeht, sobald du online bist.
+- Der Hinweis nach einer Antwort nennt auch Text und Anhänge. Die Warnung in **Mehr** nennt in der Android-App keinen Browser und sagt, was nicht gesendet ist.
+- Nach der Dateiwahl steht sofort, dass die Datei geladen wird. Die Zeile **Ohne Netz** schiebt nichts mehr unter deinem Finger.
+- Ein Link auf einen neuen Eintrag zeigt „lädt“, bis der Abgleich fertig ist. Der Faden nennt einen eigenen Nachtrag von Anfang an „von user“.
+
 ## 20261117.08 (2026-11-17)
 
 Antworten: Bedienhilfen wie TalkBack sagen die gewählte Möglichkeit an, und das Blatt **Deine Antwort** springt nach der Wahl nicht mehr.
