@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+<!-- Variante 3: Sprechblase mit Briefklappe. Adaptives Symbol, 108 x 108, sichtbar innen 72 x 72, Motiv im Kreis r 33. Die Maske ist das Motiv: weiß bleibt, schwarz ist ausgespart; dieselbe Form ist die einfarbige Ebene. -->
+<defs><mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108"><rect x="28" y="32" width="52" height="36" rx="9" fill="white"/><path d="M37 66L33 78L49 67Z" fill="white" stroke="white" stroke-width="2" stroke-linejoin="round"/><path d="M34 38L54 50.5L74 38" fill="none" stroke="black" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M42.69 55.00L42.69 62.50L45.46 62.50 M50.77 55.00L50.77 62.50L53.55 62.50 M58.86 62.50L58.86 55.00L62.08 60.01L65.31 55.00L65.31 62.50" fill="none" stroke="black" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<rect width="108" height="108" fill="#0B57D0"/>
+<rect width="108" height="108" fill="#FFFFFF" mask="url(#m3)"/>
+</svg>

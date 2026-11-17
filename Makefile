@@ -7,7 +7,7 @@ HIG ?= ../p94-hig
 BILDER ?= bilder
 NODE ?= node
 
-.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release
+.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release symbole
 
 check: test fremdhost secrets render wege
 
@@ -34,6 +34,10 @@ render:
 
 wege:
 	$(NODE) tools/wege.mjs
+
+# Bilder des Symbols aus tools/symbol.svg (Web-App und Android-App); braucht rsvg-convert, gehört nicht zu make check
+symbole:
+	$(NODE) tools/symbole.mjs
 
 # Android-Hülle (android/): Werkzeuge liegen unter XDG_DATA_HOME, nichts direkt in ~. Jede Vorgabe lässt sich beim
 # Aufruf überschreiben (make apk ANDROID_HOME=PFAD). Das SDK installiert dieses Makefile nicht (docs/entwicklung/huelle.md);

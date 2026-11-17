@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+<!-- Symbol von LLM-Post: Variante 1 aus docs/entwicklung/ansichten/symbol/, gewählt vom Nutzer (Frage hpqve5). Adaptives Symbol 108 x 108, sichtbar innen 72 x 72, Motiv im Kreis r 33. Die Maske ist das Motiv: weiß bleibt, schwarz ist ausgespart. Buchstaben sind Striche, keine Schrift. Bilder daraus: make symbole. -->
+<defs><mask id="motiv" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108"><rect x="29" y="34" width="50" height="40" rx="5" fill="white"/><path d="M33 38L54 50.5L75 38" fill="none" stroke="black" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"/><path d="M36.39 57.24L36.39 69.07L40.90 69.07 M48.90 57.24L48.90 69.07L53.42 69.07 M61.41 69.07L61.41 57.24L66.51 65.10L71.62 57.24L71.62 69.07" fill="none" stroke="black" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<rect width="108" height="108" fill="#0B57D0"/>
+<rect width="108" height="108" fill="#FFFFFF" mask="url(#motiv)"/>
+</svg>

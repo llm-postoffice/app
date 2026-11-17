@@ -37,8 +37,9 @@ Ohne `XDG_DATA_HOME` gilt `~/.local/share`. Jede Variable lässt sich beim Aufru
   Assets unter `web/`.
 - `HauptActivity.kt`: lädt `https://appassets.androidplatform.net/assets/web/index.html` über `WebViewAssetLoader`.
   Links nach draußen öffnet der Browser. Zurück geht durch den Verlauf der App und verlässt sie ganz oben.
-- Das Symbol `res/drawable-nodpi/symbol_vorne.png` ist eine Kopie von `symbole/maskierbar-512.png`; `SymbolTest`
-  hält beide gleich.
+- Das Symbol: Quelle `tools/symbol.svg` (Buchstaben als Striche, keine Schrift). `make symbole` erzeugt daraus
+  `symbole/*.png` und `res/drawable-nodpi/symbol_vorne.png` (Vordergrund und einfarbige Ebene der Android-App) und
+  braucht `rsvg-convert` aus librsvg. Varianten und Wahl: `docs/entwicklung/ansichten/symbol/`.
 
 ## Brücke zur Web-App
 

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+<!-- Variante 4: Brief, der aus dem Umschlag schaut. Adaptives Symbol, 108 x 108, sichtbar innen 72 x 72, Motiv im Kreis r 33. Die Maske ist das Motiv: weiß bleibt, schwarz ist ausgespart; dieselbe Form ist die einfarbige Ebene. -->
+<defs><mask id="m4" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108"><rect x="37" y="27" width="34" height="36" rx="2.5" fill="white"/><path d="M30 50L54 62L78 50L78 72Q78 74 76 74L32 74Q30 74 30 72Z" fill="white"/><path d="M30 50L54 62L78 50" fill="none" stroke="black" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"/><path d="M43.25 33.95L43.25 41.05L45.85 41.05 M50.95 33.95L50.95 41.05L53.55 41.05 M58.65 41.05L58.65 33.95L61.70 38.70L64.75 33.95L64.75 41.05" fill="none" stroke="black" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M43 47.5L65 47.5" fill="none" stroke="black" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<rect width="108" height="108" fill="#0B57D0"/>
+<rect width="108" height="108" fill="#FFFFFF" mask="url(#m4)"/>
+</svg>
