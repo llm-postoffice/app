@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Wegetest der App in Chromium (headless, frisches Profil, nur Node ab 22): Anmeldung, Zurück (UNA-3, UNA-4), Blatt
-// (UDI-3), Leiste (UNA-1, UNA-2), Alle (fünf Reiter, filtern, sortieren, Eintrag öffnen), ein Knopf je Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe (UEI-6),
-// Statusleiste (UFA-1), Netzzeile (UOF-4), Start ohne Netz (UOF-1), neue Fassung (UOF-5), Installation, Fassung in Mehr und eine fehlerfreie Konsole (CSP, UPL-3). Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg je Zeile: PASS, FAIL oder BLOCKED.
+// Wegetest der App in Chromium (headless, frisches Profil, nur Node ab 22): Anmeldung, Zurück, Blatt, Leiste, Alle, ein
+// Knopf je Handlung, eine linke Kante je Ansicht, Entwürfe, Statusleiste, Netzzeile, Start ohne Netz, neue Fassung,
+// Installation, Fassung in Mehr und eine fehlerfreie Konsole. Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg
+// je Zeile: PASS, FAIL oder BLOCKED.
 // Dazu IndexedDB und der Abgleich gegen eine nachgebaute GitHub-API: Chromium fängt api.github.com ab, kein Paket
 // geht ins Netz.
 import { spawn } from 'node:child_process';
@@ -15,15 +16,9 @@ import { mockQuelle } from '../tests/hilfen/mockquelle.mjs';
 import { ERFUNDENES_TOKEN, REPO, SZENARIEN, TOKEN, eintraege, entwuerfe } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'wege';
-const HILFE = `Aufruf: node tools/wege.mjs [OPTIONEN]
+const KURZ = `Aufruf: node tools/wege.mjs [OPTIONEN]
 
-Spielt die Wege der App in Chromium nach: Anmeldung, alle Zurück-Wege der Tabelle, Blätter,
-Navigationsleiste, die Übersicht Alle (filtern, sortieren, einen Eintrag öffnen), einen Knopf zu jeder Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe
-über Neuladen, Statusleiste, Netzzeile, den Start ohne Netz, eine zweite Fassung des Service
-Workers (Update wartet, Neu starten), Installation, Fassung in Mehr, IndexedDB, den Abgleich und eine Konsole ohne
-Fehler. Die Daten sind erfunden (tests/hilfen/beispieldaten.mjs).
-Chromium läuft headless mit einem frischen Profil in $TMPDIR (Vorgabe /tmp) und wird danach entfernt.
-Die Anfragen an api.github.com fängt Chromium ab und beantwortet sie aus einem nachgebauten Repo.
+Spielt die Wege der App in Chromium nach (headless, frisches Profil, erfundene Daten, GitHub-API abgefangen).
 
 Beispiele:
   Alle Wege prüfen, Chromium aus dem Pfad:
@@ -33,16 +28,23 @@ Beispiele:
 
 Optionen:
   -b, --bilder ORDNER  Mehr in allen Zuständen des Abgleichs als PNG nach ORDNER schreiben
-  -h, --help           diese Hilfe zeigen
-
+  -h, --help           diese Hilfe zeigen; --help all zeigt alles
+`;
+const ALLES = `${KURZ}
 Umgebung:
   CHROME  Pfad zum Browser (Vorgabe: chromium)
+  TMPDIR  Ort des Profils (Vorgabe /tmp); Chromium bricht bei einem Pfad über etwa 100 Zeichen ab
 
-Exit-Status: 0 alle Wege PASS, 1 mindestens ein FAIL, 2 falscher Aufruf, 3 Chromium nicht
-startbar (BLOCKED), 130 nach Strg+C, 143 nach SIGTERM.
+Geprüft werden Anmeldung, alle Zurück-Wege, Blätter, Navigationsleiste, die Übersicht Alle, ein Knopf zu jeder
+Handlung, eine linke Kante je Ansicht, Entwürfe über Neuladen, Statusleiste, Netzzeile, Start ohne Netz, eine zweite
+Fassung des Service Workers (Update wartet, Neu starten), Installation, Fassung in Mehr, IndexedDB, der Abgleich und
+eine Konsole ohne Fehler. Die Daten stehen in tests/hilfen/beispieldaten.mjs.
+
+Exit-Status: 0 alle Wege PASS, 1 mindestens ein FAIL, 2 falscher Aufruf, 3 Chromium nicht startbar (BLOCKED),
+130 nach Strg+C, 143 nach SIGTERM.
 `;
 const arg = process.argv.slice(2);
-if (arg.includes('-h') || arg.includes('--help')) { process.stdout.write(HILFE); process.exit(0); }
+if (arg.includes('-h') || arg.includes('--help')) { process.stdout.write(arg.includes('all') ? ALLES : KURZ); process.exit(0); }
 let bilderOrdner = null;
 if (arg[0] === '-b' || arg[0] === '--bilder') {
   bilderOrdner = arg[1];

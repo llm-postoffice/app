@@ -22,7 +22,7 @@ secrets:
 	gitleaks dir --no-banner --redact .
 
 # Rendert jede Ansicht in jedem Zustand (Szenarien mit erfundenen Daten: tests/hilfen/beispieldaten.mjs) in beiden Größen,
-# hell, dunkel, Schrift 200 % und ohne Netz und prüft Manifest und Start ohne Netz (UEW-2). Verlangt PASS: auch ein WARN
+# hell, dunkel, Schrift 200 % und ohne Netz und prüft Manifest und Start ohne Netz. Verlangt PASS: auch ein WARN
 # lässt die Stufe scheitern. Der Renderer ist rendern-mobil.mjs aus p94-hig; tools/rendern.mjs startet ihn je Szenario.
 render:
 	@test -f "$(HIG)/beispiele/rendern-mobil.mjs" || { \
@@ -30,7 +30,7 @@ render:
 	  echo "Gib den Klon von p94-hig an: make check HIG=PFAD" >&2; exit 1; }
 	@mkdir -p "$(BILDER)"
 	$(NODE) tools/rendern.mjs --hig "$(HIG)" -o "$(BILDER)"
-	@if grep -q '^[a-z-]*: WARN' "$(BILDER)/lauf.txt"; then echo "make: Fehler: das Rendern meldet WARN; verlangt ist PASS" >&2; exit 1; fi
+	@if grep -q '^[a-z-]*: WARN' "$(BILDER)/lauf.txt"; then echo "make: Fehler: das Rendern meldet WARN, verlangt ist PASS" >&2; echo "Die Zeilen mit WARN stehen in $(BILDER)/lauf.txt." >&2; exit 1; fi
 
 wege:
 	$(NODE) tools/wege.mjs

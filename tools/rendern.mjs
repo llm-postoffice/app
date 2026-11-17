@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Rendert die Ansichten der App mit erfundenen Daten: startet die Vorschau (tools/vorschau.mjs) und lässt den Renderer
 // rendern-mobil.mjs aus dem p94-hig-Klon jedes Szenario in beiden Größen, hell, dunkel, Schrift 200 % und ohne Netz
-// prüfen (UEW-2). Die Bilder liegen je Szenario in einem Ordner: ORDNER/SZENARIO/ADRESSE-GROESSE-MODUS.png.
+// prüfen. Die Bilder liegen je Szenario in einem Ordner: ORDNER/SZENARIO/ADRESSE-GROESSE-MODUS.png.
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,15 +10,9 @@ import { starteVorschau } from './vorschau.mjs';
 import { ADRESSEN, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'rendern';
-const HILFE = `Aufruf: node tools/rendern.mjs [OPTIONEN] [SZENARIO...]
+const KURZ = `Aufruf: node tools/rendern.mjs [OPTIONEN] [SZENARIO...]
 
-Rendert die Ansichten der App mit erfundenen Daten in Chromium (Handy-Größen, hell, dunkel, Schrift 200 %,
-ohne Netz) und schreibt die Bilder und das Protokoll lauf.txt nach ORDNER. Ohne SZENARIO rendert es alle außer den
-Bildszenarien (mehr-fassung, mehr-installieren, mehr-installiert, mehr-mitteilungen): sie scrollen Mehr zu einem
-Abschnitt, damit das Bild ihn zeigt, und der Renderer meldet beim Scrollen Text unter der Statusleiste als Fehler des
-Randes. Ebenso fehlen huelle und mehr-huelle (die Android-Hülle): dort registriert die App keinen Service Worker, und
-der Renderer meldet den Start ohne Netz als Fehler.
-Nenne sie mit Namen, um ihre Bilder zu sehen.
+Rendert die Ansichten der App mit erfundenen Daten in Chromium und schreibt Bilder und Protokoll nach ORDNER.
 
 Beispiele:
   Alle Szenarien nach bilder/ rendern:
@@ -29,9 +23,17 @@ Beispiele:
 Optionen:
       --hig PFAD       Klon von p94-hig mit beispiele/rendern-mobil.mjs (Vorgabe: ../p94-hig)
   -o, --ausgabe ORDNER Zielordner (Vorgabe: bilder)
-      --warte MS       Pause nach dem Laden, bevor der Renderer prüft (Vorgabe: 1500; der Einstieg legt erst die Daten an)
       --liste          Szenarien und Adressen nennen und beenden
-  -h, --help           diese Hilfe zeigen
+  -h, --help           diese Hilfe zeigen; --help all zeigt alles
+`;
+const ALLES = `${KURZ}      --warte MS       Pause nach dem Laden, bevor der Renderer prüft (Vorgabe: 1500)
+
+Jedes Szenario läuft in beiden Handy-Größen, hell, dunkel, mit Schrift 200 % und ohne Netz. Die Bilder liegen
+unter ORDNER/SZENARIO/, das Protokoll in ORDNER/lauf.txt. Ohne SZENARIO rendert es alle außer diesen:
+mehr-fassung, mehr-installieren, mehr-installiert und mehr-mitteilungen scrollen Mehr zu einem Abschnitt, und der
+Renderer meldet beim Scrollen Text unter der Statusleiste als Fehler des Randes; huelle und mehr-huelle zeigen die
+Android-Hülle, dort registriert die App keinen Service Worker, und der Renderer meldet den Start ohne Netz als Fehler.
+Nenne sie mit Namen, um ihre Bilder zu sehen.
 
 Exit-Status: 0 alles PASS, 1 mindestens ein FAIL, 2 falscher Aufruf, 3 etwas nicht prüfbar (BLOCKED).
 `;
@@ -44,7 +46,7 @@ try {
   process.stderr.write(`${PROG}: Fehler: ${e.message}\nHilfe: node tools/rendern.mjs --help\n`);
   process.exit(2);
 }
-if (a.values.help) { process.stdout.write(HILFE); process.exit(0); }
+if (a.values.help) { process.stdout.write(a.positionals[0] === 'all' ? ALLES : KURZ); process.exit(0); }
 if (a.values.liste) {
   for (const [n, liste] of Object.entries(ADRESSEN)) process.stdout.write(`${n}: ${liste.join(' ')}\n`);
   process.exit(0);
