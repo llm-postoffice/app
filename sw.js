@@ -4,11 +4,11 @@
 // node --test); darum ist dieser Service Worker ein Modul (register mit type: 'module').
 import { gibtFrei, veralteteCaches } from './js/swlogik.js';
 
-const FASSUNG = 'postfach-20261117.05';
+const FASSUNG = 'postfach-20261117.06';
 const DATEIEN = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './js/abgleich.js', './js/ablauf.js', './js/aktualisieren.js', './js/abnahme.js', './js/absenden.js', './js/adressen.js', './js/anmelden.js', './js/anmeldung.js',
-  './js/ansichten.js', './js/ansichtstexte.js', './js/anzeigen.js', './js/app.js', './js/dateien.js', './js/dom.js', './js/eintrag.js',
+  './js/anhaenge.js', './js/anhaengeansicht.js', './js/anhangholer.js', './js/anhangwahl.js', './js/ansichten.js', './js/ansichtstexte.js', './js/anzeigen.js', './js/app.js', './js/dateien.js', './js/dom.js', './js/eintrag.js',
   './js/entwuerfe.js', './js/erfassen.js', './js/erzeugen.js', './js/farben.js', './js/format.js', './js/hinweis.js', './js/huelle.js', './js/karten.js', './js/markdown.js',
   './js/mehr.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/schreiben.js', './js/senden.js',
   './js/speicher.js', './js/start.js', './js/statusleiste.js',

@@ -1,26 +1,29 @@
-// Erfundene Anhänge für die Entwürfe der Anzeige (docs/entwicklung/ansichten/anhaenge): zu einem Eintrag und zu einem
-// Nachtrag, mit Name, Größe und Inhalt. Ein Bild ist ein kleines SVG als data:-Adresse, denn die CSP der App erlaubt
-// img-src 'self' data:. Nichts davon ist echt; die Namen sind neutral wie die übrigen Beispieldaten.
+// Erfundene Anhänge für die Szenarien der Vorschau und für Tests: zum Eintrag r2d4vn (ein Bild, ein PDF) und zu seinem Nachtrag
+// (ein Messlauf als Text). Das Bild ist ein kleines echtes PNG (schematisches Fenster), das PDF ein Rumpf mit Füllung; nichts davon
+// ist echt, die Namen sind neutral wie die übrigen Beispieldaten. Die Datei läuft in Node und im Browser.
+import { bytesZuBasis } from '../../js/anhaenge.js';
 
-// Der Namensraum von SVG, zusammengesetzt: tools/fremdhost.mjs liest jede Adresse im Quelltext als Host.
-const RAUM = ['http:', '', 'www.w3.org', '2000', 'svg'].join('/');
+const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+export const FENSTER_PNG = bytes(
+  'iVBORw0KGgoAAAANSUhEUgAAASwAAAGQCAIAAACbF8osAAAEl0lEQVR42u3dvw2CQBiHYQo7R4DIPE7gEBS07GBBy1gmjmBjYmdv' +
+  'zs6KysDx53t+eSaAe6srrrg/PsCCCp8ARAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIENhDh4XRmEg6lCEUoQkQo' +
+  'QkQoQhEiQhEiQhGKEBGKEBGKUIS4rAcRAiIEEQIiBBECIgQRAiIEEQIiBBECIgQRAiIEEQIiBBECIgQRAv9H+Hy9gQWJEEQIIgRE' +
+  'CCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIE' +
+  'RAgiBEQIIgRyR9i03c44HIhQhIhQhCBCESJCEYIIRYgIARGCCAERgggBEYIIARGCCMdc+wFCESGIcCzCZBZgIjQToQhNhCI0E6EI' +
+  'TYQiNBOhCE2EIjQToQhNhCI0E6EITYQiNBOhCE2Eq46wrGomIQARilCEJkIRmghFKEIRilCEJkIRilCErijMRChCE6EIzUQoQhOh' +
+  'CM1EKEIToQjNRChCE6EIzUQoQhOhCM1EaCZCEZqFjhA8EipCiBohIEIQISBCECEgQhAhIEIQISBCECEgQhAhIEIQISBCECEgQhAh' +
+  'IEIQITBThE3b8eNgIUIRIkIRgghFiAhFCCIUIa4oABGCCAERgggBEYIIARHCfiP0gjnerBchiLAfklmAidBMhCI0EYrQTIQiNBGK' +
+  '0EyEIjQRitBMhCI0EYrQTIQiNBGK0EyEIjQRrjrCsqpZnHhEiAhFKEIRmggRoQhFKEITISIUoSsKMxGaiVCEZiI0E6EIzURoJkIR' +
+  'monQTIQiNBOhmQhFaCZCMxGK0GzzEYJHQkUIUSMERAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBEQIIgRECCIERAgiBGaKsGm7' +
+  'UBwdRChCRChCEKEIEaEIQYQiRISACEGEgAhBhIAIQYSACCFqhF4wx5v1IgQR9kMyCzARmolQhCZCEZqJUIQmQhGaiVCEJkIRmolQ' +
+  'hCZCEZqJUIQmQhGaiVCEJsJVR1hWNRnIQ4QiFKEIRShCE6EIRShCEYrQRChCEYrQFYWZCM1EKEIzEZqJUIRmIjQToQjNRGgmQhGa' +
+  'idBMhCI0E6GZCEVotvMIwSOhIoSoEQIiBBECIgQRAiIEEQIiBBECIgQRAiIEEQIiBBECIgQRAiIEEQIiBBECIgQRAiIEEQIiBBEC' +
+  'IgQRggh9BRAhiBAQIYgQ2HaEx8sNQhEhiFCEiFCEIEIRIkIRgghFiAhFCCIUISIUIYjQX0GEIgQRgghFCCIEEYoQRAgiFCGIMKYU' +
+  'YP6yCEUoQhGKUISIUIQiFKEIRShCEYpQhCIUoQhFKEIRilCEIkSEIgQRihARihBE6JcgQhGCCEGEIgQRgghFCCIEEYoQRAgiFCGI' +
+  'EEQoQhAhiFCEECNCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEIQoa8AIgQR' +
+  'AiIEEQIiBBEC2X0Bah5IQ65FK/QAAAAASUVORK5CYII=');
 
-/** Ein Bildschirmfoto eines Fensters mit drei Eingabefeldern, 600 × 800. */
-function fensterBild() {
-  const feld = (y, beschriftung, wert) => `<text x="48" y="${y}" font-size="26" fill="#44474e">${beschriftung}</text>`
-    + `<rect x="48" y="${y + 14}" width="504" height="72" rx="10" fill="#fff" stroke="#8b8f98" stroke-width="2"/>`
-    + `<text x="68" y="${y + 62}" font-size="30" fill="#1b1c1f">${wert}</text>`;
-  return `<svg xmlns="${RAUM}" viewBox="0 0 600 800" font-family="sans-serif">`
-    + '<rect width="600" height="800" fill="#e8ebf2"/>'
-    + '<rect width="600" height="96" fill="#d3e3fd"/><text x="48" y="62" font-size="34" font-weight="600" fill="#041e49">Neuer Eintrag</text>'
-    + feld(188, 'Titel', 'Eingabefelder prüfen')
-    + feld(330, 'Projekt', 'beta')
-    + feld(472, 'Priorität', 'Normal')
-    + '<rect x="48" y="640" width="504" height="88" rx="44" fill="#0b57d0"/><text x="300" y="696" font-size="30" text-anchor="middle" fill="#fff">Anlegen</text>'
-    + '</svg>';
-}
-
-const MESSLAUF = `Messlauf rechner-a, 14.11. 13:50
+export const MESSLAUF = `Messlauf rechner-a, 14.11. 13:50
 Befehl: beta-tool --version
 Läufe: 5, Zeiten in Sekunden
 
@@ -35,23 +38,45 @@ Mittel  0,070    0,150
 Streuung unter 3 %, beide stabil.
 `;
 
-export const ANHAENGE = {
-  eintrag: 'r2d4vn',
-  /** Zum Eintrag selbst (entries/r2/r2d4vn/attachments/NAME). */
-  eintragsAnhaenge: [
-    { name: 'eingabefelder-standard.png', groesse: 148 * 1024, art: 'bild', uri: `data:image/svg+xml,${encodeURIComponent(fensterBild())}`, alt: 'Fenster mit drei Eingabefeldern und dem Knopf Anlegen' },
-    { name: 'vergleich-bibliotheken.pdf', groesse: 412 * 1024, art: 'datei' },
-  ],
-  /** Zu einem Nachtrag (attachments/ULID/NAME, Feld Attachments); `zeit` ist der Zeitpunkt des Nachtrags. */
-  nachtragsAnhaenge: [
-    { name: 'messlauf-rechner-a.txt', groesse: 2300, art: 'text', text: MESSLAUF, zeit: '13:52' },
-  ],
-};
-
-/** Größe im Wortlaut der App: Dezimalkomma, KB und MB. */
-export function groessenWort(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1000) return `${kb < 10 ? kb.toFixed(1).replace('.', ',') : Math.round(kb)} KB`;
-  return `${(kb / 1024).toFixed(1).replace('.', ',')} MB`;
+/** Ein PDF-Rumpf mit Füllung auf `groesse` Bytes (kein lesbares PDF; die App zeigt PDF nicht an). */
+export function pdfRumpf(groesse = 18 * 1024) {
+  const kopf = new TextEncoder().encode('%PDF-1.4\n% Vergleich der Bibliotheken (Beispiel)\n');
+  const aus = new Uint8Array(groesse).fill(0x20);
+  aus.set(kopf);
+  aus.set(new TextEncoder().encode('\n%%EOF\n'), groesse - 7);
+  return aus;
 }
+
+/** Eine Textdatei über 1 MiB: die App lädt sie nicht und sagt es. */
+export const grosseDatei = () => new TextEncoder().encode('2026-11-14T13:50:00Z lauf ok\n'.repeat(41_000));
+
+/**
+ * Legt die Anhänge zu r2d4vn in `daten` (Map Pfad zu Text oder Bytes) und gibt `daten` zurück: Bild und PDF am Eintrag, der Messlauf
+ * am Nachtrag; mit `gross` dazu eine Datei über 1 MiB.
+ */
+export function anhaengeDazu(daten, { gross = false } = {}) {
+  const nachtrag = [...daten.keys()].find((p) => p.startsWith('entries/r2/r2d4vn/') && p.endsWith('-addendum.md')).split('/').pop().split('-')[0];
+  daten.set('entries/r2/r2d4vn/attachments/eingabefelder-standard.png', FENSTER_PNG);
+  daten.set('entries/r2/r2d4vn/attachments/vergleich-bibliotheken.pdf', pdfRumpf());
+  daten.set(`entries/r2/r2d4vn/attachments/${nachtrag}/messlauf-rechner-a.txt`, MESSLAUF);
+  if (gross) daten.set('entries/r2/r2d4vn/attachments/lauf-protokoll.log', grosseDatei());
+  return daten;
+}
+
+/**
+ * Ein kurzer Eintrag n5tz8d (eine Notiz) mit Anhängen, damit der Abschnitt ohne Scrollen auf dem ersten Bildschirm steht; `welche`
+ * nennt sie in der Reihenfolge der Zeilen: png, pdf, txt, gross (Datei über 1 MiB).
+ */
+export function kurzerEintrag(daten, welche = ['png', 'pdf', 'txt']) {
+  const dir = 'entries/n5/n5tz8d';
+  daten.set(`${dir}/0-entry.md`, '# Messung der Startzeit\n\n- Kind: note\n- From: session:cb56d77f, rechner-a, 2026-11-14T13:40Z\n- Priority: 3\n\nDie Messung steht im Anhang.\n');
+  const dateien = { png: ['eingabefelder-standard.png', FENSTER_PNG], pdf: ['vergleich-bibliotheken.pdf', pdfRumpf()], txt: ['messlauf-rechner-a.txt', MESSLAUF], gross: ['lauf-protokoll.log', grosseDatei()] };
+  for (const w of welche) daten.set(`${dir}/attachments/${dateien[w][0]}`, dateien[w][1]);
+  return daten;
+}
+
+/** Anhänge, wie die Auswahl sie im Entwurf ablegt (js/anhangwahl.js). */
+export const entwurfAnhaenge = () => [
+  { name: 'eingabefelder-standard.png', groesse: FENSTER_PNG.length, typ: 'image/png', daten: bytesZuBasis(FENSTER_PNG) },
+  { name: 'messlauf-rechner-a.txt', groesse: new TextEncoder().encode(MESSLAUF).length, typ: 'text/plain', daten: bytesZuBasis(new TextEncoder().encode(MESSLAUF)) },
+];

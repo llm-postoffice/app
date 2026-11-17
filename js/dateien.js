@@ -11,6 +11,7 @@ import { Fehler, folgeausgang, fruehereErgebnisse, leseAntwort, leseSchritte, si
 import { geheimnisTreffer, personenTreffer } from './pruefen.js';
 import { neueId } from './erzeugen.js';
 import { adressListe, projektDes, wirksamerKopf, absender } from './zustand.js';
+import { ANHANG_MAX, anhangTexte, basisGroesse, groessenWort, nameGueltig } from './anhaenge.js';
 
 const PROSA = ['Options', 'Blocking', 'Result', 'Reason', 'Note'];
 /** Wie lang eine Zeile im Feld Result höchstens wird (_short im Werkzeug). */
@@ -26,6 +27,25 @@ export function render(doc, behalte = null) {
 }
 
 const doc = (felder, text = '', titel = null) => new Doc(titel, felder, text);
+
+/**
+ * Prüft die Anhänge wie load_attachments des Werkzeugs (Namen, Dubletten, 1 MiB) und gibt sie zurück; sie sind
+ * [{ name, groesse, typ, daten }] mit Base64 in `daten`. Das Feld Attachments (attachments_field) nennt die Namen in dieser Reihenfolge.
+ */
+function anhaengeGeprueft(anhaenge) {
+  const gesehen = new Set();
+  for (const a of anhaenge ?? []) {
+    if (!nameGueltig(a.name)) throw new Fehler(`Anhang ${sichtbar(a.name, true)}: der Dateiname ist nicht zulässig`, 2);
+    if (gesehen.has(a.name)) throw new Fehler(`Anhang ${sichtbar(a.name, true)} kommt zweimal vor`, 2);
+    gesehen.add(a.name);
+    const n = basisGroesse(a.daten);
+    if (n > ANHANG_MAX) throw new Fehler(`Anhang ${sichtbar(a.name, true)} ist ${groessenWort(n)} groß; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}`, 2);
+  }
+  return anhaenge ?? [];
+}
+/** Die Dateien der Anhänge unter `ordner`: Inhalt als Base64, die Bytes bleiben, wie sie sind. */
+const anhangDateien = (ordner, anhaenge) => anhaenge.map((a) => ({ pfad: `${ordner}/${a.name}`, base64: a.daten }));
+const mitAnhangFeld = (felder, anhaenge) => (anhaenge.length ? [...felder, ['Attachments', anhaenge.map((a) => a.name).join(', ')]] : felder);
 
 /** Text wie read_text_input: Zeilenenden \n, Umbrüche an den Enden weg. */
 export const normText = (s) => String(s ?? '').replace(/\r\n?/g, '\n').replace(/^\n+|\n+$/g, '');
@@ -59,7 +79,8 @@ export function moeglichkeitenRoh(e) {
  * (`addendum`). Frage: Nachtrag mit `Answer` und Text, dazu die Statusdatei `done`. `nachtrag` (Als Nachtrag senden, wenn
  * die Frage schon beantwortet ist) schreibt allein den Text, ohne Answer und ohne Status.
  */
-export function antwortDateien(ctx, e, { wahl = null, text = '', nachtrag = false } = {}) {
+export function antwortDateien(ctx, e, { wahl = null, text = '', nachtrag = false, anhaenge: roh = [] } = {}) {
+  const anhaenge = anhaengeGeprueft(roh);
   const kind = e.head.get('Kind');
   const t = normText(text);
   const gewaehlt = wahl ? moeglichkeitenRoh(e).find((m) => m.wahl.toLowerCase() === String(wahl).toLowerCase())?.text ?? null : null;
@@ -67,16 +88,22 @@ export function antwortDateien(ctx, e, { wahl = null, text = '', nachtrag = fals
   if (kind !== 'question' || nachtrag) {
     const koerper = kind === 'question' && gewaehlt ? `Antwort ${gewaehlt}${t ? `\n\n${t}` : ''}` : t;
     if (!koerper) throw new Fehler('Der Nachtrag braucht Text', 2);
-    const d = doc([['By', ctx.stempel]], koerper);
-    return { dateien: [datei(ereignis(e.id, ctx.ulid(), 'addendum'), d)], nachricht: `post: addendum ${e.id}`, eingaben: [{ wo: 'Text', text: t }], pruef: d };
+    const u = ctx.ulid();
+    const d = doc(mitAnhangFeld([['By', ctx.stempel]], anhaenge), koerper);
+    return {
+      dateien: [datei(ereignis(e.id, u, 'addendum'), d), ...anhangDateien(`${pfadEintrag(e.id)}/attachments/${u}`, anhaenge)],
+      nachricht: `post: addendum ${e.id}`, eingaben: [{ wo: 'Text', text: t }, ...anhangTexte(anhaenge)], pruef: d,
+    };
   }
   if (!gewaehlt && !t) throw new Fehler('Die Antwort braucht eine Möglichkeit oder einen Text', 2);
-  const d = doc([['By', ctx.stempel], ...(gewaehlt ? [['Answer', gewaehlt]] : [])], t);
+  // Die Anhänge gehören zum Nachtrag mit der Antwort, nicht zur Statusdatei: ihre ULID ist die des Nachtrags (answer im Werkzeug)
+  const u = ctx.ulid();
+  const d = doc(mitAnhangFeld([['By', ctx.stempel], ...(gewaehlt ? [['Answer', gewaehlt]] : [])], anhaenge), t);
   const gegeben = gewaehlt ?? kurz(t.split('\n')[0], KURZ);
   const status = doc([['By', ctx.stempel], ['Status', 'done'], ['Result', `Antwort: ${gegeben}`]]);
   return {
-    dateien: [datei(ereignis(e.id, ctx.ulid(), 'addendum'), d), datei(ereignis(e.id, ctx.ulid(), 'status'), status)],
-    nachricht: `post: answer ${e.id}`, eingaben: [{ wo: 'Text', text: t }], pruef: d,
+    dateien: [datei(ereignis(e.id, u, 'addendum'), d), ...anhangDateien(`${pfadEintrag(e.id)}/attachments/${u}`, anhaenge), datei(ereignis(e.id, ctx.ulid(), 'status'), status)],
+    nachricht: `post: answer ${e.id}`, eingaben: [{ wo: 'Text', text: t }, ...anhangTexte(anhaenge)], pruef: d,
   };
 }
 
@@ -217,9 +244,10 @@ export function pruefeNeu({ art, titel, text }) {
  * Urgent. `an` ist `user`, ein Projektname oder null (Eingang). Rang 2 ist die Vorgabe und bleibt weg. Kein Eintrag
  * trägt eine Bedingung, Quelle oder Optionen: die App erfasst von Hand.
  */
-export function anlegenDateien(ctx, { art, titel, an = null, text = '', rang = 2, dringend = false }) {
+export function anlegenDateien(ctx, { art, titel, an = null, text = '', rang = 2, dringend = false, anhaenge: roh = [] }) {
   const f = pruefeNeu({ art, titel, text });
   if (f) throw new Fehler(Object.values(f)[0], 2);
+  const anhaenge = anhaengeGeprueft(roh);
   const t = normText(text);
   const id = neueId(ctx.vergeben, ctx.zufall);
   const felder = [['Kind', art]];
@@ -229,13 +257,17 @@ export function anlegenDateien(ctx, { art, titel, an = null, text = '', rang = 2
   if (rang && Number(rang) !== 2) felder.push(['Priority', String(rang)]);
   if (dringend) felder.push(['Urgent', 'yes']);
   const d = doc(felder, t, String(titel).trim());
-  return { dateien: [datei(`${pfadEintrag(id)}/0-entry.md`, d)], nachricht: `post: new ${id}: ${String(titel).trim()}`, eingaben: [{ wo: 'Titel', text: String(titel).trim() }, { wo: 'Text', text: t }], pruef: d, id };
+  return {
+    dateien: [datei(`${pfadEintrag(id)}/0-entry.md`, d), ...anhangDateien(`${pfadEintrag(id)}/attachments`, anhaenge)],
+    nachricht: `post: new ${id}: ${String(titel).trim()}`, eingaben: [{ wo: 'Titel', text: String(titel).trim() }, { wo: 'Text', text: t }, ...anhangTexte(anhaenge)], pruef: d, id,
+  };
 }
 
 // ---- Prüfung auf Geheimnisse und Personendaten
 
 /** Welche Teile der Datei sind Eingaben des Nutzers? Der Hinweis nennt „im Titel“ statt einer Zeile der Datei. */
-const WO = (wo) => (wo === 'Titel' ? 'im Titel' : wo === 'Text' ? 'im Text' : wo === 'Satz' ? 'in deinem Satz' : wo === 'Anmerkung' ? 'in der Anmerkung' : `in ${wo}`);
+const WO = (wo) => (wo === 'Titel' ? 'im Titel' : wo === 'Text' ? 'im Text' : wo === 'Satz' ? 'in deinem Satz' : wo === 'Anmerkung' ? 'in der Anmerkung'
+  : wo === 'Name des Anhangs' ? 'im Namen eines Anhangs' : wo.startsWith('Anhang ') ? `im ${wo}` : `in ${wo}`);
 
 /**
  * Prüft eine Sendung vor dem Senden: Geheimnisse blockieren immer, Personendaten nur, solange der Nutzer sie nicht freigibt.
@@ -245,9 +277,10 @@ const WO = (wo) => (wo === 'Titel' ? 'im Titel' : wo === 'Text' ? 'im Text' : wo
  */
 export function pruefeSendung(sendung) {
   const treffer = (finder, text) => finder(text).map(([zeile, art]) => ({ zeile, art }));
-  const ordne = (liste, finder) => {
+  const ordne = (liste, finder, ohneNamen = false) => {
     const aus = [];
-    for (const { wo, text } of sendung.eingaben ?? []) {
+    for (const { wo, text, nurGeheimnis } of sendung.eingaben ?? []) {
+      if (ohneNamen && nurGeheimnis) continue;   // der Name eines Anhangs geht nur durch die Prüfung auf Geheimnisse
       for (const t of treffer(finder, text)) aus.push({ wo: WO(wo), ...t });
     }
     return aus;
@@ -257,7 +290,7 @@ export function pruefeSendung(sendung) {
     const rest = treffer(geheimnisTreffer, render(sendung.pruef));
     geheimnisse = rest.map((t) => ({ wo: 'in der Antwort', ...t }));
   }
-  let personen = ordne(sendung.eingaben, personenTreffer);
+  let personen = ordne(sendung.eingaben, personenTreffer, true);
   if (!personen.length) personen = treffer(personenTreffer, render(sendung.pruef, PROSA)).map((t) => ({ wo: 'in der Antwort', ...t }));
   return { geheimnisse, personen };
 }

@@ -7,6 +7,7 @@ import { blattGeschlossen, ersetze, gehe, ort as navigationOrt, schliesseUndGehe
 import { netzZeile } from './netz.js';
 import { Aktualisierung, pruefeRegelmaessig, zeigeNeuBand } from './aktualisieren.js';
 import { baueHinweis } from './hinweis.js';
+import { Anhangholer } from './anhangholer.js';
 import { Schreiber } from './schreiben.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
@@ -46,7 +47,7 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   const eigene = aktualisierung === undefined;
   aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
   const k = {
-    db, steuerung, schreiben, jetzt, aktualisierung, installiert, huelle, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, huelle, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },

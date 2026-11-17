@@ -14,18 +14,25 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { aufbau } from './hilfen/schreiber.mjs';
 import { PROJEKTE, dateien as beispiele } from './hilfen/beispieldaten.mjs';
+import { FENSTER_PNG, MESSLAUF } from './hilfen/anhangdaten.mjs';
+import { bytesZuBasis } from '../js/anhaenge.js';
 
 const { POST_DATEN: DATEN, POST_PRUEFBEFEHL: BEFEHL } = process.env;
 const grund = !DATEN || !BEFEHL ? 'POST_DATEN und POST_PRUEFBEFEHL nicht gesetzt (SKIP: kein Postwerkzeug und kein Datenklon, etwa in der CI)'
   : !existsSync(join(DATEN, 'entries')) ? `kein Datenklon unter ${DATEN} (SKIP)` : false;
 if (grund) process.stderr.write(`SKIP  mockgithub.test.mjs: ${grund}\n`);
 
+/** Text bleibt Text, Bytes (ein Anhang) bleiben Bytes, wie die Mock-Quelle es hält. */
+const inhaltVon = (bytes) => { try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return new Uint8Array(bytes); } };
+const gleich = (a, b) => (typeof a === 'string' || typeof b === 'string' ? a === b : Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0);
+const anhang = (name, bytes, typ = '') => ({ name, groesse: bytes.length, typ, daten: bytesZuBasis(bytes) });
+
 /** Liest Pfad zu Text aus dem Datenklon, wie der Baum von GitHub die Dateien nennt (nur projects.md und entries/). */
 function liesKlon(wurzel) {
   const d = new Map([['projects.md', readFileSync(join(wurzel, 'projects.md'), 'utf8')]]);
   const geh = (rel) => {
     for (const e of readdirSync(join(wurzel, rel), { withFileTypes: true })) {
-      if (e.isDirectory()) geh(`${rel}/${e.name}`); else d.set(`${rel}/${e.name}`, readFileSync(join(wurzel, rel, e.name), 'utf8'));
+      if (e.isDirectory()) geh(`${rel}/${e.name}`); else d.set(`${rel}/${e.name}`, inhaltVon(readFileSync(join(wurzel, rel, e.name))));
     }
   };
   geh('entries');
@@ -55,13 +62,15 @@ test('Was die App an die Mock-Quelle sendet, besteht die Prüfung des Postwerkze
     const vorher = new Set(a.q.dateien.keys());
     const sende = [
       () => a.schreiber.antworten('r2d4vn', { wahl: 'A' }),                                            // Antwort mit Möglichkeit
-      () => a.schreiber.antworten('m7q2ke', { text: 'Danke für den Befund.\n\nIch kümmere mich darum.' }), // freier Text an eine Nachricht
+      () => a.schreiber.antworten('m7q2ke', { text: 'Danke für den Befund.\n\nIch kümmere mich darum.', anhaenge: [anhang('fenster (1).png', FENSTER_PNG, 'image/png')] }), // freier Text mit Anhang an eine Nachricht
       () => a.schreiber.urteilSenden('h2n9vz', { text: '1: PASS\n2: FAIL Das Bild ist unscharf.\n3: PASS\n4: PASS\n5: PASS\n6: PASS' }), // FAIL mit Folgeauftrag
       () => a.schreiber.erledigen('x9k3ft'),                                                           // Erledigen
       () => a.schreiber.einsortieren('k7m2qa', { ziel: 'alpha', satz: 'Zu den Hinweisen.' }),          // Einsortieren
       () => a.schreiber.einsortieren('w2tn4c', { ziel: 'user' }),                                      // Einsortieren an den Nutzer
       () => a.schreiber.anlegen({ art: 'task', titel: 'Datei prüfen', an: 'alpha', text: 'Bitte bis Freitag.', rang: 1, dringend: true }), // neuer Eintrag
       () => a.schreiber.anlegen({ art: 'idea', titel: 'Ideen an dich', an: 'user', text: '' }),        // neue Idee ohne Text
+      () => a.schreiber.anlegen({ art: 'task', titel: 'Bild und Messlauf prüfen', an: 'beta', text: 'Siehe Anhang.',
+        anhaenge: [anhang('eingabefelder-standard.png', FENSTER_PNG, 'image/png'), anhang('messlauf-rechner-a.txt', new TextEncoder().encode(MESSLAUF))] }),   // Eintrag mit Anhängen
     ];
     for (const f of sende) {
       const r = await f();
@@ -78,7 +87,7 @@ test('Was die App an die Mock-Quelle sendet, besteht die Prüfung des Postwerkze
 
     // Die angenommenen Dateien kommen in die Sandbox; der Rest der Sandbox ist unverändert
     for (const p of neu) { mkdirSync(dirname(join(sandbox, p)), { recursive: true }); writeFileSync(join(sandbox, p), a.q.dateien.get(p)); }
-    for (const [pfad, text] of a.q.dateien) if (vorher.has(pfad)) assert.equal(text, daten.get(pfad), `${pfad} blieb unverändert`);
+    for (const [pfad, text] of a.q.dateien) if (vorher.has(pfad)) assert.ok(gleich(text, daten.get(pfad)), `${pfad} blieb unverändert`);
     const r = pruefe(sandbox);
     assert.equal(r.status, 0, `die Prüfung des Postwerkzeugs endet mit Exit ${r.status}:\n${r.stdout}${r.stderr}`);
     assert.doesNotMatch(`${r.stdout}${r.stderr}`, /: Fehler:/, 'keine Zeile der Prüfung meldet einen Fehler');

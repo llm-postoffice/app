@@ -8,6 +8,7 @@ import { auswahl, chipAuswahl, feld, knopf } from './karten.js';
 import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 import { kannSenden, SENDEN_FEHLT } from './schreiben.js';
 import { absender } from './absenden.js';
+import { anhangWahl } from './anhangwahl.js';
 
 const ARTEN = ['task', 'idea', 'note', 'message'];
 const VORGABE = { art: 'task', titel: '', an: '', text: '', rang: '2', dringend: false };
@@ -69,9 +70,11 @@ export async function erfassenAnsicht(welt, _z, k) {
   dringend.checked = w.dringend;
   dringend.addEventListener('change', () => { w.dringend = dringend.checked; sichern(); });
 
+  const anhang = await anhangWahl(k, schluessel.erfassen, { gesperrt: !kannSenden(k) });
+
   // Eine Ablehnung steht oben im Formular, damit sie ohne Suchen im Blick ist
   const { platz: ablehnung, los } = absender(
-    (opt) => k.schreiben.anlegen({ art: w.art, titel: w.titel.trim(), an: w.an || null, text: w.text.trim(), rang: Number(w.rang), dringend: w.dringend,
+    (opt) => k.schreiben.anlegen({ art: w.art, titel: w.titel.trim(), an: w.an || null, text: w.text.trim(), rang: Number(w.rang), dringend: w.dringend, anhaenge: anhang.liste(),
       entwurf: { schluessel: schluessel.erfassen, wert: { ...w } }, ...opt }),
     () => k.neuZeichnen());
   const inhalt = el('form', { id: 'erfassen-formular' },
@@ -81,6 +84,7 @@ export async function erfassenAnsicht(welt, _z, k) {
     titel,
     feld({ beschriftung: 'An', steuerung: an, hinweis: welt.projektNamen.length ? null : 'Projekte fehlen noch. Gleiche in Mehr ab.' }),
     text,
+    anhang.platz,
     el('fieldset', { class: 'feld' }, el('legend', {}, 'Priorität'), rang),
     el('label', { class: 'haken' }, dringend, 'Dringend: meldet auch zwischen 22 und 7 Uhr'));
   inhalt.addEventListener('submit', (e) => e.preventDefault());

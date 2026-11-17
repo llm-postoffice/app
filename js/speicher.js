@@ -2,23 +2,27 @@
 // Schnittstelle (für node --test und als Rückfall, wenn der Browser IndexedDB verweigert, etwa in einem privaten
 // Fenster). Der Abgleich und die Warteschlange kennen nur die Schnittstelle, nie IndexedDB selbst.
 //
-// Schema (Fassung 1). Teil C füllt dateien, baum und einstellungen; schlange und entwuerfe legt es an, Teil E füllt sie.
+// Schema (Fassung 2; Fassung 1 hatte den Speicher anhaenge noch nicht, ein Update legt ihn an und lässt alles andere).
+// Teil C füllt dateien, baum und einstellungen; schlange und entwuerfe legt es an, Teil E füllt sie.
 //   dateien        Schlüssel sha       { sha, text }                 Inhalt einer Datei nach Git-Prüfsumme (Blob)
 //   baum           Schlüssel name      { name, sha, etag, eintraege, vollstaendig, zeit, geprueft }
 //                                        name 'stand': der zuletzt vollständig geladene Baum, aus ihm wird gelesen
 //                                        name 'neu':   ein Baum, der noch lädt; der Abgleich setzt dort fort
 //                                        eintraege: [{ pfad, sha }] nur entries/ und projects.md
+//                                        anhaenge: [{ id, ulid, name, sha, groesse }] die Anhänge im Baum (ohne Inhalt)
 //   schlange       Schlüssel id        { id, zustand, ... }          Antworten und Einträge, die noch nicht gesendet
 //                                        sind (Teil E); Index zustand
 //   entwuerfe      Schlüssel schluessel { schluessel, ... }          Eingaben, die ein Neuladen überleben sollen
 //                                        (Teil E); getrennt von der Schlange, damit ein Entwurf nichts sendet
 //   einstellungen  Schlüssel name      { name, wert }                Anmeldung, Gerät, Takt, Speicher
+//   anhaenge       Schlüssel sha       { sha, daten, zeit }          Inhalt eines Anhangs (Base64), den der Nutzer geöffnet hat;
+//                                        der Abgleich räumt weg, was der Baum nicht mehr nennt
 //
 // Das Token liegt unverschlüsselt in einstellungen (Anmeldung); A9 der Proben ergab keinen besseren Ort für eine
 // Web-App ohne Passkey. Wer Skript in der App ausführt, liest es; dagegen stehen CSP, keine Fremdskripte und der PR-Fluss.
 
 export const DB_NAME = 'postfach';
-export const DB_FASSUNG = 1;
+export const DB_FASSUNG = 2;
 
 /** Die Speicher mit Schlüsselfeld und Indizes. */
 export const SPEICHER = {
@@ -27,6 +31,7 @@ export const SPEICHER = {
   schlange: { schluessel: 'id', indizes: ['zustand'] },
   entwuerfe: { schluessel: 'schluessel' },
   einstellungen: { schluessel: 'name' },
+  anhaenge: { schluessel: 'sha' },
 };
 
 /**

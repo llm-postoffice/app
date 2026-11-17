@@ -29,4 +29,4 @@ Drei Tests überspringen sich ohne diese Variablen:
 | `POST_PRUEFBEFEHL` | Befehlszeile der Prüfung des Werkzeugs; `{DATEN}` steht für einen Datenordner |
 
 `tests/mockgithub.test.mjs` schickt alle Sendungen an eine Mock-Quelle und verlangt, dass `POST_PRUEFBEFEHL` auf den
-angenommenen Dateien mit Exit 0 endet. Kein Test schreibt nach GitHub.
+angenommenen Dateien mit Exit 0 endet, auch für einen Eintrag und eine Antwort mit Anhängen (Bytes, `attachments/NAME`, `attachments/ULID/NAME`, Feld `Attachments`). Kein Test schreibt nach GitHub.

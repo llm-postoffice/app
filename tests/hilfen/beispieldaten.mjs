@@ -3,6 +3,8 @@
 // Postsystems (Pfade entries/XX/ID/…, Köpfe, Nachträge, Statusdateien); die App liest sie über den echten Abgleich aus
 // der Mock-Quelle (mockquelle.mjs). Die Uhr steht fest: Samstag, 2026-11-14, 14:07 Ortszeit; so zeigt jede Ansicht dieselben Zeiten.
 
+import { anhaengeDazu, entwurfAnhaenge, kurzerEintrag } from './anhangdaten.mjs';
+
 export const JETZT = new Date(2026, 10, 14, 14, 7, 0).getTime();
 export const REPO = 'beispiel/eintraege';
 export const TOKEN = 'TESTTOKEN';
@@ -226,9 +228,25 @@ export const SZENARIEN = {
   'mehr-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, scroll: 'Mitteilungen' },
   // Material You: die Vorschau gibt eine erfundene Systempalette (Monet) durch denselben Weg wie die Hülle (tests/hilfen/farbrollen.mjs)
   ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, { daten: dateien(), seed: true, live: 'ok', farben: n }])),
-  // Entwürfe der Anzeige von Anhängen (Varianten 1 bis 3, Liste, Bild und Text geöffnet); nur zum Ansehen, nicht im Standardlauf
-  ...Object.fromEntries([1, 2, 3].flatMap((v) => [['liste', 'liste'], ['bild', 'bild'], ['text', 'text']].map(([n, offen]) =>
-    [`anhaenge-${['', 'eins', 'zwei', 'drei'][v]}-${n}`, { daten: dateien(), seed: true, live: 'ok', anhaenge: { variante: v, offen: v === 3 || n !== 'liste' ? offen : null } }]))),
+  // Anhänge (js/anhaengeansicht.js): ein kurzer Eintrag n5tz8d, dessen Abschnitt auf dem ersten Bildschirm steht; die erste Zeile
+  // wird aufgeklappt, wo der Zustand es verlangt. `anhaenge-nachtrag` zeigt r2d4vn mit einem Anhang am Nachtrag und scrollt dorthin.
+  anhaenge: { daten: kurzerEintrag(dateien()), seed: true, live: 'ok' },
+  'anhaenge-bild': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: 'ok', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
+  'anhaenge-text': { daten: kurzerEintrag(dateien(), ['txt', 'pdf']), seed: true, live: 'ok', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
+  'anhaenge-datei': { daten: kurzerEintrag(dateien(), ['pdf']), seed: true, live: 'ok', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
+  'anhaenge-offline': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: 'netz', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
+  'anhaenge-fehler': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: '503', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
+  'anhaenge-gross': { daten: kurzerEintrag(dateien(), ['gross', 'txt']), seed: true, live: 'ok', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
+  'anhaenge-nachtrag': { daten: anhaengeDazu(dateien()), seed: true, live: 'ok', scroll: 'Anhänge (3)', klick: '.anhaenge li:nth-child(3) .anhang-kopf' },
+  // Anhänge anhängen: Dateien im Entwurf, wie die Auswahl sie ablegt
+  'erfassen-anhang': { daten: dateien(), seed: true, live: 'ok',
+    entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: 'Eingabefelder prüfen', an: 'beta', text: 'Siehe Bild und Messlauf.', rang: '2', dringend: false, zeit: JETZT },
+      { schluessel: 'anhaenge/erfassen', anhaenge: entwurfAnhaenge(), zeit: JETZT }] },
+  'antworten-anhang': { daten: dateien(), seed: true, live: 'ok',
+    entwuerfe: [{ schluessel: 'antwort/r2d4vn', text: 'Ich nehme A, die Messung steht im Anhang.', zeit: JETZT },
+      { schluessel: 'anhaenge/antwort/r2d4vn', anhaenge: entwurfAnhaenge().slice(1), zeit: JETZT }] },
+  // Anhänge in einer Palette aus Material You (orange), erste Zeile aufgeklappt
+  'farben-anhaenge': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: 'ok', farben: 'orange', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
   'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
   'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
@@ -239,7 +257,9 @@ export const SZENARIEN = {
 
 /** Die Adressen, die die Vorschau je Szenario rendert. */
 export const ADRESSEN = {
-  ...Object.fromEntries(Object.keys(SZENARIEN).filter((n) => n.startsWith('anhaenge-')).map((n) => [n, ['eintrag/r2d4vn']])),
+  anhaenge: ['eintrag/n5tz8d'], 'anhaenge-bild': ['eintrag/n5tz8d'], 'anhaenge-text': ['eintrag/n5tz8d'], 'anhaenge-datei': ['eintrag/n5tz8d'],
+  'anhaenge-offline': ['eintrag/n5tz8d'], 'anhaenge-fehler': ['eintrag/n5tz8d'], 'anhaenge-gross': ['eintrag/n5tz8d'], 'anhaenge-nachtrag': ['eintrag/r2d4vn'],
+  'erfassen-anhang': ['erfassen'], 'antworten-anhang': ['eintrag/r2d4vn/antworten'],
   normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],
