@@ -193,6 +193,15 @@ test('Ohne Netz sagt die App nach dem Ende von Rückgängig einmal, dass die Sen
   netz = true;
   await a.schreiber.weckeNetz();
   assert.equal(eigene(a.q).length, 1);
+  assert.match(a.meldungen.at(-1), /^Erledigt gesendet um \d\d:\d\d\.$/, 'was gewartet hatte, meldet nach dem Senden die Uhrzeit');
+  assert.equal(a.meldungen.length, 2);
+});
+
+test('Eine Sendung ohne Wartezeit meldet nach dem Senden nichts zusätzlich', async () => {
+  const a = await aufbau();
+  await a.schreiber.erledigen('m7q2ke');
+  await a.sende();
+  assert.deepEqual(a.meldungen, []);
 });
 
 test('Zweig bewegt sich (422 beim Verschieben): Baum und Commit werden auf dem neuen Kopf neu gebaut, die Blobs bleiben', async () => {

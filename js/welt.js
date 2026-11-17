@@ -115,9 +115,19 @@ export const sendungHaengt = (s) => SENDUNG_STECKT.includes(s.zustand);
 /** Wartet die Sendung außerhalb der zehn Sekunden Rückgängig: auf Netz oder auf einen neuen Versuch? */
 export const sendungWartet = (w, s, ohneNetz = false) => s.zustand === 'liegt' && (s.warteArt === 'netz' || ohneNetz || (s.nichtVor ?? 0) > w.jetzt);
 
-/** Sendungen, die noch nicht raus sind und die der Nutzer sehen soll: erst die hängenden, dann die wartenden, je nach Alter. */
+/** So lange nach dem Senden bleibt eine Sendung sichtbar, falls der Abgleich sie nicht schon aus der Schlange nahm. */
+export const GESENDET_SICHTBAR_MS = 60_000;
+/** Läuft die Sendung gerade, nachdem sie gewartet hat? Eine frische Sendung ohne Wartezeit zeigt nichts (kein Band, das aufblitzt). */
+export const sendungLaeuft = (s) => s.zustand === 'sendet' && Boolean(s.gewartet);
+/** Ist die Sendung gerade raus, nachdem sie gewartet hat? Der Abgleich nimmt sie danach aus der Schlange. */
+export const sendungRaus = (w, s) => s.zustand === 'gesendet' && Boolean(s.gewartet) && w.jetzt - (s.zeit ?? 0) < GESENDET_SICHTBAR_MS;
+
+/** Geht die Sendung als Nächstes raus, nachdem sie gewartet hat (Netz ist da, die Frist ist um)? */
+export const sendungBereit = (w, s) => s.zustand === 'liegt' && Boolean(s.gewartet) && s.warteArt !== 'netz' && (s.nichtVor ?? 0) <= w.jetzt && (s.sendenAb ?? 0) <= w.jetzt;
+
+/** Sendungen, die der Nutzer sehen soll: erst die hängenden, dann wartende, laufende und eben gesendete, je nach Alter. */
 export function offeneSendungen(w, { ohneNetz = false } = {}) {
-  return w.schlange.filter((s) => sendungHaengt(s) || sendungWartet(w, s, ohneNetz))
+  return w.schlange.filter((s) => sendungHaengt(s) || sendungWartet(w, s, ohneNetz) || sendungLaeuft(s) || sendungRaus(w, s) || sendungBereit(w, s))
     .sort((a, b) => Number(sendungHaengt(b)) - Number(sendungHaengt(a)) || (a.zeit ?? 0) - (b.zeit ?? 0));
 }
 

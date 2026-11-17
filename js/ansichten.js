@@ -6,18 +6,28 @@ import { abnahmenNachRechner, eingangListe, ideenListe, karteVon, suche, wartetL
 import { abnahmen as abnahmenText, schritte as schritteText, um, zeitpunkt } from './ansichtstexte.js';
 import { schlangeBandKnoten } from './schlange.js';
 import { band, chipDringend, gruppentitel, karten, knopf, linkKnopf, platz, ruhigeKarte, uebersicht } from './karten.js';
+import { fristKnoten } from './frist.js';
 import { fehlerAnzeige, fortschrittAnzeige, uhrzeit } from './texte.js';
 
 const BILD_TON = { ruhig: 'blau', warnung: 'warn', fehler: 'fehler' };
 const BAND_TON = { ruhig: 'info', warnung: 'warn', fehler: 'fehler' };
 
-/** Die Zeile „Abgeglichen um 14:07“; mit Fehler „Stand von 13:50, seitdem nicht abgeglichen“, ohne Netz „Zuletzt …“. */
+/**
+ * Die Zeilen unter der Zahl: erst der Stand des Abgleichs („Abgeglichen um 14:07“, „Gleicht gerade ab …“, mit Fehler „Stand von
+ * 13:50, seitdem nicht abgeglichen“, ohne Netz „Zuletzt abgeglichen …“), dann was als Nächstes kommt: der nächste Abgleich mit
+ * Frist, beim nächsten Netz oder nur von Hand. Es sind immer zwei Zeilen (beim Fehler, den nur du beheben kannst, eine): der
+ * Wechsel zwischen den Zuständen ändert die Höhe nicht und schiebt nichts unter dem Finger. Ohne Stand eine leere Liste.
+ */
 export function standZeile(z, jetzt) {
   const letzter = z.letzter?.geprueft;
-  if (!letzter) return null;
-  if (z.phase === 'fehler' && !z.ohneNetz) return `Stand von ${uhrzeit(letzter)}, seitdem nicht abgeglichen`;
+  if (!letzter) return [];
   const wann = um(letzter, jetzt);
-  return z.ohneNetz ? `Zuletzt abgeglichen ${wann}` : `Abgeglichen ${wann}`;
+  const frist = (text) => [text, ' ', fristKnoten(z.naechster, jetzt)];
+  if (z.phase === 'laeuft') return ['Gleicht gerade ab …', `Zuletzt abgeglichen ${wann}`];
+  if (z.ohneNetz) return [`Zuletzt abgeglichen ${wann}`, 'Beim nächsten Netz gleicht die App ab.'];
+  if (z.phase === 'fehler') return [`Stand von ${uhrzeit(letzter)}, seitdem nicht abgeglichen`, ...(z.naechster ? [frist('Nächster Versuch')] : [])];
+  if (z.naechster) return [`Abgeglichen ${wann}`, frist('Nächster Abgleich')];
+  return [`Abgeglichen ${wann}`, ...(z.fertig ? ['Der nächste Abgleich läuft nur von Hand.'] : [])];
 }
 
 /** Knöpfe zu einem Fehler des Abgleichs: Erneut versuchen oder Neues Token eintragen (E7). */
@@ -78,10 +88,10 @@ export function wartet(welt, z, k) {
     return [...oben, platz({
       bild: 'ok', titel: 'Nichts für dich',
       saetze: ['Neue Fragen, Freigaben und Abnahmen erscheinen hier. Die App ntfy meldet sie dir, sobald sie ankommen.'],
-      knoepfe: [linkKnopf('Etwas erfassen', '#erfassen')], neben: stand ? [stand] : [],
+      knoepfe: [linkKnopf('Etwas erfassen', '#erfassen')], neben: stand,
     }), ...unten];
   }
-  return [...oben, uebersicht({ n: liste.length, wort: 'für dich', chips: c.dringend ? [chipDringend(`davon ${c.dringend} dringend`)] : [], neben: stand ? [stand] : [] }),
+  return [...oben, uebersicht({ n: liste.length, wort: 'für dich', chips: c.dringend ? [chipDringend(`davon ${c.dringend} dringend`)] : [], neben: stand }),
     karten(liste.map((x) => karteVon(welt, x, { ohneNetz: z.ohneNetz })), (m) => `#eintrag/${m.id}`), ...unten];
 }
 
@@ -95,13 +105,13 @@ export function abnahmen(welt, z, k) {
   if (!c.abnahmen) {
     return [...oben, platz({
       bild: 'ok', symbol: 'checklist-f', titel: 'Keine Abnahmen',
-      saetze: ['Abnahmen, die auf dein Urteil warten, erscheinen hier. Du beurteilst jeden Schritt einzeln.'], neben: stand ? [stand] : [],
+      saetze: ['Abnahmen, die auf dein Urteil warten, erscheinen hier. Du beurteilst jeden Schritt einzeln.'], neben: stand,
     })];
   }
   const gruppen = abnahmenNachRechner(welt);
   const teile = [...oben, uebersicht({
     n: c.abnahmen, wort: c.abnahmen === 1 ? 'Abnahme' : 'Abnahmen',
-    neben: [`${schritteText(c.offeneSchritte)} offen`, ...(stand ? [stand] : [])],
+    neben: [`${schritteText(c.offeneSchritte)} offen`, ...stand],
   })];
   for (const g of gruppen) {
     const offen = g.offen === 1 ? '1 Schritt' : `${g.offen} Schritte`;
@@ -119,11 +129,11 @@ export function eingang(welt, z, k) {
   const stand = standZeile(z, welt.jetzt);
   const oben = [fehlerBand(welt, z, k)];
   if (!liste.length) {
-    return [...oben, platz({ bild: 'ok', titel: 'Alles einsortiert', saetze: ['Einträge ohne Ziel erscheinen hier, bis du sie einsortierst.'], neben: stand ? [stand] : [] })];
+    return [...oben, platz({ bild: 'ok', titel: 'Alles einsortiert', saetze: ['Einträge ohne Ziel erscheinen hier, bis du sie einsortierst.'], neben: stand })];
   }
   return [...oben, uebersicht({
     n: liste.length, wort: 'zum Einsortieren',
-    neben: ['Einträge ohne Ziel. Mit Einsortieren bekommen sie ein Projekt, oder sie gehen an dich.', ...(stand ? [stand] : [])],
+    neben: ['Einträge ohne Ziel. Mit Einsortieren bekommen sie ein Projekt, oder sie gehen an dich.', ...stand],
   }), hinweisSendung(welt, liste),
   karten(liste.map((x) => karteVon(welt, x, { ohneNetz: z.ohneNetz })), (m) => `#eintrag/${m.id}`),
   el('p', { class: 'neben' }, 'Tippe auf einen Eintrag, um ihn zu lesen und einzusortieren.')];
@@ -139,12 +149,12 @@ export function ideen(welt, z, k) {
   if (!liste.length) {
     return [...oben, platz({
       bild: 'nachricht', titel: 'Keine Ideen', saetze: ['Ideen, die Sitzungen für dich festhalten, erscheinen hier. Sie warten nicht auf dich.'],
-      knoepfe: [linkKnopf('Idee erfassen', '#erfassen')], neben: stand ? [stand] : [],
+      knoepfe: [linkKnopf('Idee erfassen', '#erfassen')], neben: stand,
     })];
   }
   return [...oben, uebersicht({
     n: liste.length, wort: liste.length === 1 ? 'Idee' : 'Ideen',
-    neben: ['Ideen, die Sitzungen für dich festhalten. Sie warten nicht auf dich.', `Neueste zuerst.${stand ? ` ${stand}` : ''}`],
+    neben: ['Ideen, die Sitzungen für dich festhalten. Sie warten nicht auf dich.', 'Neueste zuerst.', ...stand],
   }), hinweisSendung(welt, liste),
   karten(liste.map((x) => karteVon(welt, x, { ohneNetz: z.ohneNetz })), (m) => `#eintrag/${m.id}`)];
 }

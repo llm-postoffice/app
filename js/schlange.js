@@ -5,10 +5,11 @@
 // die Welt, sobald er in der Schlange liegt). Gewählt wurde die Variante A (Entwürfe: docs/entwicklung/ansichten/warteschlange).
 import { el, ico } from './dom.js';
 import { schlangeBand, sendungText, sendungZustand } from './ansichtstexte.js';
+import { fristKnoten } from './frist.js';
 import { idMitStrich } from './format.js';
 import { band, chipZustand, knopf, linkKnopf, platz } from './karten.js';
 import { kannSenden, SENDEN_FEHLT } from './schreiben.js';
-import { offeneSendungen, sendungHaengt } from './welt.js';
+import { offeneSendungen, sendungBereit, sendungHaengt, sendungLaeuft, sendungRaus } from './welt.js';
 import { finde } from './zustand.js';
 
 /** Der Satz nach Verwerfen: die Eingabe liegt wieder als Entwurf da, wenn sie aus einem Entwurf kam. */
@@ -25,15 +26,23 @@ export function verwerfenKnopf(s, k, { ziel = null } = {}) {
   return b;
 }
 
-/** Das Band oben in Wartet; `null`, wenn nichts auf Netz wartet und nichts hängt. */
+/** Das Band oben in Wartet; `null`, wenn nichts auf Netz wartet, nichts läuft und nichts hängt. */
 export function schlangeBandKnoten(welt, z) {
   const offen = offeneSendungen(welt, { ohneNetz: z.ohneNetz });
   if (!offen.length) return null;
-  const haengend = offen.filter(sendungHaengt).length;
-  const wartend = offen.length - haengend;
-  const netz = z.ohneNetz || offen.filter((s) => !sendungHaengt(s)).every((s) => s.warteArt === 'netz');
-  const t = schlangeBand({ wartend, haengend, netz });
-  return band({ ton: 'warn', symbol: 'cloud_upload-f', titel: t.titel, satz: t.satz, knoepfe: [linkKnopf('Anzeigen', '#schlange', { klasse: 'tonal' })] });
+  const haengend = offen.filter(sendungHaengt);
+  const sendet = offen.filter(sendungLaeuft);
+  const gesendet = offen.filter((s) => sendungRaus(welt, s));
+  const rest = offen.filter((s) => !haengend.includes(s) && !sendet.includes(s) && !gesendet.includes(s));
+  const gleich = rest.filter((s) => sendungBereit(welt, s) && !z.ohneNetz);
+  const netz = rest.filter((s) => !gleich.includes(s) && (z.ohneNetz || s.warteArt === 'netz'));
+  const spaeter = rest.filter((s) => !gleich.includes(s) && !netz.includes(s));
+  const fristen = spaeter.map((s) => s.nichtVor ?? 0).filter((ms) => ms > welt.jetzt);
+  const t = schlangeBand({ netz: netz.length, spaeter: spaeter.length, gleich: gleich.length, haengend: haengend.length, sendet: sendet.length, gesendet: gesendet.length,
+    bis: fristen.length ? Math.min(...fristen) : null, zeit: gesendet.length ? Math.max(...gesendet.map((s) => s.zeit ?? 0)) : null });
+  const satz = t.frist ? [[`${t.satz} `, t.frist.text, ' ', fristKnoten(t.frist.bis, welt.jetzt), '.']] : t.satz;
+  const nurRaus = offen.length === gesendet.length;
+  return band({ ton: nurRaus ? 'ok' : 'warn', symbol: nurRaus ? 'check_circle-f' : 'cloud_upload-f', titel: t.titel, satz, knoepfe: [linkKnopf('Anzeigen', '#schlange', { klasse: 'tonal' })] });
 }
 
 /** Die Knöpfe einer Zeile je nach Zustand: erst, was weiterhilft, zuletzt Verwerfen. */
@@ -54,7 +63,7 @@ function knoepfeVon(s, k) {
 function zeile(welt, z, k, s) {
   const e = finde(welt.eintraege, s.eintrag);
   const titel = e?.head.title ?? s.eintragTitel ?? `Eintrag ${idMitStrich(s.eintrag)}`;
-  const zst = sendungZustand(s, { ohneNetz: z.ohneNetz });
+  const zst = sendungZustand(s, { ohneNetz: z.ohneNetz, jetzt: welt.jetzt });
   return el('li', { class: `sendung${sendungHaengt(s) ? ' haengt' : ''}` },
     el('a', { class: 'sendung-kopf', href: `#eintrag/${s.eintrag}` },
       el('span', { class: 'sendung-was' }, sendungText(s)), el('b', {}, titel), ico('chevron_right')),

@@ -63,7 +63,7 @@ export function alleAnsicht(welt, z, k, f = filter) {
     return [...oben, platz({
       bild: 'ok', titel: 'Nichts offen',
       saetze: ['Hier stehen alle offenen Einträge aller Projekte, auch die, die nicht auf dich warten.'],
-      knoepfe: [linkKnopf('Etwas erfassen', '#erfassen')], neben: stand ? [stand] : [],
+      knoepfe: [linkKnopf('Etwas erfassen', '#erfassen')], neben: stand,
     })];
   }
   const sichtbar = filtere(alle, f);

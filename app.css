@@ -157,6 +157,7 @@ progress::-moz-progress-bar { background: var(--akzent); }
 .band strong { display: block; font-weight: 600; }
 .band p { margin: 0 0 8px; font-size: 0.875rem; line-height: 1.25rem; }
 .band p:last-child { margin-bottom: 0; }
+.frist { font-variant-numeric: tabular-nums; }
 .band.warn { background: var(--w-cont); color: var(--w-on); }
 .band.fehler { background: var(--f-cont); color: var(--f-on); }
 .band.ok { background: var(--ok-cont); color: var(--ok-on); }

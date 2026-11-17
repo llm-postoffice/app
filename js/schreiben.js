@@ -29,6 +29,7 @@ import { anhangPfadVon } from './anhaenge.js';
 import { anlegenDateien, antwortDateien, erledigtDateien, kurz, moeglichkeitenRoh, pruefeSendung, routeDateien, urteilDateien } from './dateien.js';
 import { korrigierteZeit, merkeUhr, stempel, ulidErzeuger, zufallsbytes } from './erzeugen.js';
 import { idMitStrich, ulidZeit } from './format.js';
+import { uhrzeit } from './texte.js';
 import { einstellung } from './speicher.js';
 import { schreibTakt, sendeCommit } from './senden.js';
 import { Fehler } from './urteil.js';
@@ -131,6 +132,7 @@ export class Schreiber {
     this.timer = null;
     this.laeuft = null;
     this.nochmal = false;
+    this.nachgeholt = [];   // Sendungen, die gewartet hatten und jetzt raus sind; ein Hinweis meldet sie nach dem Lauf
   }
 
   // ---- Zeit und Kennungen
@@ -282,7 +284,7 @@ export class Schreiber {
     const s = await this.sendung(id);
     if (!s || s.zustand === 'gesendet' || s.zustand === 'sendet') return false;
     const { titel, grund, ...rest } = s;
-    await this.db.schreibe('schlange', { ...rest, zustand: 'liegt', trotzdem: true, sendenAb: this.jetzt(), nichtVor: undefined });
+    await this.db.schreibe('schlange', { ...rest, zustand: 'liegt', trotzdem: true, gewartet: true, sendenAb: this.jetzt(), nichtVor: undefined });
     this.beiAenderung();
     this.plane();
     return true;
@@ -293,7 +295,7 @@ export class Schreiber {
     const s = await this.sendung(id);
     if (!s || !['token', 'verboten', 'fehler'].includes(s.zustand)) return false;
     const { grund, ...rest } = s;
-    await this.db.schreibe('schlange', { ...rest, zustand: 'liegt', sendenAb: this.jetzt(), nichtVor: undefined });
+    await this.db.schreibe('schlange', { ...rest, zustand: 'liegt', gewartet: true, sendenAb: this.jetzt(), nichtVor: undefined });
     this.beiAenderung();
     this.plane();
     return true;
@@ -338,7 +340,7 @@ export class Schreiber {
     this.laeuft = (async () => {
       try {
         do { this.nochmal = false; await this.laufEinmal(); } while (this.nochmal);
-      } finally { this.laeuft = null; await this.plane(); }
+      } finally { this.laeuft = null; this.meldeNachgeholt(); await this.plane(); }
     })();
     return this.laeuft;
   }
@@ -372,7 +374,7 @@ export class Schreiber {
     const quelle = await this.anmeldung();
     if (!quelle) return 'halt';
     let s = await this.setze(s0, { zustand: 'sendet' });
-    const liegen = async (teil) => { await this.setze(s, { zustand: 'liegt', warteArt: undefined, ...teil }); return 'halt'; };
+    const liegen = async (teil) => { await this.setze(s, { zustand: 'liegt', warteArt: undefined, gewartet: true, ...teil }); return 'halt'; };
     // Fehler des Abgleichs und des Sendens: netz und limit bleiben liegen, 401 wird zum Token, der Rest steht in der Zeile
     const behandle = async (f) => {
       if (f.art === 'netz' || f.art === 'abgebrochen') {
@@ -385,7 +387,7 @@ export class Schreiber {
       if (f.art === 'token') { await this.setze(s, { zustand: 'token' }); return 'halt'; }
       if (f.art === 'verboten') { await this.setze(s, { zustand: 'verboten' }); return 'halt'; }
       if (f.art === 'nicht-gefunden') { await this.setze(s, { zustand: 'fehler', grund: 'GitHub findet das Repo nicht. Prüfe in Mehr, ob Repo und Token zusammenpassen.' }); return 'halt'; }
-      if ((f.status ?? 0) >= 500 || f.art === 'intern') return liegen({ nichtVor: this.jetzt() + WIEDER_MS, grund: `GitHub antwortet mit Status ${f.status ?? '?'}, ein neuer Versuch folgt.` });
+      if ((f.status ?? 0) >= 500 || f.art === 'intern') return liegen({ nichtVor: this.jetzt() + WIEDER_MS, grund: `GitHub antwortet mit Status ${f.status ?? '?'}.` });
       await this.setze(s, { zustand: 'fehler', grund: `GitHub lehnt die Sendung ab (${f.message ?? f.art}).` });
       return 'halt';
     };
@@ -423,10 +425,19 @@ export class Schreiber {
     } else {
       s = await this.setze(s, { zustand: 'gesendet', zeit: this.jetzt() });
     }
+    if (s0.gewartet) this.nachgeholt.push({ wer: sendungText(s), zeit: s.zeit });
     // Danach gleicht der Schreiber ab: die Dateien stehen dann im Stand, und die Sendung verlässt die Warteschlange
     const a = await this.abgleich();
     if (a.ok) await this.raeume();
     return 'weiter';
+  }
+
+  /** Nach einem Lauf: was gewartet hatte und jetzt raus ist, meldet ein Hinweis mit der Uhrzeit (das Band verschwindet sonst ohne Wort). */
+  meldeNachgeholt() {
+    const fertig = this.nachgeholt.splice(0);
+    if (!fertig.length) return;
+    const um = uhrzeit(fertig.at(-1).zeit);
+    this.meldung(fertig.length === 1 ? `${fertig[0].wer || 'Die Sendung'} gesendet um ${um}.` : `${fertig.length} Sendungen gesendet um ${um}.`);
   }
 
   /** Entfernt gesendete Sendungen, deren Dateien der Abgleich schon kennt. */

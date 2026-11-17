@@ -3,6 +3,7 @@
 // gehören zusammen; Farbe steht nie allein (UFA-2, UFA-7). Maße und Farben stehen in app.css.
 import { el, ico } from './dom.js';
 import { PRIO_WORTE, absenderText } from './ansichtstexte.js';
+import { fristKnoten } from './frist.js';
 
 /** Chip der Art: Symbol und Wort in der Farbe der Art. */
 export const chipArt = (art) => el('span', { class: `chip-art ${art.klasse}` }, ico(art.symbol), art.wort);
@@ -11,7 +12,7 @@ export const chipArt = (art) => el('span', { class: `chip-art ${art.klasse}` }, 
 export const chipDringend = (text = 'Dringend') => el('span', { class: 'chip-dringend' }, ico('flag-f'), text);
 
 /** Chip eines Zustands: Rolle s-ok, s-warn, s-fehler oder s-neutral, Symbol, Wort. */
-export const chipZustand = (z) => el('span', { class: `chip-zst ${z.rolle ?? 's-neutral'}` }, ico(z.symbol), el('span', {}, z.text));
+export const chipZustand = (z) => el('span', { class: `chip-zst ${z.rolle ?? 's-neutral'}` }, ico(z.symbol), el('span', {}, z.text, z.bis ? [' ', fristKnoten(z.bis, z.jetzt)] : null));
 
 /** Zustandszeile mit Symbol; fett, wenn etwas auf dich wartet. */
 export const zustandsZeile = (z) => (z.chip ? chipZustand(z)
