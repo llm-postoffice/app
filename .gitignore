@@ -2,3 +2,9 @@
 bilder/
 node_modules/
 *.log
+# Android-Hülle: Bau und lokale Einstellungen
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties

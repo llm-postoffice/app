@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LLM-Post</string>
+    <string name="webview_fehlt">LLM-Post braucht die WebView des Systems. Sie fehlt oder ist abgeschaltet; schalte sie in den Einstellungen unter Apps ein.</string>
+</resources>

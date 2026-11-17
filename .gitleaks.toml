@@ -1,0 +1,8 @@
+# Prüfung auf Geheimnisse (make secrets): die Regeln von gitleaks, ohne die Bauordner der Android-Hülle.
+# gitleaks dir beachtet die .gitignore nicht und meldete sonst Funde in Dateien, die nie ins Repo gehen.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Bauordner der Android-Hülle, nicht versioniert"
+paths = ['''(^|/)android/(app/)?build/''', '''(^|/)android/\.gradle/''', '''(^|/)android/\.kotlin/''']

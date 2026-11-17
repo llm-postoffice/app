@@ -7,7 +7,7 @@ HIG ?= ../p94-hig
 BILDER ?= bilder
 NODE ?= node
 
-.PHONY: check test fremdhost secrets render wege
+.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden
 
 check: test fremdhost secrets render wege
 
@@ -34,3 +34,26 @@ render:
 
 wege:
 	$(NODE) tools/wege.mjs
+
+# Android-Hülle (android/): Werkzeuge liegen unter XDG_DATA_HOME, nichts direkt in ~. Jede Vorgabe lässt sich beim
+# Aufruf überschreiben (make apk ANDROID_HOME=PFAD). Das SDK installiert dieses Makefile nicht (docs/entwicklung/huelle.md);
+# fehlende Plattformen und Build-Tools lädt Gradle beim Bau selbst. Die Stufen der Hülle gehören nicht zu make check.
+XDG_DATA_HOME ?= $(HOME)/.local/share
+ANDROID_HOME ?= $(XDG_DATA_HOME)/android-sdk
+GRADLE_USER_HOME ?= $(XDG_DATA_HOME)/gradle
+ANDROID_USER_HOME ?= $(XDG_DATA_HOME)/android
+export ANDROID_HOME GRADLE_USER_HOME ANDROID_USER_HOME
+GRADLEW := android/gradlew -p android
+
+sdk-vorhanden:
+	@test -f "$(ANDROID_HOME)/licenses/android-sdk-license" || { \
+	  echo "make: Fehler: kein Android-SDK mit angenommener Lizenz in $(ANDROID_HOME)" >&2; \
+	  echo "Installier es wie in docs/entwicklung/huelle.md beschrieben." >&2; exit 1; }
+
+# Debug-APK der Hülle; JVM-Tests der Hülle
+apk: sdk-vorhanden
+	$(GRADLEW) assembleDebug
+	@echo "make: APK liegt in android/app/build/outputs/apk/debug/app-debug.apk"
+
+apk-test: sdk-vorhanden
+	$(GRADLEW) testDebugUnitTest
