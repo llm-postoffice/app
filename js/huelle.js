@@ -1,7 +1,7 @@
 // Brücke zur Android-Hülle. Die Hülle (Kotlin, WebView) legt vor dem ersten Skript der Seite ein Objekt `llmpost` an, nur
 // für die Herkunft appassets.androidplatform.net und nur im Hauptframe. Es hat postMessage(text) und ruft onmessage({ data }).
 // Im Browser fehlt es; dann bleibt alles, wie es ist. Nachrichten sind JSON-Texte:
-//   Seite an Hülle: { art: 'bereit' } (die App läuft, die Hülle schickt, was ansteht);
+//   Seite an Hülle: { art: 'bereit' } (die App läuft, die Hülle schickt, was ansteht); { art: 'weiter' } (siehe teilen);
 //                   { nr, art: 'token-holen' }, Antwort { nr, art: 'token', token: Text oder null };
 //                   { nr, art: 'token-setzen', token: Text oder null }, Antwort { nr, art: 'ok' } oder { nr, art: 'fehler' };
 //                   { nr, art: 'speichern', name, typ, daten }: legt die Datei ab (daten ist Base64, höchstens 1 MiB; name ohne
@@ -11,11 +11,15 @@
 //                   Dateien für <input type=file> (Datei anhängen) wählt die Hülle selbst (WebChromeClient), ohne Nachricht.
 //   Hülle an Seite: { art: 'oeffnen', adresse: '#…' } (ein Link llmpost://…); { art: 'teilen', titel, text } (für Erfassen);
 //                   zu Dateien aus dem Teilen (Foto, PDF, eine oder mehrere) kommen dazu `dateien` und `mehr`: dateien ist eine Liste
-//                   von { name, typ, groesse, daten } (daten ist Base64, höchstens 1 MiB) oder { name, typ, groesse, fehler }
-//                   mit fehler 'zu-gross' (über 1 MiB: kein Inhalt, nur Name und Größe), 'unlesbar' oder 'kein-zugriff' (der
-//                   Intent gab keine Lesefreigabe, oder die Adresse ist kein content://; name ist dann 'Datei'); groesse ist null,
-//                   wenn sie unbekannt ist. Höchstens 10 Dateien, `mehr` zählt die weiteren. Text und Titel fehlen, wenn nur
-//                   Dateien geteilt werden (dann leer);
+//                   von { name, typ, groesse, daten } (daten ist Base64) oder { name, typ, groesse, fehler, grenze } mit
+//                   fehler 'zu-gross' (über grenze: kein Inhalt, nur Name und Größe), 'unlesbar' oder 'kein-zugriff' (der Intent
+//                   gab keine Lesefreigabe, oder die Adresse ist kein content://; name ist dann 'Datei'); groesse ist null, wenn
+//                   sie unbekannt ist. Die Grenze ist 1 MiB, für Bilder (JPEG, PNG, WebP, HEIC) 20 MiB; die Seite kodiert Fotos (und PNG
+//                   über 1 MiB) neu und verkleinert sie dabei. Höchstens 10 Dateien, `mehr` zählt die weiteren. Text und Titel fehlen, wenn nur Dateien
+//                   geteilt werden (dann leer). Ein Teilen kommt als mehrere Nachrichten `teilen`: erst Titel, Text, abgelehnte
+//                   Dateien und `mehr` (nur wenn es etwas davon gibt), dann je lesbare Datei eine mit `dateien` von einem Eintrag.
+//                   Nach jeder Nachricht `teilen` schickt die Seite { art: 'weiter' }, erst dann liest die Hülle die nächste
+//                   Datei: so liegt nie mehr als eine große Datei im Speicher;
 //                   { art: 'farben', hell: { ROLLE: '#rrggbb', … }, dunkel: { … } } (Systemfarben, Material You; die Rollen heißen
 //                   wie die Variablen in app.css ohne `--`, die Liste steht in farben.js; die Hülle schickt sie nach bereit und
 //                   erneut, wenn sich die Systemfarben ändern; ungültige Werte und unbekannte Rollen übergeht die Seite).
@@ -95,6 +99,9 @@ export class Huelle {
 
   /** Die App läuft; die Hülle schickt jetzt, was ansteht (Link, geteilter Text). */
   bereit() { this.#sende({ art: 'bereit' }); }
+
+  /** Eine Nachricht `teilen` ist verarbeitet; die Hülle liest und schickt die nächste Datei (immer nur eine zugleich im Speicher). */
+  weiter() { this.#sende({ art: 'weiter' }); }
 }
 
 /** Die Hülle, wenn die Seite in ihr läuft, sonst null. */
@@ -167,12 +174,14 @@ export const adresseAusHuelle = (adresse) => parse(String(adresse ?? ''))?.adres
 
 /**
  * Legt geteilte Dateien (Feld `dateien` der Nachricht `teilen`) in den Entwurf der Anhänge. `alt` ist der bisherige Entwurf
- * (oder null). Ergebnis: der neue Entwurf { anhaenge, meldung, meldungFehler } oder null, wenn nichts geteilt wurde. Die Meldung
- * nennt abgelehnte Dateien und Hinweise in Sätzen; Anhangwahl zeigt sie einmal.
+ * (oder null), `verkleinere` verkleinert zu große Bilder (anhaenge.js: teileAuf). Ergebnis: der neue Entwurf { anhaenge,
+ * fehler, hinweise } oder null, wenn nichts geteilt wurde. `fehler` und `hinweise` sind Sätze zu abgelehnten Dateien und zu
+ * Anhängen; sie bleiben im Entwurf, bis der Nutzer sie in Erfassen mit **Verstanden** schließt (anhangwahl.js), und sammeln
+ * sich über mehrere Nachrichten desselben Teilens (gleiche Sätze nur einmal).
  */
-export function mitGeteiltenDateien(alt, { dateien, mehr } = {}) {
+export async function mitGeteiltenDateien(alt, { dateien, mehr } = {}, verkleinere = null) {
   if (!(Array.isArray(dateien) && dateien.length) && !(Number.isInteger(mehr) && mehr > 0)) return null;
-  const r = teileAuf(alt?.anhaenge ?? [], dateien, mehr);
-  const meldung = [...r.fehler, ...r.hinweise].join(' ');
-  return { anhaenge: r.liste, meldung, meldungFehler: r.fehler.length > 0 };
+  const r = await teileAuf(alt?.anhaenge ?? [], dateien, mehr, verkleinere);
+  const dazu = (bisher, neu) => [...new Set([...(Array.isArray(bisher) ? bisher : []), ...neu])];
+  return { anhaenge: r.liste, fehler: dazu(alt?.fehler, r.fehler), hinweise: dazu(alt?.hinweise, r.hinweise) };
 }
