@@ -106,11 +106,11 @@ test('Antworten: der Abschnitt steht unter dem Textfeld, und Senden mit einer ge
   const k = kontext({ schreiben });
   const welt = M.welt.baueWelt({ pfade: dateien(), jetzt: JETZT });
   const blatt = await M.eintrag.antwortBlatt(welt, k, { id: 'r2d4vn' }, () => {});
-  const wahlen = finde(blatt.koerper, 'input[data-wahl]');
+  const wahlen = finde(blatt.koerper, '[data-wahl]');
   assert.ok(wahlen.length >= 2);
   assert.equal(finde(blatt.koerper, '.anhangwahl').length, 1);
   await waehle(blatt.koerper, datei('log.txt', new TextEncoder().encode('Zeile 1')));
-  for (const f of wahlen[0].horcher.change) await f();
+  await wahlen[0].klick();
   await finde(blatt.knoepfe, 'button').find((b) => b.textContent.trim() === 'Senden').klick();
   assert.equal(aufrufe[0].wahl, 'A');
   assert.deepEqual(aufrufe[0].anhaenge.map((a) => a.name), ['log.txt']);

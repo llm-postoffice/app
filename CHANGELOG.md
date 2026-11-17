@@ -1,5 +1,9 @@
 # Änderungen
 
+## 20261117.08 (2026-11-17)
+
+Antworten: Bedienhilfen wie TalkBack sagen die gewählte Möglichkeit an, und das Blatt **Deine Antwort** springt nach der Wahl nicht mehr.
+
 ## 20261117.07 (2026-11-17)
 
 Antworten: Im Blatt **Deine Antwort** wählt ein Tipp eine Möglichkeit (sie ist dann gefüllt und mit Haken markiert), und **Senden** schickt Wahl, eigenen Text und Anhänge zusammen.
