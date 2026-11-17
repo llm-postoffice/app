@@ -1,4 +1,5 @@
 # Postfach: Prüfkette. `make check` führt alles aus; eine Stufe allein läuft mit ihrem Namen (make wege).
+# Nur bestimmte Szenarien rendern: make render SZENARIEN="leer fehler"; Zahl der Jobs: make render JOBS=3.
 # Der Renderer gehört zu p94-hig und wird nicht kopiert: HIG zeigt auf den Klon (make check HIG=PFAD).
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -6,10 +7,18 @@ SHELL := /bin/bash
 HIG ?= ../p94-hig
 BILDER ?= bilder
 NODE ?= node
+SZENARIEN ?=
+JOBS ?=
 
-.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release symbole
+.PHONY: check stufen test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release symbole
 
-check: test fremdhost secrets render wege
+# Die fünf Stufen teilen weder Ports (jede wählt einen freien) noch Dateien (Profile in eigenen Temp-Ordnern, Bilder nur in
+# BILDER), darum laufen sie gleichzeitig. -k lässt jede Stufe zu Ende laufen, damit alle Fehler auf einmal erscheinen;
+# --output-sync=target druckt die Ausgabe je Stufe am Stück, wenn sie fertig ist. Ein Fehler jeder Stufe lässt check scheitern.
+check:
+	@$(MAKE) --no-print-directory -j -k --output-sync=target stufen
+
+stufen: test fremdhost secrets render wege
 
 test:
 	$(NODE) --test tests/
@@ -29,7 +38,7 @@ render:
 	  echo "make: Fehler: $(HIG)/beispiele/rendern-mobil.mjs fehlt" >&2; \
 	  echo "Gib den Klon von p94-hig an: make check HIG=PFAD" >&2; exit 1; }
 	@mkdir -p "$(BILDER)"
-	$(NODE) tools/rendern.mjs --hig "$(HIG)" -o "$(BILDER)"
+	$(NODE) tools/rendern.mjs --hig "$(HIG)" -o "$(BILDER)" $(if $(JOBS),--jobs $(JOBS)) $(SZENARIEN)
 	@if grep -q '^[a-z-]*: WARN' "$(BILDER)/lauf.txt"; then echo "make: Fehler: das Rendern meldet WARN, verlangt ist PASS" >&2; echo "Die Zeilen mit WARN stehen in $(BILDER)/lauf.txt." >&2; exit 1; fi
 
 wege:
