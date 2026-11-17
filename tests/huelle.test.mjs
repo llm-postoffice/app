@@ -96,6 +96,8 @@ test('Nachrichten vor verbinde kommen bei verbinde in Reihenfolge an, neue Arten
   assert.deepEqual(farben, [{ art: 'farben', hell: '#fff' }]);
   h.bereit();
   assert.deepEqual(o.gesendet, [{ art: 'bereit' }]);
+  h.weiter();
+  assert.deepEqual(o.gesendet.at(-1), { art: 'weiter' });
 });
 
 test('mitTresor hält den Vertrag der Speicher-Schnittstelle', async () => {
@@ -169,18 +171,21 @@ test('teilen mit Dateien erreicht den Empfänger unverändert; Dateien ohne Text
   assert.deepEqual(an, [n]);
 });
 
-test('mitGeteiltenDateien: nichts geteilt gibt null, geteilt ergibt Anhänge und Meldung; ein vorhandener Entwurf bleibt', () => {
-  assert.equal(mitGeteiltenDateien(null, {}), null);
-  assert.equal(mitGeteiltenDateien({ anhaenge: [] }, { dateien: [], mehr: 0 }), null);
-  const eins = mitGeteiltenDateien(null, { dateien: [{ name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }] });
+test('mitGeteiltenDateien: nichts geteilt gibt null, geteilt ergibt Anhänge und Sätze; ein vorhandener Entwurf bleibt, Sätze sammeln sich', async () => {
+  assert.equal(await mitGeteiltenDateien(null, {}), null);
+  assert.equal(await mitGeteiltenDateien({ anhaenge: [] }, { dateien: [], mehr: 0 }), null);
+  const eins = await mitGeteiltenDateien(null, { dateien: [{ name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }] });
   assert.deepEqual(eins.anhaenge.map((a) => a.name), ['a.txt']);
-  assert.equal(eins.meldung, '');
-  assert.equal(eins.meldungFehler, false);
-  const zwei = mitGeteiltenDateien(eins, { dateien: [{ name: 'b.txt', typ: 'text/plain', groesse: 1, daten: 'eQ==' }, { name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }], mehr: 0 });
+  assert.deepEqual([eins.fehler, eins.hinweise], [[], []]);
+  const zwei = await mitGeteiltenDateien(eins, { dateien: [{ name: 'b.txt', typ: 'text/plain', groesse: 1, daten: 'eQ==' }, { name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }], mehr: 0 });
   assert.deepEqual(zwei.anhaenge.map((a) => a.name), ['a.txt', 'b.txt']);
-  assert.match(zwei.meldung, /Eine Datei mit dem Namen a\.txt ist schon angehängt/);
-  assert.equal(zwei.meldungFehler, true);
-  const nurMehr = mitGeteiltenDateien(null, { dateien: [], mehr: 4 });
+  assert.equal(zwei.fehler.length, 1);
+  assert.match(zwei.fehler[0], /Eine Datei mit dem Namen a\.txt ist schon angehängt/);
+  // dieselbe Ablehnung noch einmal: der Satz steht nur einmal da; ein neuer Satz kommt dazu
+  const drei = await mitGeteiltenDateien(zwei, { dateien: [{ name: 'a.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' }, { name: 'gross.pdf', typ: 'application/pdf', groesse: 3000000, fehler: 'zu-gross', grenze: 1048576 }] });
+  assert.equal(drei.fehler.length, 2);
+  assert.match(drei.fehler[1], /gross\.pdf ist 2,9 MiB groß/);
+  const nurMehr = await mitGeteiltenDateien(null, { dateien: [], mehr: 4 });
   assert.deepEqual(nurMehr.anhaenge, []);
-  assert.match(nurMehr.meldung, /4 weitere Dateien sind nicht dabei/);
+  assert.match(nurMehr.fehler[0], /4 weitere Dateien sind nicht dabei/);
 });

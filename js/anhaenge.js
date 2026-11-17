@@ -151,7 +151,70 @@ export function nimmAuf(liste, neu) {
   if (neu.groesse > ANHANG_MAX) return { ok: false, fehler: `${name} ist ${groessenWort(neu.groesse)} groß; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und wähle sie noch einmal.` };
   if (liste.some((a) => a.name === name)) return { ok: false, fehler: `Eine Datei mit dem Namen ${name} ist schon angehängt. Entferne sie oder benenne die neue Datei um.` };
   const hinweis = neu.groesse > ANHANG_WARNUNG ? `${name} ist ${groessenWort(neu.groesse)} groß. Über ${groessenWort(ANHANG_WARNUNG)} belastet ein Anhang das Datenrepo; kleiner ist besser.` : null;
-  return { ok: true, liste: [...liste, { name, groesse: neu.groesse, typ: neu.typ || typVon(name), daten: neu.daten }], hinweis };
+  const a = { name, groesse: neu.groesse, typ: neu.typ || typVon(name), daten: neu.daten };
+  if (neu.vorher) a.vorher = neu.vorher;
+  return { ok: true, liste: [...liste, a], hinweis };
+}
+
+// ---- Bilder verkleinern
+
+/** Bis zu dieser Größe nimmt die App ein Bild an, um es auf ANHANG_MAX zu verkleinern (die Hülle liest Bilder bis hierher). */
+export const BILD_QUELLE_MAX = 20 * 1024 * 1024;
+
+const FOTO_TYP = /^image\/(jpeg|webp|heic|heif)$/;
+const FOTO_ENDUNG = new Set(['jpg', 'jpeg', 'webp', 'heic', 'heif']);
+
+/** 'foto' (JPEG, WebP, HEIC/HEIF), 'png' oder null (alles andere, auch GIF und SVG). Der Typ gilt, sonst die Endung. */
+function bildArt(name, typ) {
+  const t = String(typ ?? '').toLowerCase();
+  if (t.startsWith('image/')) return FOTO_TYP.test(t) ? 'foto' : t === 'image/png' ? 'png' : null;
+  const e = endung(String(name ?? ''));
+  return FOTO_ENDUNG.has(e) ? 'foto' : e === 'png' ? 'png' : null;
+}
+
+/** Ob die App ein Bild dieser Art neu kodieren kann (Fotos und PNG); die Hülle liest solche Bilder bis BILD_QUELLE_MAX. */
+export const verkleinerbar = (name, typ) => bildArt(name, typ) !== null;
+
+/**
+ * Ob die App die Datei neu kodiert: ein Foto (JPEG, WebP, HEIC) immer, ein PNG nur über ANHANG_MAX (Bildschirmfotos und Belege
+ * mit Text bleiben scharf), alles andere nie.
+ */
+export function wirdUmkodiert(name, typ, groesse) {
+  const art = bildArt(name, typ);
+  return art === 'foto' || (art === 'png' && groesse > ANHANG_MAX);
+}
+
+/**
+ * Bereitet eine gewählte oder geteilte Datei zum Anhängen vor. `datei` ist { name, typ, groesse, bytes oder blob }.
+ * Ein Foto kodiert `verkleinere(blob, name)` (verkleinern.js) immer neu, ein PNG über ANHANG_MAX auch; bleibt das Ergebnis nicht
+ * kleiner als das Original, gilt das Original. Ein Bild über ANHANG_MAX, das sich nicht verkleinern lässt, wird abgelehnt; ein
+ * kleineres bleibt, wie es ist. Alles andere über ANHANG_MAX wird abgelehnt, ohne es zu lesen. Fehlt `verkleinere`, bleibt alles,
+ * wie es ist. `verb` ist „wähle“ oder „teile“ im Satz.
+ * Ergebnis: { ok: true, name, typ, groesse, daten (Base64), vorher (nur nach dem Neukodieren) } oder { ok: false, fehler }.
+ */
+export async function bereiteVor(datei, verkleinere = null, verb = 'wähle') {
+  const { name, typ } = datei;
+  const gross = groessenWort(datei.groesse);
+  const satz = (s) => `${name} ist ${gross} groß${s}`;
+  const ueber = datei.groesse > ANHANG_MAX;
+  const lesen = async () => bytesZuBasis(datei.bytes ?? new Uint8Array(await datei.blob.arrayBuffer()));
+  if (ueber && (!verkleinerbar(name, typ) || !verkleinere)) {
+    const r = nimmAuf([], { name, groesse: datei.groesse, typ, daten: '' });
+    return { ok: false, fehler: r.fehler.replace('wähle sie noch einmal', `${verb} sie noch einmal`) };
+  }
+  if (ueber && datei.groesse > BILD_QUELLE_MAX) return { ok: false, fehler: satz(`; Bilder verkleinert die App bis ${groessenWort(BILD_QUELLE_MAX)}. Verkleinere das Bild und ${verb} es noch einmal.`) };
+  if (!verkleinere || !wirdUmkodiert(name, typ, datei.groesse) || datei.groesse > BILD_QUELLE_MAX) return { ok: true, name, typ, groesse: datei.groesse, daten: await lesen() };
+  let v;
+  try { v = await verkleinere(datei.blob ?? new Blob([datei.bytes], { type: typ || typVon(name) }), name); } catch { v = { ok: false, grund: 'nicht-lesbar' }; }
+  if (!v.ok) {
+    // Ein Foto bis 1 MiB, das sich nicht neu kodieren lässt (etwa HEIC ohne Decoder), geht so, wie es ist
+    if (!ueber) return { ok: true, name, typ, groesse: datei.groesse, daten: await lesen() };
+    return { ok: false, fehler: satz(v.grund === 'zu-gross' ? `, lässt sich aber nicht auf ${groessenWort(ANHANG_MAX)} verkleinern. ${verb === 'teile' ? 'Teile' : 'Wähle'} eine kleinere Fassung.`
+      : `, und die App kann es nicht verkleinern. Erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere das Bild und ${verb} es noch einmal.`) };
+  }
+  if (!ueber && v.blob.size >= datei.groesse) return { ok: true, name, typ, groesse: datei.groesse, daten: await lesen() };
+  const bytes = new Uint8Array(await v.blob.arrayBuffer());
+  return { ok: true, name: v.name, typ: v.typ, groesse: bytes.length, daten: bytesZuBasis(bytes), vorher: datei.groesse };
 }
 
 /** So viele Dateien nimmt Erfassen aus einem Teilen der Hülle (DATEIEN_MAX in Teilen.kt). */
@@ -159,10 +222,11 @@ export const ANHAENGE_TEILEN_MAX = 10;
 
 /**
  * Nimmt die Dateien aus der Nachricht `teilen` der Hülle in die Liste auf, über dieselbe Prüfung wie Datei anhängen (nimmAuf).
- * `dateien` sind { name, typ, groesse, daten } oder { name, typ, groesse, fehler } (Protokoll im Kopf von huelle.js), `mehr`
- * die Zahl der Dateien, die die Hülle über ihrer Grenze ausließ. Ergebnis: { liste, fehler: [Satz], hinweise: [Satz] }.
+ * `dateien` sind { name, typ, groesse, daten } oder { name, typ, groesse, fehler, grenze } (Protokoll im Kopf von huelle.js),
+ * `mehr` die Zahl der Dateien, die die Hülle über ihrer Grenze ausließ. Ein Bild über ANHANG_MAX verkleinert `verkleinere`
+ * (bereiteVor). Ergebnis: { liste, fehler: [Satz], hinweise: [Satz] }.
  */
-export function teileAuf(liste, dateien, mehr = 0) {
+export async function teileAuf(liste, dateien, mehr = 0, verkleinere = null) {
   const fehler = [];
   const hinweise = [];
   const alle = Array.isArray(dateien) ? dateien : [];
@@ -172,8 +236,10 @@ export function teileAuf(liste, dateien, mehr = 0) {
     const name = typeof d.name === 'string' && d.name !== '' ? saeubereName(d.name) : 'Datei';
     const bekannt = typeof d.groesse === 'number' && d.groesse >= 0;
     if (d.fehler === 'zu-gross') {
-      fehler.push(bekannt ? `${name} ist ${groessenWort(d.groesse)} groß; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und teile sie noch einmal.`
-        : `${name} ist größer als ${groessenWort(ANHANG_MAX)}; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und teile sie noch einmal.`);
+      const bild = d.grenze > ANHANG_MAX;
+      const wie = bekannt ? `${name} ist ${groessenWort(d.groesse)} groß` : `${name} ist größer als ${groessenWort(bild ? d.grenze : ANHANG_MAX)}`;
+      fehler.push(bild ? `${wie}; Bilder verkleinert die App bis ${groessenWort(d.grenze)}. Verkleinere das Bild und teile es noch einmal.`
+        : `${wie}; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und teile sie noch einmal.`);
       continue;
     }
     if (d.fehler === 'kein-zugriff') { fehler.push('Eine Datei ließ sich nicht öffnen, weil die andere App sie nicht freigab. Teile sie noch einmal.'); continue; }
@@ -181,7 +247,10 @@ export function teileAuf(liste, dateien, mehr = 0) {
     let bytes;
     try { bytes = basisZuBytes(d.daten); } catch { fehler.push(`${name} lässt sich nicht lesen. Teile sie noch einmal.`); continue; }
     const typ = typeof d.typ === 'string' && /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i.test(d.typ) && d.typ !== 'application/octet-stream' ? d.typ.toLowerCase() : '';
-    const r = nimmAuf(aus, { name, groesse: bytes.length, typ, daten: bytesZuBasis(bytes) });
+    let b;
+    try { b = await bereiteVor({ name, typ: typ || typVon(name), groesse: bytes.length, bytes }, verkleinere, 'teile'); } catch { b = { ok: false, fehler: `${name} lässt sich nicht lesen. Teile sie noch einmal.` }; }
+    if (!b.ok) { fehler.push(b.fehler); continue; }
+    const r = nimmAuf(aus, { name: b.name, groesse: b.groesse, typ: b.typ, daten: b.daten, vorher: b.vorher });
     if (r.ok) { aus = r.liste; if (r.hinweis) hinweise.push(r.hinweis); } else fehler.push(r.fehler.replace('wähle sie noch einmal', 'teile sie noch einmal'));
   }
   const ausgelassen = Math.max(0, alle.length - ANHAENGE_TEILEN_MAX) + (Number.isInteger(mehr) && mehr > 0 ? mehr : 0);

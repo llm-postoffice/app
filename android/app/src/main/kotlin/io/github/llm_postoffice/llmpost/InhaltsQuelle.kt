@@ -14,12 +14,13 @@ class InhaltsQuelle(private val aufloeser: ContentResolver) : Quelle {
         return i to c
     }
 
+    // Eine Spalte, die fehlt, leer ist oder sich nicht lesen lässt (manche Apps liefern die Größe als Text oder gar nicht), ist unbekannt
     override fun name(adresse: String): String? = abfrage(adresse, OpenableColumns.DISPLAY_NAME)?.let { (i, c) ->
-        c.use { if (it.isNull(i)) null else it.getString(i) }
+        c.use { try { if (it.isNull(i)) null else it.getString(i) } catch (_: RuntimeException) { null } }
     }
 
     override fun groesse(adresse: String): Long? = abfrage(adresse, OpenableColumns.SIZE)?.let { (i, c) ->
-        c.use { if (it.isNull(i)) null else it.getLong(i) }
+        c.use { try { if (it.isNull(i)) null else it.getLong(i) } catch (_: RuntimeException) { null } }
     }
 
     override fun typ(adresse: String): String? = try { aufloeser.getType(Uri.parse(adresse)) } catch (_: Exception) { null }

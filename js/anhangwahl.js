@@ -1,10 +1,13 @@
 // Dateien anhängen: der Knopf „Datei anhängen“ öffnet die Dateiauswahl des Systems (in der Android-Hülle über deren
 // Dateiauswahl), darunter steht die Liste der gewählten Dateien mit Größe und Entfernen. Die Dateien liegen als Base64 im
 // Entwurf `anhaenge/SCHLÜSSEL` auf dem Gerät, damit Zurück, Neuladen und das Beenden der App sie nicht kosten. Prüfen und
-// Annehmen macht anhaenge.js (nimmAuf): zu groß, doppelter Name, Hinweis über 300 KiB.
+// Annehmen macht anhaenge.js (nimmAuf): zu groß, doppelter Name, Hinweis über 300 KiB; ein Foto kodiert
+// verkleinern.js (bereiteVor) immer neu, ein PNG über 1 MiB auch. Was beim Teilen aus einer anderen App abgelehnt wurde, steht im Entwurf (`fehler`, `hinweise`)
+// und oben in der Ansicht als Band, bis der Nutzer es mit Verstanden schließt; ein neues Zeichnen der Ansicht ändert daran nichts.
 import { el } from './dom.js';
-import { ANHANG_MAX, bytesZuBasis, groessenWort, nimmAuf } from './anhaenge.js';
-import { knopf } from './karten.js';
+import { ANHANG_MAX, BILD_QUELLE_MAX, bereiteVor, groessenWort, nimmAuf, wirdUmkodiert } from './anhaenge.js';
+import { verkleinereBild } from './verkleinern.js';
+import { band, knopf } from './karten.js';
 import { liesEntwurf, speichereEntwurf } from './entwuerfe.js';
 
 /** Der Schlüssel des Entwurfs der Anhänge zu einem Entwurf. */
@@ -12,32 +15,43 @@ export const anhangSchluessel = (schluesselDesEntwurfs) => `anhaenge/${schluesse
 
 /**
  * Baut den Anhangsteil eines Formulars. `schluessel` ist der Schlüssel des Texteentwurfs der Ansicht; `gesperrt` sperrt den
- * Knopf (keine Schreibschicht). Ergebnis: `platz` (in die Ansicht setzen), `liste()` (die Anhänge für die Schreibschicht),
- * `leer()`.
+ * Knopf (keine Schreibschicht); `verkleinere` verkleinert zu große Bilder. Ergebnis: `platz` (in die Ansicht setzen), `band` (das
+ * Band zum Teilen, gehört an den Anfang der Ansicht und ist leer, wenn es nichts zu sagen gibt), `liste()` (die Anhänge für die
+ * Schreibschicht), `leer()`.
  */
-export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null } = {}) {
+export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null, verkleinere = verkleinereBild } = {}) {
   const key = anhangSchluessel(schluessel);
   const gemerkt = await liesEntwurf(k.db, key);
   let liste = gemerkt?.anhaenge ?? [];
-  // Was beim Teilen aus einer anderen App abgelehnt wurde (huelle.js, mitGeteiltenDateien), steht einmal als Satz da
-  const geteilt = typeof gemerkt?.meldung === 'string' && gemerkt.meldung !== '' ? gemerkt : null;
-  const meldung = el('p', { class: geteilt?.meldungFehler ? 'neben fehler' : 'neben', role: 'status' }, geteilt?.meldung ?? `Bis ${groessenWort(ANHANG_MAX)} je Datei.`);
+  const saetze = (x) => (Array.isArray(x) ? x.filter((t) => typeof t === 'string' && t !== '') : []);
+  let fehler = saetze(gemerkt?.fehler);
+  let hinweise = saetze(gemerkt?.hinweise);
+  const standard = `Bis ${groessenWort(ANHANG_MAX)} je Datei; Fotos verkleinert die App.`;
+  const meldung = el('p', { class: 'neben', role: 'status' }, standard);
+  const teilenBand = el('div', { class: 'teilen-hinweis' });
   const zeilen = el('ul', { class: 'gewaehlt' });
   const eingabe = el('input', { type: 'file', multiple: true, hidden: true, tabindex: '-1', 'aria-hidden': 'true' });
-  const sichern = () => speichereEntwurf(k.db, key, { anhaenge: liste }, liste.length === 0, k.jetzt());
+  const sichern = () => speichereEntwurf(k.db, key, { anhaenge: liste, fehler, hinweise }, liste.length === 0 && fehler.length === 0 && hinweise.length === 0, k.jetzt());
+
+  const zeichneBand = () => {
+    if (fehler.length === 0 && hinweise.length === 0) { teilenBand.replaceChildren(); return; }
+    const verstanden = knopf('Verstanden', { klasse: 'text', an: () => { fehler = []; hinweise = []; zeichneBand(); sichern(); } });
+    teilenBand.replaceChildren(band({ ton: fehler.length ? 'fehler' : 'info', symbol: fehler.length ? 'error-f' : 'info-f',
+      titel: fehler.length ? 'Beim Teilen nicht übernommen' : 'Zu den geteilten Dateien', satz: [...fehler, ...hinweise], knoepfe: [verstanden] }));
+  };
 
   const zeichne = () => {
     zeilen.replaceChildren(...liste.map((a) => {
       const weg = knopf('Entfernen', { klasse: 'text', an: () => { liste = liste.filter((x) => x !== a); meldung.textContent = `${a.name} ist entfernt.`; zeichne(); sichern(); } });
       weg.setAttribute('aria-label', `${a.name} entfernen`);
-      return el('li', {}, el('span', { class: 'gewaehlt-name' }, el('b', {}, a.name), el('span', {}, groessenWort(a.groesse))), weg);
+      return el('li', {}, el('span', { class: 'gewaehlt-name' }, el('b', {}, a.name), el('span', {}, a.vorher ? `verkleinert von ${groessenWort(a.vorher)} auf ${groessenWort(a.groesse)}` : groessenWort(a.groesse))), weg);
     }));
     nach?.(liste);
   };
 
   eingabe.addEventListener('change', async () => {
-    const hinweise = [];
-    const fehler = [];
+    const hinweise_ = [];
+    const fehler_ = [];
     const gewaehlt = [...(eingabe.files ?? [])];
     // Sofort sagen, dass geladen wird: das Lesen und Umwandeln großer Dateien dauert
     if (gewaehlt.length) {
@@ -45,15 +59,16 @@ export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null 
       meldung.setAttribute('class', 'neben');
     }
     for (const f of gewaehlt) {
-      if (f.size > ANHANG_MAX) { fehler.push(`${f.name} ist ${groessenWort(f.size)} groß; erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere die Datei und wähle sie noch einmal.`); continue; }
-      let daten;
-      try { daten = bytesZuBasis(new Uint8Array(await f.arrayBuffer())); } catch { fehler.push(`${f.name} lässt sich nicht lesen. Wähle sie noch einmal.`); continue; }
-      const r = nimmAuf(liste, { name: f.name, groesse: f.size, typ: f.type, daten });
-      if (r.ok) { liste = r.liste; if (r.hinweis) hinweise.push(r.hinweis); } else fehler.push(r.fehler);
+      if (f.size <= BILD_QUELLE_MAX && wirdUmkodiert(f.name, f.type, f.size)) { meldung.textContent = `${f.name} wird verkleinert …`; meldung.setAttribute('class', 'neben'); }
+      let b;
+      try { b = await bereiteVor({ name: f.name, typ: f.type, groesse: f.size, blob: f }, verkleinere, 'wähle'); } catch { fehler_.push(`${f.name} lässt sich nicht lesen. Wähle sie noch einmal.`); continue; }
+      if (!b.ok) { fehler_.push(b.fehler); continue; }
+      const r = nimmAuf(liste, { name: b.name, groesse: b.groesse, typ: b.typ, daten: b.daten, vorher: b.vorher });
+      if (r.ok) { liste = r.liste; if (r.hinweis) hinweise_.push(r.hinweis); } else fehler_.push(r.fehler);
     }
     eingabe.value = '';
-    meldung.textContent = [...fehler, ...hinweise].join(' ') || `Bis ${groessenWort(ANHANG_MAX)} je Datei.`;
-    meldung.setAttribute('class', fehler.length ? 'neben fehler' : 'neben');
+    meldung.textContent = [...fehler_, ...hinweise_].join(' ') || standard;
+    meldung.setAttribute('class', fehler_.length ? 'neben fehler' : 'neben');
     zeichne();
     sichern();
   });
@@ -61,10 +76,6 @@ export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null 
   const waehlen = knopf('Datei anhängen', { klasse: 'tonal', symbol: 'attach_file', gesperrt, an: () => eingabe.click() });
   const platz = el('div', { class: 'anhangwahl' }, waehlen, eingabe, zeilen, meldung);
   zeichne();
-  if (geteilt) {
-    sichern();   // die Meldung kommt nicht wieder, die Dateien bleiben
-    // Ein Satz zu einer abgelehnten Datei steht sonst unter dem Rand des Bildschirms; die Ansicht setzt `platz` erst nach diesem Aufruf ein
-    if (geteilt.meldungFehler) setTimeout(() => platz.scrollIntoView?.({ block: 'center' }), 150);
-  }
-  return { platz, liste: () => liste, leer: () => { liste = []; zeichne(); return sichern(); } };
+  zeichneBand();
+  return { band: teilenBand, platz, liste: () => liste, leer: () => { liste = []; fehler = []; hinweise = []; zeichneBand(); zeichne(); return sichern(); } };
 }

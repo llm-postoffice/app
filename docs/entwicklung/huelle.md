@@ -37,10 +37,15 @@ Werkzeuge liegen unter `$XDG_DATA_HOME` (ohne: `~/.local/share`): `android-sdk` 
   (sonst die ClipData) und die Freigabe des Intents (`FLAG_GRANT_READ_URI_PERMISSION`); `Ziel.kt` macht daraus ein `Ziel.Teilen` mit
   den Adressen. Gelesen wird abseits der Oberfläche über `InhaltsQuelle.kt` (ContentResolver: `OpenableColumns`, `getType`,
   `openInputStream`), die Regeln stehen rein in `Teilen.kt` (`ZielTest`, `TeilenTest`): nur `content://` mit Freigabe, höchstens 10
-  Dateien, die Größe vorab und noch einmal beim Lesen auf 1 MiB begrenzt; eine größere Datei bleibt ohne Inhalt, nur Name und
-  Größe gehen an die Seite. Die Nachricht `teilen` trägt `dateien` und `mehr` (Protokoll im Kopf von `js/huelle.js`); die Seite nimmt
-  sie über `teileAuf` in `js/anhaenge.js` in die Anhangliste von Erfassen auf, mit denselben Prüfungen wie Datei anhängen. Nicht
-  auf dem Handy belegt: wie sich Apps mit nur `ClipData` oder ohne Freigabe verhalten; die Brücke prüft der Wegetest mit einer Attrappe.
+  Dateien, die Größe vorab und noch einmal beim Lesen begrenzt: auf 1 MiB, für Bilder (JPEG, PNG, WebP, HEIC) auf 20 MiB; eine
+  größere Datei bleibt ohne Inhalt, nur Name, Größe und Grenze gehen an die Seite. Ein Teilen kommt als mehrere Nachrichten `teilen`
+  (Protokoll im Kopf von `js/huelle.js`): erst Text und Abgelehntes, dann je Datei eine, und die nächste Datei liest die Hülle erst,
+  wenn die Seite die vorige mit `weiter` quittiert (`nachrichten` in `Teilen.kt`, `HauptActivity.kt`); so liegt bei 20 MiB nie mehr als
+  eine Datei im Speicher (Base64 über die Brücke, dazu `largeHeap` im Manifest). Die Seite nimmt sie über `teileAuf` in
+  `js/anhaenge.js` in die Anhangliste von Erfassen auf, mit denselben Prüfungen wie Datei anhängen; Fotos kodiert
+  `js/verkleinern.js` immer neu, ein PNG nur über 1 MiB (`createImageBitmap`, `OffscreenCanvas`, JPEG oder WebP, Kante 2560 bis 1280, Qualität 0,85 bis 0,7). Was nicht
+  übernommen wurde, steht als Band oben in Erfassen, bis der Nutzer **Verstanden** tippt. Nicht auf dem Handy belegt: wie sich Apps
+  mit nur `ClipData` oder ohne Freigabe verhalten, der Speicherbedarf bei 20 MiB; die Brücke prüft der Wegetest mit einer Attrappe.
 - Ändert sich eine Abhängigkeit (Apache-2.0), ändert sich `android/app/BIBLIOTHEKEN.txt` mit.
 
 ## Release

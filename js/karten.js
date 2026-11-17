@@ -88,11 +88,11 @@ export function kopfkarte(m, { rangText = null, weitere = [] } = {}) {
     ...weitere);
 }
 
-/** Band mit Symbol, Titel, Satz und Knöpfen; ton ist ruhig, ok, info, warn oder fehler. */
+/** Band mit Symbol, Titel, Satz (oder eine Liste von Sätzen, je Satz ein Absatz) und Knöpfen; ton ist ruhig, ok, info, warn oder fehler. */
 export function band({ ton = 'info', symbol, titel = null, satz, knoepfe = [], alarm = false }) {
   return el('div', { class: `band ${ton}`, role: alarm || ton === 'warn' || ton === 'fehler' ? 'alert' : 'status' },
     ico(symbol),
-    el('div', {}, titel ? el('strong', {}, titel) : null, el('p', {}, satz), knoepfe.length ? el('div', { class: 'zeilenknoepfe' }, knoepfe) : null));
+    el('div', {}, titel ? el('strong', {}, titel) : null, ...(Array.isArray(satz) ? satz : [satz]).map((t) => el('p', {}, t)), knoepfe.length ? el('div', { class: 'zeilenknoepfe' }, knoepfe) : null));
 }
 
 /** Knopf (button) mit Klasse gefuellt, tonal oder text; `symbol` setzt ein Symbol vor das Wort. */

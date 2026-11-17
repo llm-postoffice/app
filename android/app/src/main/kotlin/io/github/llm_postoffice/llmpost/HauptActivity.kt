@@ -35,6 +35,7 @@ class HauptActivity : Activity() {
     private val tresor by lazy { Tresor(File(noBackupFilesDir, "token.bin")) }
     private var antwort: JavaScriptReplyProxy? = null
     private var anstehend: Ziel? = null
+    private var lieferung: Iterator<String>? = null   // die noch nicht gelesenen Nachrichten eines Teilens (Teilen.kt: nachrichten)
     private var gesendeteFarben: String? = null
     private var speichern: Offen? = null
     private var dateiAuswahl: ValueCallback<Array<Uri>>? = null
@@ -129,20 +130,23 @@ class HauptActivity : Activity() {
         return (0 until klammer.itemCount).mapNotNull { klammer.getItemAt(it).uri?.toString() }
     }
 
-    // Liest die Dateien eines Teilens abseits der Oberfläche und liefert dann; die Freigabe des Intents gilt, solange die Activity lebt
+    // Ein Teilen kommt als mehrere Nachrichten, die Datei für Datei gelesen werden: die erste jetzt (oder mit `bereit`, wenn die Seite
+    // noch nicht läuft), jede weitere, wenn die Seite die vorige mit `weiter` quittiert. So liegt nie mehr als eine große Datei im Speicher.
     private fun liefere(ziel: Ziel.Teilen) {
-        if (ziel.quellen.isEmpty()) { zustelle(ziel); return }
-        val quelle = InhaltsQuelle(contentResolver)
-        arbeiter.execute {
-            val fertig = mitDateien(ziel, quelle)
-            runOnUiThread { if (!isDestroyed) zustelle(fertig) }
-        }
+        lieferung = nachrichten(ziel, InhaltsQuelle(contentResolver)).iterator()
+        naechste()
     }
 
-    // Auf der Oberfläche: an die Seite, sobald sie bereit ist (bereit holt `anstehend` nach)
-    private fun zustelle(ziel: Ziel.Teilen) {
-        val p = antwort
-        if (p != null) p.postMessage(nachrichtVon(ziel)) else anstehend = ziel
+    private fun naechste() {
+        val l = lieferung ?: return
+        if (antwort == null) return
+        arbeiter.execute {
+            val n = try { if (l.hasNext()) l.next() else null } catch (_: Exception) { null } catch (_: OutOfMemoryError) { null }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                if (n != null) antwort?.postMessage(n) else if (lieferung === l) lieferung = null
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -163,6 +167,10 @@ class HauptActivity : Activity() {
                 sendeFarben()
                 anstehend?.let { proxy.postMessage(nachrichtVon(it)) }
                 anstehend = null
+                naechste()
+            }
+            "weiter" -> {
+                naechste()
             }
             "token-holen" -> arbeiter.execute {
                 val t = tresor.lies()

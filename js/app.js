@@ -13,6 +13,7 @@ import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
 import { ladeWelt, ortVon } from './welt.js';
 import { adresseAusHuelle, mitGeteiltem, mitGeteiltenDateien } from './huelle.js';
+import { verkleinereBild } from './verkleinern.js';
 import { systemfarbenVon } from './farben.js';
 import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
 import { anhangSchluessel } from './anhangwahl.js';
@@ -77,17 +78,24 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   // Die Systemfarben (Material You) setzen die Rollen von app.css auf :root (farben.js); ein weiterer Wert der Hülle bekommt hier
   // einen weiteren Empfänger.
   if (huelle) {
+    let teilenKette = Promise.resolve();
     const farben = systemfarbenVon();
     huelle.verbinde({
       farben: (m) => { farben?.uebernimm(m); },
       oeffnen: (m) => { if (navigationOrt().ansicht !== 'anmelden') gehe(adresseAusHuelle(m.adresse)); },
-      teilen: async (m) => {
-        const alt = (await liesEntwurf(db, schluessel.erfassen)) ?? {};
-        const dateien = mitGeteiltenDateien(await liesEntwurf(db, anhangSchluessel(schluessel.erfassen)), m);
-        if (!dateien || m.titel || m.text) await speichereEntwurf(db, schluessel.erfassen, mitGeteiltem(alt, { titel: m.titel, text: m.text }), false, jetzt());
-        if (dateien) await speichereEntwurf(db, anhangSchluessel(schluessel.erfassen), dateien, false, jetzt());
-        const hier = navigationOrt().ansicht;
-        if (hier === 'erfassen') k.neuZeichnen(); else if (hier !== 'anmelden') gehe('#erfassen');
+      // Ein Teilen kommt als mehrere Nachrichten (huelle.js); sie laufen nacheinander, und jede ist erst mit `weiter` quittiert, wenn sie im Entwurf liegt
+      teilen: (m) => {
+        teilenKette = teilenKette.then(async () => {
+          try {
+            const alt = (await liesEntwurf(db, schluessel.erfassen)) ?? {};
+            const dateien = await mitGeteiltenDateien(await liesEntwurf(db, anhangSchluessel(schluessel.erfassen)), m, verkleinereBild);
+            if (!dateien || m.titel || m.text) await speichereEntwurf(db, schluessel.erfassen, mitGeteiltem(alt, { titel: m.titel, text: m.text }), false, jetzt());
+            if (dateien) await speichereEntwurf(db, anhangSchluessel(schluessel.erfassen), dateien, false, jetzt());
+            const hier = navigationOrt().ansicht;
+            if (hier === 'erfassen') k.neuZeichnen(); else if (hier !== 'anmelden') gehe('#erfassen');
+          } catch { /* die Hülle wartet auf weiter, auch wenn diese Nachricht scheiterte */ }
+          huelle.weiter();
+        });
       },
     });
     huelle.bereit();

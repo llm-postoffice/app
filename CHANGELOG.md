@@ -1,5 +1,12 @@
 # Änderungen
 
+## 20261117.12 (2026-11-17)
+
+Fotos werden vor dem Senden verkleinert (beim Teilen und bei **Datei anhängen**, bis 20 MiB); die Zeile nennt „verkleinert von … auf …“. Bildschirmfotos (PNG bis 1 MiB) bleiben unverändert. Ein verkleinertes Foto trägt keine Ortsangabe mehr.
+
+- Was beim Teilen nicht übernommen wurde, steht oben in **Erfassen** in einem Band und bleibt dort, bis du **Verstanden** tippst. Es ging vorher beim ersten neuen Zeichnen verloren und stand unter dem Bildschirmrand.
+- Andere Dateien über 1 MiB lehnt die App weiter ab, mit Name, Größe und Grund.
+
 ## 20261117.11 (2026-11-17)
 
 Ohne Netz sagt die App nach dem Ende von **Rückgängig** sofort, dass die Antwort auf Netz wartet; vorher kam der Satz mitunter erst Sekunden später.

@@ -1005,15 +1005,80 @@ try {
   const geteilterEntwurf = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'erfassen'); db.schliesse(); return e; })()`);
   melde(geteilt && geteilterEntwurf?.titel === 'Geteilte Seite' && geteilterEntwurf?.text === 'Text aus einer anderen App',
     'geteilter Text öffnet Erfassen mit Titel und Text, beides steht im Entwurf', `${await p.stand()}, ${JSON.stringify(geteilterEntwurf)}`);
-  // Dateien aus dem Teilen: eine kommt an, eine war zu groß (nur Name und Größe), ein Duplikat des Namens wird abgelehnt
+  // Dateien aus dem Teilen: eine kommt an, eine war zu groß (nur Name und Größe); der Satz steht oben in Erfassen, ohne Scrollen
+  const bandText = `(document.querySelector('.teilen-hinweis .band')?.textContent ?? '')`;
+  const bandSichtbar = `(() => { const r = document.querySelector('.teilen-hinweis .band')?.getBoundingClientRect(); return !!r && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight && scrollY === 0; })()`;
+  const vorWeiter = (await p.werte('window.__huelle.gesendet')).filter((n) => n.art === 'weiter').length;
   await p.werte(`__huelleSchicke({ art: 'teilen', titel: '', text: '', dateien: [{ name: 'Foto.jpg', typ: 'image/jpeg', groesse: 3, daten: 'AQID' },
-    { name: 'bericht.pdf', typ: 'application/pdf', groesse: 3000000, fehler: 'zu-gross' }], mehr: 1 })`);
-  const mitDateien = await p.warte(`document.querySelector('.gewaehlt li')?.textContent.startsWith('Foto.jpg') && document.querySelector('.anhangwahl [role=status]')?.textContent.includes('bericht.pdf ist 2,9 MiB groß')`, 4000);
+    { name: 'bericht.pdf', typ: 'application/pdf', groesse: 3000000, fehler: 'zu-gross', grenze: 1048576 }], mehr: 1 })`);
+  const mitDateien = await p.warte(`document.querySelector('.gewaehlt li')?.textContent.startsWith('Foto.jpg') && ${bandText}.includes('bericht.pdf ist 2,9 MiB groß')`, 4000);
   const dateiEntwurf = await bis(() => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse(); return e; })()`), (e) => e?.anhaenge?.length === 1);
   melde(mitDateien && dateiEntwurf?.anhaenge?.length === 1 && dateiEntwurf.anhaenge[0].name === 'Foto.jpg' && dateiEntwurf.anhaenge[0].typ === 'image/jpeg' && dateiEntwurf.anhaenge[0].daten === 'AQID',
-    'geteilte Dateien hängen in Erfassen an, eine zu große und die über der Grenze nennt ein Satz, der Titel und Text bleiben', `${await p.stand()}, ${JSON.stringify(dateiEntwurf)}`);
-  melde(await p.warte(`document.querySelector('[name=titel]')?.value === 'Geteilte Seite' && document.querySelector('.anhangwahl [role=status]')?.textContent.includes('1 weitere Datei ist nicht dabei')`),
-    'Titel und Text des früheren Teilens bleiben, der Satz nennt auch die Datei über der Grenze', await p.werte(`document.querySelector('.anhangwahl [role=status]')?.textContent`));
+    'geteilte Dateien hängen in Erfassen an, eine zu große nennt ein Band mit Name und Größe, der Titel und Text bleiben', `${await p.stand()}, ${JSON.stringify(dateiEntwurf)}`);
+  melde(await p.warte(bandSichtbar, 3000), 'das Band zum Teilen steht nach dem Öffnen von Erfassen ohne Scrollen im Bild', `${await p.werte(bandText)}`);
+  melde(await p.warte(`document.querySelector('[name=titel]')?.value === 'Geteilte Seite' && ${bandText}.includes('1 weitere Datei ist nicht dabei')`),
+    'Titel und Text des früheren Teilens bleiben, das Band nennt auch die Datei über der Grenze', await p.werte(bandText));
+  melde((await p.werte('window.__huelle.gesendet')).filter((n) => n.art === 'weiter').length > vorWeiter, 'die Seite quittiert jede Nachricht teilen mit weiter', 'kein weiter gesendet');
+  // Ein neues Zeichnen (Wechsel der Ansicht, Abgleich) lässt das Band stehen; Verstanden schließt es, die Datei bleibt
+  await p.navigiere('#mehr');
+  await p.navigiere('#erfassen');
+  melde(await p.warte(`${bandText}.includes('bericht.pdf')`, 3000) && await p.werte(bandSichtbar), 'nach einem neuen Zeichnen von Erfassen steht das Band noch da', await p.werte(bandText));
+  await p.tippe('.teilen-hinweis .band button');
+  melde(await p.warte(`!document.querySelector('.teilen-hinweis .band') && document.querySelector('.gewaehlt li')?.textContent.startsWith('Foto.jpg')`, 3000), 'Verstanden schließt das Band, die Datei bleibt angehängt', await p.stand());
+  // Ein Foto aus der Galerie: im Browser erzeugt (Verlauf mit Rauschen, 4000 × 3000, JPEG), über der Grenze von 1 MiB; die Seite verkleinert es
+  const foto = await p.werte(`(async () => {
+    const c = new OffscreenCanvas(4000, 3000); const z = c.getContext('2d');
+    const g = z.createLinearGradient(0, 0, 4000, 3000); g.addColorStop(0, '#1b3a5c'); g.addColorStop(0.5, '#d9a441'); g.addColorStop(1, '#3d7a4a');
+    z.fillStyle = g; z.fillRect(0, 0, 4000, 3000);
+    const bild = z.getImageData(0, 0, 4000, 3000); let x = 12345;
+    for (let i = 0; i < bild.data.length; i += 4) { x = (x * 1103515245 + 12345) & 0x7fffffff; const r = ((x >> 16) % 31) - 15; bild.data[i] += r; bild.data[i + 1] += r; bild.data[i + 2] += r; }
+    z.putImageData(bild, 0, 0);
+    const blob = await c.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+    const b64 = await new Promise((ok) => { const f = new FileReader(); f.onload = () => ok(f.result.split(',')[1]); f.readAsDataURL(blob); });
+    window.__foto = { b64, groesse: blob.size };
+    return blob.size; })()`);
+  await p.werte(`__huelleSchicke({ art: 'teilen', titel: '', text: '', dateien: [{ name: 'IMG_20261117_101530.jpg', typ: 'image/jpeg', groesse: __foto.groesse, daten: __foto.b64 }] })`);
+  const verkleinert = await p.warte(`[...document.querySelectorAll('.gewaehlt li')].map((l) => l.textContent).join(' | ').includes('IMG_20261117_101530')`, 20000);
+  const fotoEntwurf = await bis(() => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse();
+    const a = e?.anhaenge?.find((x) => x.name.startsWith('IMG_20261117_101530')); if (!a) return null;
+    const bytes = Uint8Array.from(atob(a.daten), (ch) => ch.charCodeAt(0)); const bild = await createImageBitmap(new Blob([bytes], { type: a.typ }));
+    return { name: a.name, typ: a.typ, groesse: a.groesse, vorher: a.vorher, echt: bytes.length, breite: bild.width, hoehe: bild.height, zeile: [...document.querySelectorAll('.gewaehlt li')].map((l) => l.textContent).join(' | ') }; })()`), (e) => e !== null, 60000);
+  console.log(`      Testfoto ${(foto / 1048576).toFixed(2).replace('.', ',')} MiB (${foto} B) wird zu ${fotoEntwurf?.name}: ${fotoEntwurf?.echt} B, ${fotoEntwurf?.breite} × ${fotoEntwurf?.hoehe}`);
+  melde(verkleinert && foto > 3 * 1048576 && foto < 5.5 * 1048576 && fotoEntwurf && fotoEntwurf.echt <= 1048576 && fotoEntwurf.echt === fotoEntwurf.groesse && fotoEntwurf.vorher === foto && Math.max(fotoEntwurf.breite, fotoEntwurf.hoehe) <= 2560
+    && /\.(jpg|webp)$/.test(fotoEntwurf.name) && /^image\/(jpeg|webp)$/.test(fotoEntwurf.typ) && fotoEntwurf.zeile.includes('verkleinert von'),
+    'ein Foto über 1 MiB aus dem Teilen wird auf höchstens 1 MiB verkleinert, mit passender Endung, Typ und der Zeile verkleinert von … auf …', JSON.stringify(fotoEntwurf));
+  // ein Bild über 20 MiB und ein zweites, kleines Teilen zugleich: das Band nennt die Grenze für Bilder, das kleine hängt an
+  await p.werte(`__huelleSchicke({ art: 'teilen', titel: '', text: '', dateien: [{ name: 'riesig.jpg', typ: 'image/jpeg', groesse: 26214400, fehler: 'zu-gross', grenze: 20971520 }, { name: 'notiz.txt', typ: 'text/plain', groesse: 2, daten: 'aGk=' }] })`);
+  melde(await p.warte(`${bandText}.includes('riesig.jpg ist 25,0 MiB groß; Bilder verkleinert die App bis 20,0 MiB') && [...document.querySelectorAll('.gewaehlt li')].some((l) => l.textContent.startsWith('notiz.txt'))`, 8000),
+    'ein Bild über 20 MiB nennt die Grenze für Bilder im Band, die übrigen Dateien hängen trotzdem an', await p.werte(bandText));
+  // Ein kleines Foto (unter 1 MiB) wird auch neu kodiert und wird kleiner; ein Bildschirmfoto (PNG bis 1 MiB) bleibt Byte für Byte, wie es ist
+  const kleine = await p.werte(`(async () => {
+    const mal = async (b, h, typ, q, rausch) => {
+      const c = new OffscreenCanvas(b, h); const z = c.getContext('2d'); const g = z.createLinearGradient(0, 0, b, h); g.addColorStop(0, '#223344'); g.addColorStop(1, '#ccbb88'); z.fillStyle = g; z.fillRect(0, 0, b, h);
+      if (rausch) { const d = z.getImageData(0, 0, b, h); let x = 99; for (let i = 0; i < d.data.length; i += 4) { x = (x * 1103515245 + 12345) & 0x7fffffff; const r = ((x >> 16) % 7) - 3; d.data[i] += r; d.data[i + 1] += r; d.data[i + 2] += r; } z.putImageData(d, 0, 0); }
+      z.fillStyle = '#000'; z.font = '24px sans-serif'; z.fillText('Beleg 4711', 20, 40);
+      const blob = await c.convertToBlob({ type: typ, quality: q });
+      return new Promise((ok) => { const f = new FileReader(); f.onload = () => ok({ b64: f.result.split(',')[1], groesse: blob.size }); f.readAsDataURL(blob); });
+    };
+    window.__klein = { foto: await mal(1280, 960, 'image/jpeg', 0.98, true), png: await mal(400, 300, 'image/png', 1, false) };
+    return [__klein.foto.groesse, __klein.png.groesse]; })()`);
+  await p.werte(`__huelleSchicke({ art: 'teilen', titel: '', text: '', dateien: [{ name: 'kamera-klein.jpg', typ: 'image/jpeg', groesse: __klein.foto.groesse, daten: __klein.foto.b64 }, { name: 'beleg.png', typ: 'image/png', groesse: __klein.png.groesse, daten: __klein.png.b64 }] })`);
+  const kleinListe = await bis(() => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse();
+    const f = e?.anhaenge?.find((a) => a.name.startsWith('kamera-klein')); const n = e?.anhaenge?.find((a) => a.name === 'beleg.png'); if (!f || !n) return null;
+    return { foto: { name: f.name, groesse: f.groesse, vorher: f.vorher }, png: { groesse: n.groesse, gleich: n.daten === __klein.png.b64, vorher: n.vorher } }; })()`), (e) => e !== null, 30000);
+  console.log(`      Kleines Foto ${kleine[0]} B wird zu ${kleinListe?.foto.groesse} B; PNG ${kleine[1]} B bleibt ${kleinListe?.png.groesse} B`);
+  melde(kleine[0] < 1048576 && kleinListe?.foto.vorher === kleine[0] && kleinListe.foto.groesse < kleine[0] && kleinListe.png.gleich && kleinListe.png.vorher === undefined && kleinListe.png.groesse === kleine[1],
+    'ein Foto unter 1 MiB wird neu kodiert und kleiner, ein PNG unter 1 MiB bleibt unverändert', JSON.stringify({ kleine, kleinListe }));
+  // Entwurf verwerfen leert auch geteilte und verkleinerte Anhänge samt Band; Rückgängig holt sie zurück
+  const anhangEntwurf = () => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse(); return e ? e.anhaenge.map((a) => a.name) : null; })()`);
+  const vorVerwerfen = await anhangEntwurf();
+  await p.tippe('#aktion [data-handlung=entwurf-verwerfen]');
+  melde(await p.warte(`document.querySelectorAll('main .gewaehlt li').length === 0 && !document.querySelector('.teilen-hinweis .band')`, 5000) && await anhangEntwurf() === null && vorVerwerfen?.length === 5,
+    'Entwurf verwerfen entfernt die geteilten und verkleinerten Anhänge aus Liste und Entwurf', `${JSON.stringify(vorVerwerfen)} → ${JSON.stringify(await anhangEntwurf())}`);
+  await p.tippe('#hinweis-knopf');
+  melde(await p.warte(`document.querySelectorAll('main .gewaehlt li').length === 5`, 5000) && (await anhangEntwurf())?.length === 5, 'Rückgängig holt die Anhänge zurück', JSON.stringify(await anhangEntwurf()));
+  await p.tippe('#aktion [data-handlung=entwurf-verwerfen]');
+  await p.warte(`document.querySelectorAll('main .gewaehlt li').length === 0`, 5000);
   await p.werte(`__huelleSchicke({ art: 'oeffnen', adresse: '#eintrag/R2D-4VN' })`);
   const geoeffnet = await p.warte(`location.hash === '#eintrag/r2d4vn'`, 4000);
   await p.zurueck();

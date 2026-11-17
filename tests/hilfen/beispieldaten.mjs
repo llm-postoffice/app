@@ -256,11 +256,11 @@ export const SZENARIEN = {
   'erfassen-anhang': { daten: dateien(), seed: true, live: 'ok',
     entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: 'Eingabefelder prüfen', an: 'beta', text: 'Siehe Bild und Messlauf.', rang: '2', dringend: false, zeit: JETZT },
       { schluessel: 'anhaenge/erfassen', anhaenge: entwurfAnhaenge(), zeit: JETZT }] },
-  // Geteilt aus einer anderen App (Hülle, js/huelle.js): zwei Dateien hängen am Entwurf, eine war zu groß und steht als Satz da
+  // Geteilt aus einer anderen App (Hülle, js/huelle.js): zwei Dateien hängen am Entwurf (das Foto verkleinert), eine war zu groß und steht als Band oben
   'erfassen-geteilt': { daten: dateien(), seed: true, live: 'ok',
     entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: '', an: '', text: 'Bildschirmfoto von der Messung', rang: '2', dringend: false, zeit: JETZT },
-      { schluessel: 'anhaenge/erfassen', anhaenge: entwurfAnhaenge(), zeit: JETZT,
-        meldung: 'bericht-quartal.pdf ist 2,4 MiB groß; erlaubt sind höchstens 1,0 MiB. Verkleinere die Datei und teile sie noch einmal.', meldungFehler: true }] },
+      { schluessel: 'anhaenge/erfassen', anhaenge: entwurfAnhaenge().map((a, i) => (i === 0 ? { ...a, vorher: 4_300_000 } : a)), zeit: JETZT,
+        fehler: ['bericht-quartal.pdf ist 2,4 MiB groß; erlaubt sind höchstens 1,0 MiB. Verkleinere die Datei und teile sie noch einmal.'], hinweise: [] }] },
   'antworten-anhang': { daten: dateien(), seed: true, live: 'ok',
     entwuerfe: [{ schluessel: 'antwort/r2d4vn', text: 'Ich nehme A, die Messung steht im Anhang.', zeit: JETZT },
       { schluessel: 'anhaenge/antwort/r2d4vn', anhaenge: entwurfAnhaenge().slice(1), zeit: JETZT }] },
