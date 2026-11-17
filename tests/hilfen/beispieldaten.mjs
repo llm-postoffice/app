@@ -259,7 +259,7 @@ export const SZENARIEN = {
 export const ADRESSEN = {
   anhaenge: ['eintrag/n5tz8d'], 'anhaenge-bild': ['eintrag/n5tz8d'], 'anhaenge-text': ['eintrag/n5tz8d'], 'anhaenge-datei': ['eintrag/n5tz8d'],
   'anhaenge-offline': ['eintrag/n5tz8d'], 'anhaenge-fehler': ['eintrag/n5tz8d'], 'anhaenge-gross': ['eintrag/n5tz8d'], 'anhaenge-nachtrag': ['eintrag/r2d4vn'],
-  'erfassen-anhang': ['erfassen'], 'antworten-anhang': ['eintrag/r2d4vn/antworten'],
+  'erfassen-anhang': ['erfassen'], 'antworten-anhang': ['eintrag/r2d4vn/antworten'], 'farben-anhaenge': ['eintrag/n5tz8d'],
   normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],

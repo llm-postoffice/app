@@ -31,7 +31,7 @@ Erwartet war Variante 1, gewählt wurde 2: der Eintrag bleibt kurz, nichts lädt
 - Hochladen: **Datei anhängen** in Erfassen und im Antwortblatt (`js/anhangwahl.js`), Liste mit **Entfernen**. Speicherung wie im Postwerkzeug; die Sendung geht samt Dateien in einem Commit raus.
 - Schritte (gezählt auf den Bildern): Bild sehen 2 Tipps (Eintrag, Zeile); PDF speichern 3 (Eintrag, Zeile, Herunterladen) plus Dialog des Systems; Datei im Erfassen 3 (Datei anhängen, Auswahl, Senden); in der Antwort 4 (Antworten, Datei anhängen, Auswahl, Senden).
 - Wörter, die der Nutzer verstehen muss: Anhänge, Datei anhängen, Entfernen, Herunterladen, Erneut versuchen, vom Nachtrag, Gekürzt (langer Text, nur die ersten Zeichen).
-- Vorher und nachher: `vorher-` und `nachher-erfassen-*`, `vorher-` und `nachher-antworten-*` (hell, dunkel); gebaut: `gebaut-liste-hell`, `gebaut-bild-hell`, `gebaut-text-hell`, `gebaut-offline-dunkel`.
+- Vorher und nachher: `vorher-` und `nachher-erfassen-*`, `vorher-` und `nachher-antworten-*` (hell, dunkel); gebaut: `gebaut-liste-hell`, `gebaut-bild-hell`, `gebaut-text-hell`, `gebaut-offline-dunkel`, `gebaut-farben-dunkel` (Palette aus Material You, Szenario `farben-anhaenge`).
 - Prüfung: Rendern aller Anhangs-Szenarien hell, dunkel, Schrift 200 %, ohne Netz ohne Fehler (das Szenario mit Scroll läuft nur einzeln); Wegetest in Chromium (Abschnitt, Herunterladen, ohne Netz, Hochladen, keine CSP-Verstöße); Kaltlesen in `kaltlesen.md`.
 
 ## Befunde der Entwürfe
