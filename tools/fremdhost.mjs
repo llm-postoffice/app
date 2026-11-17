@@ -45,7 +45,7 @@ Beispiel:
     node tools/fremdhost.mjs
 
 Optionen:
-  -h, --help  diese Hilfe zeigen
+  -h, --help  diese Hilfe zeigen (--help all ist gleich)
 
 Exit-Status: 0 kein Fremdhost, 1 mindestens ein Fremdhost, 2 falscher Aufruf.
 `;

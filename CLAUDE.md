@@ -5,7 +5,10 @@ beantwortet Fragen, beurteilt Abnahmen Schritt für Schritt, erfasst Einträge u
 in einem privaten GitHub-Repo; die App liest und schreibt sie mit einem Token des Nutzers über die GitHub-API und
 arbeitet offline mit einer Warteschlange.
 
-- p94-hig: es gelten die Teile mobile, text und doku; vom Teil gui nichts.
+- p94-hig: es gelten die Teile mobile, text und doku; vom Teil gui nichts. Doku für vier Leser: README für alle (höchstens
+  100 Zeilen), `docs/` für Nutzer (eine Seite je Aufgabe), `docs/entwicklung/` für Entwickler, diese Datei für Sitzungen;
+  README plus `docs/` bleiben kurz (Entwurfsdateien unter `docs/entwicklung/ansichten/` zählen nicht). Prüfung:
+  `python3 -I PFAD/beispiele/abnahme.py .` im p94-hig-Klon.
 - Stack ohne Build: HTML, CSS, ES-Module, Tests mit `node --test` (Node ab 22). Keine npm-Pakete, keine Bibliothek,
   keine Fremdskripte. Die CSP steht als `<meta http-equiv>`, weil Pages keine Kopfzeilen setzt; darum kein Inline-Skript,
   kein Inline-Stil und kein Host außer `api.github.com` und `ntfy.sh`. Zu `default-src 'none'` gehört `manifest-src
@@ -40,18 +43,18 @@ arbeitet offline mit einer Warteschlange.
   beobachtet die Registrierung: wartet ein Worker und steuert schon eine ältere Fassung die Seite, zeigt `#neu` in
   `index.html` die Zeile „Neue Fassung geladen.“ mit **Neu starten**, in Mehr steht dasselbe als Band bei Fassung (dort fehlt
   die Zeile). Der Knopf schickt `wechseln` an den wartenden Worker; geladen wird einmal nach `controllerchange`, nie von
-  selbst und nie, weil eine andere Seite wechselte (UOF-5; der Knopf heißt **Neu starten**, nicht **Neu laden** wie in der
-  Regel: Abweichung, weil die App wirklich neu startet). Geprüft wird beim Öffnen und bei jeder Rückkehr in den
+  selbst und nie, weil eine andere Seite wechselte (der Knopf heißt **Neu starten**, nicht **Neu laden**, weil die App wirklich neu
+  startet). Geprüft wird beim Öffnen und bei jeder Rückkehr in den
   Vordergrund, ohne Netz still. Wortlaut von Installation und Mitteilungen steht in `texte.js` (`installationAnzeige`,
   `MITTEILUNGEN`, mit **fett** für Beschriftungen); „Install and create shortcut“ ist der Eintrag in Vanadium (Probe),
-  der deutsche Wortlaut ist nicht geprüft und steht so da. Mitteilungen weichen von UMI-3 ab (ein Tipp öffnet ntfy) und
-  versprechen kein Öffnen der App (UMI-4), Grund im Kopf der Texte. Die Vorschau setzt `aktualisierung` und `installiert`
+  der deutsche Wortlaut ist nicht geprüft und steht so da. Bei Mitteilungen öffnet ein Tipp ntfy und die App verspricht
+  kein Öffnen der App, Grund im Kopf der Texte. Die Vorschau setzt `aktualisierung` und `installiert`
   für die Szenarien `neue-fassung`, `installiert` ein, die ein Renderer nicht herstellen kann; Szenarien mit `scroll`
   (Bilder von unteren Abschnitten in Mehr) laufen nicht im Standardlauf von `tools/rendern.mjs`, weil der Renderer beim
   Scrollen „unter der Statusleiste“ meldet. Der Wegetest ändert den Cache-Namen des Service Workers über den Server und
   belegt Start ohne Netz und Update-Weg in Chromium.
 - Android-Hülle, Web-Teil: `js/huelle.js` (rein, unter `node --test`) spricht mit der Hülle über das Objekt `llmpost`, das die Hülle vor dem ersten Skript anlegt; fehlt es (Browser), ändert sich nichts. Nachrichten sind JSON: `bereit`, `token-holen`, `token-setzen` (Seite an Hülle, mit `nr`) und `oeffnen`, `teilen` (Hülle an Seite); ein weiterer Wert der Hülle (etwa Systemfarben) wird eine neue Art mit einem Empfänger in `huelle.verbinde` in `js/app.js`; das Protokoll steht im Kopf von `js/huelle.js` und gilt wörtlich auch für die Kotlin-Seite. In der Hülle legt `mitTresor` das Token in den Android Keystore statt in IndexedDB, die App registriert keinen Service Worker (Updates kommen als APK), Mehr zeigt keinen Abschnitt App installieren, und geteilter Text landet als Entwurf in Erfassen. Die Vorschau stellt die Hülle mit den Szenarien `huelle` und `mehr-huelle` nach, der Wegetest mit einer nachgebauten Brücke auf der Herkunft `localhost`.
-- Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe README) und überspringt
+- Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe `docs/entwicklung/pruefen.md`) und überspringt
   sich ohne sie; mit ihnen endet die Prüfung des Postwerkzeugs auf der Sandbox mit Exit 0.
 - Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten
   (`tests/hilfen/beispieldaten.mjs`, neutral: alpha, beta, gamma, rechner-a) und ersetzt dort nur `js/start.js`;
@@ -69,7 +72,7 @@ arbeitet offline mit einer Warteschlange.
 - Zustand, Urteile und Prüfmuster sind ein Nachbau des Postwerkzeugs in Python (`zustand.js` und die Dateien daneben).
   Gleich bleiben sie durch die gemeinsamen Testfälle (`tests/testfaelle/cases.json`, wörtliche Kopie, Herkunft in
   `QUELLE.json`) und den Vergleich mit dem Werkzeug über `POST_QUELLE`, `POST_DATEN`, `POST_BEFEHL` und
-  `POST_WERKZEUG` (siehe README). Weicht ein Regex-Muster von Python ab, steht die Abweichung mit Grund im Kopf von
+  `POST_WERKZEUG` (siehe `docs/entwicklung/pruefen.md`). Weicht ein Regex-Muster von Python ab, steht die Abweichung mit Grund im Kopf von
   `js/pruefen.js`.
 - Der Wegetest fängt `api.github.com` in Chromium ab (CDP `Fetch`) und antwortet aus einer Mock-Quelle; mit einem Testtoken
   geht nie eine Anfrage ins Netz. Der Browser-Test fand Fehler, die node nicht findet (Zeitgeber ohne Empfänger,
@@ -80,4 +83,4 @@ arbeitet offline mit einer Warteschlange.
   PR; Claude öffnet ihn, der Nutzer mergt. Nie direkt auf `main` pushen (einzige Ausnahme war der erste Commit).
 - Browser-Tests nur headless mit frischem Profil, nie in Claude in Chrome. Chromium legt einen Socket unter `$TMPDIR`
   an und bricht bei einem Pfad über etwa 100 Zeichen ab (`Socket path too long`); dann ein kurzes `TMPDIR` setzen.
-- Pages liefert `main` aus der Wurzel aus; es wird mit Teil G eingeschaltet, nicht früher.
+- Pages ist eingeschaltet und liefert `main` aus der Wurzel aus (https://llm-postoffice.github.io/app/, Stand 2026-11-17: gebaut, Fassung 20261117.04).
