@@ -196,7 +196,7 @@ export const SZENARIEN = {
   offline: { daten: dateien(), seed: true, live: 'netz', schlange: [schlange()[0], schlange()[2]] },
   anmeldung: { daten: dateien(), anmelden: false },
   'anmeldung-fehler': { daten: dateien(), anmelden: false, formular: { repo: 'kein-repo', token: 'ab cd', geraet: 'Pixel 8 Pro' } },
-  // Teil E: Schreiben. Die Vorschau sendet nie von allein; `klick` tippt nach dem Start auf einen Knopf wie ein Nutzer.
+  // Teil E: Schreiben. Die Vorschau sendet nie von allein; `klick` tippt nach dem Start auf einen Knopf wie ein Nutzer. In `antworten` ist A gewählt.
   antworten: { daten: dateien(), seed: true, live: 'ok', klick: '#blatt [data-wahl="A"]' },
   erledigen: { daten: dateien(), seed: true, live: 'ok', klick: '#aktion [data-handlung=erledigt]' },
   'eingang-senden': { daten: dateien(), seed: true, live: 'ok', schlange: [schlange()[2], schlangeZustaende().sendet] },
@@ -245,6 +245,12 @@ export const SZENARIEN = {
   'antworten-anhang': { daten: dateien(), seed: true, live: 'ok',
     entwuerfe: [{ schluessel: 'antwort/r2d4vn', text: 'Ich nehme A, die Messung steht im Anhang.', zeit: JETZT },
       { schluessel: 'anhaenge/antwort/r2d4vn', anhaenge: entwurfAnhaenge().slice(1), zeit: JETZT }] },
+  // Möglichkeiten einer Frage: im Eintrag als Liste, im Blatt als Auswahl (ungewählt, dann B gewählt), fest und in einer Palette aus Material You (orange)
+  'eintrag-frage': { daten: dateien(), seed: true, live: 'ok', scroll: 'Möglichkeiten' },
+  'antworten-leer': { daten: dateien(), seed: true, live: 'ok' },
+  'farben-eintrag': { daten: dateien(), seed: true, live: 'ok', farben: 'orange', scroll: 'Möglichkeiten' },
+  'farben-blatt': { daten: dateien(), seed: true, live: 'ok', farben: 'orange' },
+  'farben-antwort': { daten: dateien(), seed: true, live: 'ok', farben: 'orange', klick: '#blatt [data-wahl="B"]' },
   // Anhänge in einer Palette aus Material You (orange), erste Zeile aufgeklappt
   'farben-anhaenge': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: 'ok', farben: 'orange', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
   // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
@@ -259,7 +265,7 @@ export const SZENARIEN = {
 export const ADRESSEN = {
   anhaenge: ['eintrag/n5tz8d'], 'anhaenge-bild': ['eintrag/n5tz8d'], 'anhaenge-text': ['eintrag/n5tz8d'], 'anhaenge-datei': ['eintrag/n5tz8d'],
   'anhaenge-offline': ['eintrag/n5tz8d'], 'anhaenge-fehler': ['eintrag/n5tz8d'], 'anhaenge-gross': ['eintrag/n5tz8d'], 'anhaenge-nachtrag': ['eintrag/r2d4vn'],
-  'erfassen-anhang': ['erfassen'], 'antworten-anhang': ['eintrag/r2d4vn/antworten'], 'farben-anhaenge': ['eintrag/n5tz8d'],
+  'erfassen-anhang': ['erfassen'], 'antworten-anhang': ['eintrag/r2d4vn/antworten'], 'farben-anhaenge': ['eintrag/n5tz8d'], 'farben-antwort': ['eintrag/r2d4vn/antworten'], 'farben-blatt': ['eintrag/r2d4vn/antworten'], 'farben-eintrag': ['eintrag/r2d4vn'], 'eintrag-frage': ['eintrag/r2d4vn'], 'antworten-leer': ['eintrag/r2d4vn/antworten'],
   normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],

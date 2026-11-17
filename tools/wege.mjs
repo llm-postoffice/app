@@ -485,6 +485,7 @@ try {
     const dient = (e) => {
       if (e.tagName === 'UL' || e.tagName === 'FORM') return true;
       if (e.tagName !== 'LI') return false;
+      if (e.querySelector(':scope > .buchstabe')) return false;   // Zeile einer Liste mit Marke (Möglichkeiten): sie beginnt am Rand, der Text steht hinter der Marke
       const c = getComputedStyle(e);
       return parseFloat(c.paddingLeft) === 0 && parseFloat(c.borderLeftWidth) === 0 && c.backgroundColor === 'rgba(0, 0, 0, 0)';
     };
@@ -595,9 +596,12 @@ try {
   p = await seite(t(`#eintrag/${ID}/antworten`));
   await p.warte('document.getElementById("blatt").open');
   await p.tippe('#blatt [data-wahl="A"]');
+  melde(await p.werte('document.querySelector("#blatt [data-wahl=A]").checked && !document.querySelector("#blatt [data-wahl=B]").checked && document.getElementById("blatt").open'),
+    'ein Tipp auf eine Möglichkeit wählt nur diese, das Blatt bleibt offen', await p.stand());
+  await p.tippe('#blatt-knoepfe .gefuellt');
   melde(await p.warte('!document.getElementById("blatt").open') && await p.hash() === `#eintrag/${ID}`
     && /^Antwort „A“ gespeichert$/.test(await hinweis(p) ?? '') && await p.werte('!document.getElementById("hinweis-knopf").hidden && document.getElementById("hinweis-knopf").textContent') === 'Rückgängig',
-  'ein Tipp auf eine Möglichkeit schließt das Blatt und zeigt „Antwort „A“ gespeichert“ mit Rückgängig', `${await p.stand()}, Hinweis ${await hinweis(p)}`);
+  'Senden mit gewählter Möglichkeit schließt das Blatt und zeigt „Antwort „A“ gespeichert“ mit Rückgängig', `${await p.stand()}, Hinweis ${await hinweis(p)}`);
   melde(await p.warte('/noch nicht gesendet/.test(document.querySelector("main .kopfkarte").innerText)', 3000), 'der Eintrag sagt in Worten „noch nicht gesendet“', await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
   const zahlVor = schreibend();
   await p.tippe('#hinweis-knopf');
@@ -611,6 +615,8 @@ try {
   p = await seite(t(`#eintrag/${ID}/antworten`));
   await p.warte('document.getElementById("blatt").open');
   await p.tippe('#blatt [data-wahl="A"]');
+  await p.tippe('#blatt-knoepfe .gefuellt');
+  await p.warte('!document.getElementById("blatt").open');
   p = await seite(t(`#eintrag/${EINGANG}/einsortieren`));
   await p.warte('document.getElementById("blatt").open');
   melde(await p.werte('document.querySelector("#blatt-knoepfe .gefuellt").disabled') === true, 'Einsortieren: Senden bleibt gesperrt, bis ein Ziel gewählt ist', 'Senden frei');

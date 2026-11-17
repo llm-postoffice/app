@@ -13,7 +13,7 @@ before(async () => {
   M = {
     welt: await import('../js/welt.js'), eintrag: await import('../js/eintrag.js'), ablauf: await import('../js/ablauf.js'),
     erfassen: await import('../js/erfassen.js'), hinweis: await import('../js/hinweis.js'), speicher: await import('../js/speicher.js'),
-    steuerung: await import('../js/steuerung.js'), absenden: await import('../js/absenden.js'),
+    steuerung: await import('../js/steuerung.js'), absenden: await import('../js/absenden.js'), entwuerfe: await import('../js/entwuerfe.js'),
   };
 });
 after(() => aufraeumen());
@@ -39,17 +39,66 @@ const schliessen = () => { schliessen.n++; };
 schliessen.n = 0;
 const knopfMit = (liste, text) => finde(liste, 'button').find((b) => t(b).trim() === text);
 
-test('Antwortblatt: ein Tipp auf eine Möglichkeit sendet genau diese, schließt das Blatt und fasst den freien Text nicht an', async () => {
+const waehleWahl = async (r) => { for (const f of r.horcher.change) await f(); };
+
+test('Antwortblatt: die Möglichkeiten sind eine Radiogruppe, ungewählt, mit Beschriftung aus Buchstabe und Text', async () => {
+  const k = await kontext(attrappe());
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  const gruppe = finde(r.koerper, '.antworten')[0];
+  assert.equal(gruppe.getAttribute('role'), 'radiogroup');
+  assert.equal(gruppe.getAttribute('aria-label'), 'Möglichkeiten');
+  const radios = finde(r.koerper, 'input[type="radio"]');
+  assert.deepEqual(radios.map((x) => x.getAttribute('data-wahl')), ['A', 'B']);
+  assert.ok(radios.every((x) => !x.hasAttribute('checked') && !x.disabled && x.getAttribute('name') === 'moeglichkeit'));
+  const zeilen = finde(r.koerper, 'label.wahl');
+  assert.equal(zeilen.length, 2);
+  assert.ok(zeilen.every((z) => finde(z, 'input').length === 1 && finde(z, '.buchstabe').length === 1 && finde(z, '.an').length === 1), 'Zeile = Eingabe, Buchstabe, Text, Haken');
+});
+
+test('Antwortblatt: Wählen sendet nichts; Senden schickt die gewählte Möglichkeit mit dem Text und legt beides in den Entwurf', async () => {
   const s = attrappe();
   const k = await kontext(s);
   schliessen.n = 0;
   const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
-  const b = finde(r.koerper, 'button[data-wahl]');
-  assert.deepEqual(b.map((x) => x.getAttribute('data-wahl')), ['A', 'B']);
-  assert.equal(b[0].disabled, false);
-  await b[0].klick();
-  assert.deepEqual(s.aufrufe.map((a) => [a[0], a[1], a[2].wahl, a[2].text]), [['antworten', 'r2d4vn', 'A', undefined]]);
+  await waehleWahl(finde(r.koerper, 'input[data-wahl="B"]')[0]);
+  assert.equal(s.aufrufe.length, 0, 'ein Tipp wählt nur');
+  assert.deepEqual(await M.entwuerfe.liesEntwurf(k.db, 'antwort/r2d4vn').then((d) => d && { text: d.text, wahl: d.wahl }), { text: '', wahl: 'B' });
+  const feld = finde(r.koerper, 'textarea')[0];
+  feld.value = 'Wegen der Größe.';
+  await knopfMit(r.knoepfe, 'Senden').klick();
+  assert.deepEqual(s.aufrufe.map((a) => [a[0], a[1], a[2].wahl, a[2].text]), [['antworten', 'r2d4vn', 'B', 'Wegen der Größe.']]);
+  assert.deepEqual(s.aufrufe[0][2].entwurf, { schluessel: 'antwort/r2d4vn', wert: { text: 'Wegen der Größe.', wahl: 'B' } });
   assert.equal(schliessen.n, 1);
+});
+
+test('Antwortblatt: eine gewählte Möglichkeit allein genügt, ohne Wahl und ohne Text geschieht nichts', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  const fehlt = finde(r.koerper, 'p.satz')[0];
+  assert.ok(knopfMit(r.knoepfe, 'Senden').disabled, 'Senden bleibt gesperrt');
+  assert.equal(fehlt.hidden, false);
+  assert.match(t(fehlt), /Wähle eine Möglichkeit oder schreibe eine eigene Antwort\./);
+  await knopfMit(r.knoepfe, 'Senden').klick();
+  assert.equal(s.aufrufe.length, 0);
+  await waehleWahl(finde(r.koerper, 'input[data-wahl="A"]')[0]);
+  assert.equal(knopfMit(r.knoepfe, 'Senden').disabled, false);
+  assert.equal(fehlt.hidden, true);
+  await knopfMit(r.knoepfe, 'Senden').klick();
+  assert.deepEqual(s.aufrufe.map((a) => [a[2].wahl, a[2].text]), [['A', '']]);
+});
+
+test('Antwortblatt: die Wahl im Entwurf ist beim Öffnen wieder gewählt', async () => {
+  const k = await kontext(attrappe());
+  await M.entwuerfe.speichereEntwurf(k.db, 'antwort/r2d4vn', { text: '', wahl: 'B' }, false, JETZT);
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  assert.deepEqual(finde(r.koerper, 'input[type="radio"]').filter((x) => x.hasAttribute('checked')).map((x) => x.getAttribute('data-wahl')), ['B']);
+});
+
+test('Antwortblatt ohne Schreibschicht: die Möglichkeiten sind gesperrt', async () => {
+  const k = await kontext(undefined);
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  assert.ok(finde(r.koerper, 'input[type="radio"]').every((x) => x.disabled));
 });
 
 test('Antwortblatt: freier Text geht mit seinem Entwurf mit, damit Rückgängig ihn zurücklegt; ohne Text geschieht nichts', async () => {
