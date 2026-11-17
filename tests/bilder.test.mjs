@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync, crc32 } from 'node:zlib';
-import { abweichung, lesePng, pruefeBilder, VARIANTEN } from '../tools/bilder.mjs';
+import { abweichung, lesePng, pruefeBilder } from '../tools/bilder.mjs';
 
 const chunk = (art, inhalt) => {
   const kopf = Buffer.alloc(8); kopf.writeUInt32BE(inhalt.length); kopf.write(art, 4, 'latin1');
@@ -50,6 +50,8 @@ test('abweichung: einfarbig 0, mit Inhalt deutlich darüber', () => {
   assert.ok(abweichung(lesePng(mitInhalt(0))) > 0.02);
 });
 
+// Neutrale Endungen: das Werkzeug kennt keine; es nimmt, was der Renderer schreibt
+const VARIANTEN = ['klein-hell', 'klein-dunkel', 'gross-hell', 'gross-dunkel', 'klein-text200', 'klein-offline'];
 function szenario(dateien) {
   const ordner = mkdtempSync(join(tmpdir(), 'bilder-'));
   for (const [name, inhalt] of Object.entries(dateien)) writeFileSync(join(ordner, name), inhalt);
@@ -76,17 +78,27 @@ test('pruefeBilder: eine winzige oder kaputte Datei ist ein Befund, kein Absturz
   const ordner = szenario({ ...alle('wartet', 1), 'alle-klein-hell.png': Buffer.alloc(0), ...kaputt });
   try {
     const befunde = pruefeBilder(ordner, ['wartet', 'alle']);
-    assert.equal(befunde.length, 5);
-    assert.match(befunde[0], /alle \(klein-hell\): Bild leer \(0 Bytes\)/);
-    assert.match(befunde[1], /Bild nicht lesbar/);
+    assert.equal(befunde.length, VARIANTEN.length);
+    assert.ok(befunde.some((b) => /^alle \(klein-hell\): Bild leer \(0 Bytes\)/.test(b)));
+    assert.ok(befunde.some((b) => /^alle \(gross-dunkel\): Bild nicht lesbar/.test(b)));
   } finally { rmSync(ordner, { recursive: true }); }
 });
 
-test('pruefeBilder: ein fehlendes Bild ist ein Befund, das ohne Netz nicht', () => {
+test('pruefeBilder: eine Variante, die andere Adressen haben, fehlt als Befund; eine, die keine hat, nicht', () => {
   const dateien = alle('wartet', 1);
-  delete dateien['wartet-voyager-hell.png'];
-  const ordner = szenario(dateien);
-  try { assert.deepEqual(pruefeBilder(ordner, ['wartet']), ['wartet (voyager-hell): Bild fehlt']); } finally { rmSync(ordner, { recursive: true }); }
+  delete dateien['wartet-gross-hell.png'];
+  const ordner = szenario({ ...dateien, ...alle('alle', 2) });
+  try { assert.deepEqual(pruefeBilder(ordner, ['wartet', 'alle']), ['wartet (gross-hell): Bild fehlt']); } finally { rmSync(ordner, { recursive: true }); }
+  const ohne = Object.fromEntries(Object.entries(alle('wartet', 1)).filter(([n]) => !n.includes('offline')));
+  const ordner2 = szenario({ ...ohne, ...Object.fromEntries(Object.entries(alle('alle', 2)).filter(([n]) => !n.includes('offline'))) });
+  try { assert.deepEqual(pruefeBilder(ordner2, ['wartet', 'alle']), []); } finally { rmSync(ordner2, { recursive: true }); }
+});
+
+test('pruefeBilder: ohne ein einziges Bild ist jede Adresse ein Befund; Adressen, die mit dem Namen einer anderen beginnen, bleiben getrennt', () => {
+  const leer = szenario({});
+  try { assert.deepEqual(pruefeBilder(leer, ['wartet', 'alle']), ['wartet: keine Bilder', 'alle: keine Bilder']); } finally { rmSync(leer, { recursive: true }); }
+  const ordner = szenario({ ...alle('alle', 1), ...alle('alle-status', 2) });
+  try { assert.deepEqual(pruefeBilder(ordner, ['alle', 'alle/status']), []); } finally { rmSync(ordner, { recursive: true }); }
 });
 
 test('pruefeBilder: dasselbe Bild für zwei Adressen zeigt die Hülle statt der Ansicht', () => {
@@ -94,7 +106,7 @@ test('pruefeBilder: dasselbe Bild für zwei Adressen zeigt die Hülle statt der 
   try {
     const befunde = pruefeBilder(ordner, ['wartet', 'alle']);
     assert.equal(befunde.length, VARIANTEN.length);
-    assert.match(befunde[0], /^alle \(klein-hell\): dasselbe Bild wie wartet/);
+    assert.ok(befunde.every((b) => /^alle \(.+\): dasselbe Bild wie wartet/.test(b)));
   } finally { rmSync(ordner, { recursive: true }); }
 });
 

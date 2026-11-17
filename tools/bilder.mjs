@@ -2,13 +2,10 @@
 // Der Renderer prüft den Aufbau der Seite, nicht, ob sie fertig gestartet ist; bricht der Start ab, bleibt die Hülle ohne Inhalt,
 // und alle seine Prüfungen melden trotzdem PASS. Rein bis auf das Lesen der Dateien; PNG liest zlib aus Node.
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { inflateSync } from 'node:zlib';
 
-/** Bilder, die der Renderer je Adresse schreibt; das Bild ohne Netz entsteht nur, wenn die Seite einen Service Worker hat. */
-export const VARIANTEN = ['klein-hell', 'klein-dunkel', 'voyager-hell', 'voyager-dunkel', 'klein-text200'];
-export const OFFLINE = 'klein-offline';
 /** Ein Bild gilt als leer, wenn weniger als dieser Anteil der Pixel von der häufigsten Farbe abweicht. Gemessen: auch die
  *  Seite „Nichts offen“ hat Text und Leiste und liegt weit darüber. */
 export const MIN_ANTEIL = 0.002;
@@ -75,17 +72,27 @@ export function abweichung({ breite, hoehe, kanaele, daten }) {
 export const dateiname = (adresse) => adresse.replace(/[^\p{L}\p{N}_-]+/gu, '-');
 
 /**
- * Prüft die Bilder eines Szenarios in `ordner`. Gibt eine Liste von Befunden zurück (leer: alles in Ordnung); jeder Befund
- * nennt Adresse und Variante. Ein fehlendes Bild zählt, außer dem ohne Netz; dasselbe Bild für zwei Adressen auch.
+ * Prüft die Bilder eines Szenarios in `ordner`. Die Varianten (Größe, Modus, ...) stehen nirgends fest: erwartet wird jede Endung,
+ * die der Renderer für mindestens eine Adresse geschrieben hat (ADRESSE-ENDUNG.png; bei zwei passenden Adressen gilt die längere).
+ * Gibt eine Liste von Befunden zurück (leer: alles in Ordnung); jeder nennt Adresse und Variante. Eine Variante, die einer Adresse
+ * fehlt, obwohl eine andere sie hat, zählt, ebenso ein leeres Bild und dasselbe Bild für zwei Adressen.
  */
 export function pruefeBilder(ordner, adressen) {
+  const namen = adressen.map((adr) => ({ adr, stamm: `${dateiname(adr)}-` })).sort((x, y) => y.stamm.length - x.stamm.length);
+  const varianten = new Set();
+  for (const f of existsSync(ordner) ? readdirSync(ordner) : []) {
+    if (!f.endsWith('.png')) continue;
+    const treffer = namen.find((n) => f.startsWith(n.stamm));
+    if (treffer) varianten.add(f.slice(treffer.stamm.length, -4));
+  }
+  if (!varianten.size) return adressen.map((adr) => `${adr}: keine Bilder`);
   const befunde = [];
   const hashes = new Map();
   for (const adr of adressen) {
-    for (const v of [...VARIANTEN, OFFLINE]) {
+    for (const v of [...varianten].sort()) {
       const datei = join(ordner, `${dateiname(adr)}-${v}.png`);
       const wo = `${adr} (${v})`;
-      if (!existsSync(datei)) { if (v !== OFFLINE) befunde.push(`${wo}: Bild fehlt`); continue; }
+      if (!existsSync(datei)) { befunde.push(`${wo}: Bild fehlt`); continue; }
       const buf = readFileSync(datei);
       if (buf.length < MIN_BYTES) { befunde.push(`${wo}: Bild leer (${buf.length} Bytes)`); continue; }
       try {
