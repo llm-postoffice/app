@@ -922,6 +922,10 @@ try {
   melde(await p.werte(`/läuft im Browser/.test(document.querySelector('main').innerText) && !/läuft als installierte App/.test(document.querySelector('main').innerText)`), 'im Browser sagt Mehr „läuft im Browser“', 'anderer Satz');
   melde(await p.werte(`/ID kopieren im Hinweis legt die ID des Eintrags in die Zwischenablage/.test(document.querySelector('main').innerText) && /Tipp auf den Hinweis öffnet ntfy, nicht diese App/.test(document.querySelector('main').innerText)`),
     'Mehr sagt, was ID kopieren tut und dass ein Tipp ntfy öffnet', 'Satz fehlt');
+  // Web-Push als Probe: im Browser mit Service Worker und PushManager zeigt Mehr den Abschnitt mit Feld und Einschalten (das Abo selbst
+  // braucht den Push-Dienst von Google und bleibt dem Test auf dem Handy)
+  melde(await p.werte(`(() => { const h = [...document.querySelectorAll('main h2')].find((e) => e.textContent === 'Web-Push (Probe)'); return !!h && 'PushManager' in window && !!document.querySelector('main input[name=webpush-schluessel]') && [...document.querySelectorAll('main button')].some((b) => b.textContent === 'Einschalten') && document.getElementById('webpush-stand').textContent === 'Web-Push ist aus.'; })()`),
+    'Mehr zeigt im Browser den Abschnitt Web-Push (Probe) mit Feld und Einschalten', await p.stand());
   await p.schliesse();
 
   // Start ohne Netz: die Seite lädt aus dem Cache, nichts kommt vom Server, die Einträge stehen da, die ruhige Zeile sagt es
@@ -1000,6 +1004,8 @@ try {
   await p.navigiere('#mehr');
   melde(await p.werte(`![...document.querySelectorAll('main h2')].some((e) => e.textContent === 'App installieren') && document.querySelector('main').innerText.includes('öffnet den Eintrag in dieser App') && document.getElementById('neu').hidden`),
     'Mehr zeigt in der Hülle keinen Abschnitt App installieren und sagt, dass ein Tipp den Eintrag öffnet', await p.stand());
+  melde(await p.werte(`![...document.querySelectorAll('main h2')].some((e) => /Web-Push/.test(e.textContent)) && !document.querySelector('main input[name=webpush-schluessel]')`),
+    'Mehr zeigt in der Hülle keinen Abschnitt Web-Push', await p.stand());
   await p.werte(`__huelleSchicke({ art: 'teilen', titel: 'Geteilte Seite', text: 'Text aus einer anderen App' })`);
   const geteilt = await p.warte(`location.hash === '#erfassen' && document.querySelector('[name=titel]')?.value === 'Geteilte Seite' && document.querySelector('main textarea')?.value.includes('Text aus einer anderen App')`, 4000);
   const geteilterEntwurf = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'erfassen'); db.schliesse(); return e; })()`);
