@@ -13,6 +13,11 @@
 Endet `make wege` mit `BLOCKED`, startet Chromium nicht. Ein Pfad in `$TMPDIR` über etwa 100 Zeichen bricht ab; setze
 ein kurzes, etwa `TMPDIR=/tmp make wege`.
 
+Der Wegetest wartet auf Zustände, nicht auf feste Zeiten: `tippe` wartet, bis das Ziel an stabiler Stelle steht, `neuLaden` und `navigiere`
+bis die neue Ansicht steht, `warte` gilt das Dreifache der genannten Zeit (mindestens 15 s), weil `make check` die Stufen gleichzeitig
+laufen lässt. Ein neuer Weg setzt keine Pause vor eine Prüfung, sondern wartet mit `warte` oder `bis` auf das, was er prüft; fest bleibt
+nur, was beweist, dass nichts passiert.
+
 ## Schnell iterieren
 
 Beim Arbeiten nur das laufen lassen, was die Änderung berührt; den vollen `make check` einmal vor dem PR.

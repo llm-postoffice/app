@@ -95,15 +95,18 @@ chrome.stdio[4]?.on('data', (d) => {
     else if (m.method === 'Fetch.requestPaused') abgefangen?.(m);
   }
 });
-// Antwortet Chromium nicht (die Seite lädt gerade neu), gilt die Antwort nach 8 s als leer.
+// Antwortet Chromium nicht (die Seite lädt gerade neu), gilt die Antwort nach 20 s als leer; unter Last (gleichzeitige Stufen) dauert
+// eine Antwort länger als bei einem Lauf allein.
 const senden = (method, params = {}, sessionId) => new Promise((r) => {
   if (chrome.exitCode !== null || chrome.signalCode !== null) { r({}); return; }
-  const n = ++id; offen.set(n, r); setTimeout(() => { if (offen.delete(n)) r({}); }, 8000);
+  const n = ++id; offen.set(n, r); setTimeout(() => { if (offen.delete(n)) r({}); }, 20000);
   try { chrome.stdio[3].write(JSON.stringify({ id: n, method, params, sessionId }) + '\0'); } catch { r({}); }
 });
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Wartet, bis die Mock-Quelle einen Commit verbucht hat, auf den `passt` zutrifft; gibt ihn zurück oder null. */
-const qaWarte = async (q, passt, ms) => { for (let t = 0; t < ms; t += 250) { const c = q.commits.find((x) => !x.fremd && passt(x)); if (c) return c; await pause(250); } return null; };
+const qaWarte = async (q, passt, ms) => { for (let t = 0; t < Math.max(ms * 3, 60000); t += 250) { const c = q.commits.find((x) => !x.fremd && passt(x)); if (c) return c; await pause(250); } return null; };
+/** Wartet, bis `ok(f())` zutrifft, höchstens `ms` (großzügig, damit auch ein belasteter Rechner reicht); gibt den letzten Wert zurück. */
+const bis = async (f, ok = Boolean, ms = 30000) => { let w; for (let t = 0; t < ms; t += 100) { w = await f(); if (ok(w)) return w; await pause(100); } return w; };
 const SPEICHER_ERWARTET = { anhaenge: 1, baum: 1, dateien: 1, einstellungen: 1, entwuerfe: 1, schlange: 1 };
 
 let fehler = 0;
@@ -181,10 +184,19 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
   await senden('Page.addScriptToEvaluateOnNewDocument', { source: WAECHTER + vorher }, s);
   // ohneNetz: das Netz ist schon aus, wenn die Seite zum ersten Mal geladen wird (Start ohne Netz, UOF-1)
   if (ohneNetz) await senden('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, s);
-  await senden('Page.navigate', { url }, s); await pause(700);
+  await senden('Page.navigate', { url }, s);
   const werte = async (x) => (await senden('Runtime.evaluate', { expression: x, returnByValue: true, awaitPromise: true }, s)).result?.result?.value;
+  // Tippt erst, wenn das Ziel da ist und an derselben Stelle steht wie eine Zehntelsekunde zuvor (die Ansicht baut sich noch auf)
   const tippe = async (sel) => {
-    const [x, y] = await werte(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+    const stelle = `(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`;
+    let xy = null; let davor = null;
+    for (let t = 0; t < 30000; t += 100) {
+      xy = await werte(stelle);
+      if (xy && davor && xy[0] === davor[0] && xy[1] === davor[1]) break;
+      davor = xy; xy = null; await pause(100);
+    }
+    if (!xy) throw new Error(`${sel} fehlt oder bewegt sich auch nach 30 s noch`);
+    const [x, y] = xy;
     await senden('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] }, s);
     await senden('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, s); await pause(400);
   };
@@ -194,16 +206,24 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
   };
   // Text eintippen wie auf dem Handy: Feld fokussieren, den Inhalt wählen, Text einfügen (löst input aus)
   const schreibe = async (sel, text) => {
+    await warte(`!!document.querySelector(${JSON.stringify(sel)})`);
     await werte(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); e.focus(); e.select?.(); })()`);
     await senden('Input.insertText', { text }, s); await pause(200);
   };
   // Eine Datei im <input type=file> wählen, wie die Dateiauswahl es täte (löst input und change aus)
   const datei = async (sel, pfade) => {
+    await warte(`!!document.querySelector(${JSON.stringify(sel)})`);
     const { result: { root } } = await senden('DOM.getDocument', {}, s);
     const { result: { nodeId } } = await senden('DOM.querySelector', { nodeId: root.nodeId, selector: sel }, s);
     await senden('DOM.setFileInputFiles', { files: pfade, nodeId }, s); await pause(600);
   };
-  const zurueck = async () => { await werte('history.back()'); await pause(500); };
+  // Zurück ist getan, wenn sich die Adresse ändert (auch beim Verlassen der Seite)
+  const zurueck = async () => {
+    const vor = await werte('location.href');
+    await werte('history.back()');
+    for (let t = 0; t < 10000 && await werte('location.href') === vor; t += 100) await pause(100);
+    await pause(100);
+  };
   const medien = async (modus) => { await senden('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: modus }] }, s); await pause(300); };
   const netz = async (an) => {
     await senden('Network.emulateNetworkConditions', { offline: !an, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, s); await pause(400);
@@ -230,10 +250,32 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
     await schreibe('text200');
     await werte(`document.documentElement.style.removeProperty('font-size'); scrollTo(0, 0)`);
   };
+  // Die Grenze ist eine Obergrenze: trifft die Bedingung zu, geht es sofort weiter. Sie ist das Dreifache der genannten Zeit, mindestens
+  // 15 s, weil unter Last alles langsamer ist als bei einem Lauf allein.
   const warte = async (bedingung, ms = 5000) => {
-    for (let t = 0; t < ms; t += 100) { if (await werte(bedingung)) return true; await pause(100); }
+    for (let t = 0; t < Math.max(ms * 3, 15000); t += 100) { if (await werte(bedingung)) return true; await pause(100); }
     return false;
   };
+  // Wartet, bis sich die Ansicht nicht mehr ändert (Höhe, Zahl der Knoten, Textlänge, Adresse dreimal gleich), höchstens `ms`
+  const ruhig = async (ms = 10000) => {
+    const stand = `document.readyState + '|' + location.href + '|' + document.body?.scrollHeight + '|' + document.querySelectorAll('*').length + '|' + document.body?.innerText.length`;
+    let davor = null; let gleich = 0;
+    for (let t = 0; t < ms && gleich < 3; t += 100) {
+      const jetzt = await werte(stand);
+      gleich = jetzt !== undefined && jetzt === davor ? gleich + 1 : 0;
+      davor = jetzt; await pause(100);
+    }
+  };
+  // Eine neue Adresse in der Seite: warten, bis sie gilt und die Ansicht steht
+  const navigiere = async (ziel) => { await werte(`location.hash = ${JSON.stringify(ziel)}`); await warte(`location.hash === ${JSON.stringify(ziel)}`); await ruhig(); };
+  // Neu laden: das alte Dokument trägt eine Marke, das neue nicht; fertig, wenn das neue geladen ist und steht
+  const neuLaden = async (js = 'location.reload()') => {
+    await werte('window.__alt = true'); await werte(js);
+    await warte('window.__alt === undefined && document.readyState === "complete"', 10000); await ruhig();
+  };
+  // Die Seite ist da, wenn der Browser den Ladevorgang meldet und die Ansicht steht (statt einer festen Pause)
+  await warte(`location.href !== 'about:blank' && document.readyState === 'complete'`, 10000);
+  await ruhig(5000);
   // Der Accessibility-Baum, wie Chromium ihn den Bedienhilfen gibt: Rolle, Name und Zustand der Knoten, die eine der Rollen tragen
   const baum = async (rollen) => {
     await senden('Accessibility.enable', {}, s);
@@ -244,7 +286,7 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
   const schliesse = () => senden('Target.closeTarget', { targetId });
   aktuell = schliesse;
   const stand = async () => werte(`[location.hash, document.getElementById('titel').textContent, document.getElementById('zurueck').hidden ? 'ohne Pfeil' : 'mit Pfeil'].join(' | ')`);
-  return { werte, tippe, schreibe, datei, taste, baum, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
+  return { werte, tippe, schreibe, datei, taste, baum, zurueck, medien, netz, quelle, bild, warte, ruhig, navigiere, neuLaden, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
 }
 
 // Startet Chromium nicht, ist das BLOCKED und kein FAIL (TXT-14): der Test konnte nicht laufen.
@@ -269,7 +311,7 @@ try {
     await v.werte(`(async () => { const { oeffneDatenbank, setzeEinstellung, SPEICHER } = await import('/js/speicher.js'); const db = await oeffneDatenbank();
       for (const n of Object.keys(SPEICHER)) for (const k of await db.schluessel(n)) await db.entferne(n, k);
       await setzeEinstellung(db, 'anmeldung', { repo: ${JSON.stringify(REPO)}, token: ${JSON.stringify(TOKEN)} }); await setzeEinstellung(db, 'geraet', 'handy'); db.schliesse(); })()`);
-    await v.werte("location.hash = '#wartet'; location.reload()"); await pause(600);
+    await v.neuLaden("location.hash = '#wartet'; location.reload()");
     const da = await v.warte(`document.querySelectorAll('main .karte').length > 3`, 15000);
     await v.schliesse();
     return da;
@@ -298,7 +340,7 @@ try {
   melde(await p.draussen(), 'danach verlässt Zurück die App', await p.werte('location.href'));
   // Neuladen darf den Stapel nicht noch einmal aufbauen
   p = await seite(t(`#eintrag/${ID}`));
-  await p.werte('location.reload()'); await pause(800);
+  await p.neuLaden();
   await p.zurueck(); const nachReload = await p.hash();
   await p.zurueck();
   melde(nachReload === '#wartet' && await p.draussen(), 'nach Neuladen bleibt der Stapel gleich tief', `${nachReload}, danach ${await p.werte('location.href')}`);
@@ -415,7 +457,7 @@ try {
   melde(await p.hash() === '#alle' && (await zeilen()).length === 16, 'Zurück aus Eintrag und Blatt führt in Alle, der Filter ist zurückgesetzt', `${await p.hash()}, ${(await zeilen()).length}`);
   console.log(`INFO  Alle: ${nach} Berührungen bis zum Filter Projekt und der Sortierung nach Priorität (Alle, Projekt, Wert, Zeigen, Sortieren, Priorität), ${beruehrungen - nach} weitere bis Antworten`);
   // Bei Schrift 200 % läuft nichts waagrecht über: Chips brechen um, das Blatt scrollt
-  await p.werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`); await pause(300);
+  await p.werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`); await p.ruhig(3000);
   melde(await p.werte('document.documentElement.scrollWidth - innerWidth') <= 0, 'Alle läuft bei Schrift 200 % nicht waagrecht über', await p.werte('document.documentElement.scrollWidth - innerWidth'));
   await p.werte(`document.documentElement.style.removeProperty('font-size')`);
   await p.schliesse();
@@ -515,7 +557,7 @@ try {
   const kanten = [];
   p = await seite(t('#wartet'));
   for (const a of KANTE_ANSICHTEN) {
-    await p.werte(`location.hash = ${JSON.stringify(a)}`); await pause(500);
+    await p.navigiere(a);
     const k = await p.werte(KANTE);
     if (!k || k.n === 0 || k.max - k.min > 1) kanten.push(`${a}: ${k ? `${k.min}..${k.max} px (${k.ab.join(', ')})` : 'kein Inhalt'}`);
   }
@@ -548,7 +590,7 @@ try {
   for (const [a, name] of BLAETTER) {
     p = await seite(t(a));
     await p.warte('document.getElementById("blatt").open');
-    await p.werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`); await pause(400);
+    await p.werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`); await p.ruhig(3000);
     const f = await p.werte(BLATT);
     if (!f || f.length) ueberlagert.push(`${name}: ${f ? f.join(', ') : 'keine Messung'}`);
   }
@@ -558,29 +600,32 @@ try {
   p = await seite(t('#erfassen'));
   const entwurf = (key) => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const d = await db.lies('entwuerfe', ${JSON.stringify(key)}); db.schliesse(); return d; })()`);
   await p.schreibe('[name=titel]', 'Wegetest: Eintrag in Arbeit');
-  melde((await entwurf('erfassen'))?.titel === 'Wegetest: Eintrag in Arbeit', 'Erfassen sichert den Titel beim Tippen als Entwurf auf dem Gerät', JSON.stringify(await entwurf('erfassen')));
+  const roh1 = await bis(() => entwurf('erfassen'), (d) => d?.titel === 'Wegetest: Eintrag in Arbeit');
+  melde(roh1?.titel === 'Wegetest: Eintrag in Arbeit', 'Erfassen sichert den Titel beim Tippen als Entwurf auf dem Gerät', JSON.stringify(roh1));
   await p.tippe('#leiste a[href="#mehr"]'); await p.tippe('#leiste a[href="#erfassen"]');
   melde(await p.werte('document.querySelector("[name=titel]")?.value') === 'Wegetest: Eintrag in Arbeit', 'der Entwurf steht nach dem Wechsel in einen anderen Bereich und zurück wieder im Feld', await p.stand());
-  await p.werte('location.reload()'); await pause(900);
+  await p.neuLaden();
   melde(await p.werte('document.querySelector("[name=titel]")?.value') === 'Wegetest: Eintrag in Arbeit', 'der Entwurf steht nach Neuladen wieder im Feld', await p.stand());
   melde(await p.werte('document.querySelector("#aktion button[data-handlung=anlegen]")?.disabled') === false
     && !/nicht eingerichtet/.test(await p.werte('document.getElementById("aktion").innerText')), 'Eintrag anlegen ist bedienbar, die Schreibschicht ist angeschlossen', await p.werte('document.getElementById("aktion").innerText'));
-  await p.werte('(() => { const i = document.querySelector("[name=titel]"); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); })()'); await pause(300);
-  melde(await entwurf('erfassen') == null, 'ein geleertes Formular löscht den Entwurf', JSON.stringify(await entwurf('erfassen')));
+  await p.werte('(() => { const i = document.querySelector("[name=titel]"); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); })()');
+  const roh2 = await bis(() => entwurf('erfassen'), (d) => d == null);
+  melde(roh2 == null, 'ein geleertes Formular löscht den Entwurf', JSON.stringify(roh2));
   p = await seite(t(`#eintrag/${ID}/antworten`));
   await p.schreibe('#blatt textarea', 'Mein Entwurf einer Antwort');
-  await p.werte('location.reload()'); await pause(900);
+  await p.neuLaden();
   melde(await p.werte('document.querySelector("#blatt textarea")?.value') === 'Mein Entwurf einer Antwort', 'der Text im Antwortblatt steht nach Neuladen wieder da', await p.stand());
-  await p.werte('document.getElementById("blatt").close()'); await pause(300);
-  melde((await entwurf(`antwort/${ID}`))?.text === 'Mein Entwurf einer Antwort', 'der Entwurf bleibt auch nach dem Schließen des Blatts auf dem Gerät', JSON.stringify(await entwurf(`antwort/${ID}`)));
+  await p.werte('document.getElementById("blatt").close()');
+  const roh3 = await bis(() => entwurf(`antwort/${ID}`), (d) => d?.text === 'Mein Entwurf einer Antwort');
+  melde(roh3?.text === 'Mein Entwurf einer Antwort', 'der Entwurf bleibt auch nach dem Schließen des Blatts auf dem Gerät', JSON.stringify(roh3));
   await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('entwuerfe', 'antwort/${ID}'); db.schliesse(); })()`);
   p = await seite(t(`#eintrag/${ABNAHME}/schritt/4/fail`));
   await p.schreibe('#blatt textarea', 'Die Ausgabe bricht in der Pipe um.');
   await p.tippe('#blatt-knoepfe .gefuellt');
-  const urteil = await entwurf(`urteil/${ABNAHME}`);
+  const urteil = await bis(() => entwurf(`urteil/${ABNAHME}`), (d) => d?.schritte?.[4]?.wort === 'FAIL');
   melde(urteil?.schritte?.[4]?.wort === 'FAIL' && urteil.schritte[4].satz === 'Die Ausgabe bricht in der Pipe um.' && /schritt\/5$/.test(await p.hash()),
     'Speichern im Satzblatt legt das Urteil als Entwurf ab und geht zum nächsten Schritt', `${await p.stand()}, ${JSON.stringify(urteil?.schritte?.[4])}`);
-  await p.werte('location.reload()'); await pause(900);
+  await p.neuLaden();
   p = await seite(t(`#eintrag/${ABNAHME}/ergebnis`));
   melde(/Die Ausgabe bricht in der Pipe um\./.test(await p.werte('document.getElementById("inhalt").innerText')), 'das Ergebnis zeigt nach Neuladen das gesicherte Urteil mit seinem Satz', await p.stand());
   await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); await db.entferne('entwuerfe', 'urteil/${ABNAHME}'); db.schliesse(); })()`);
@@ -627,7 +672,7 @@ try {
   melde(await p.warte('/noch nicht gesendet/.test(document.querySelector("main .kopfkarte").innerText)', 3000), 'der Eintrag sagt in Worten „noch nicht gesendet“', await p.werte('document.querySelector("main .kopfkarte")?.innerText'));
   const zahlVor = schreibend();
   await p.tippe('#hinweis-knopf');
-  await pause(500);
+  await p.warte('/Zurückgenommen/.test(document.getElementById("hinweis-text")?.textContent ?? "")');
   melde((await schlangeJetzt(p)).length === 0 && /Zurückgenommen/.test(await hinweis(p) ?? '') && schreibend() === zahlVor,
     'Rückgängig nimmt die Antwort aus der Schlange, der Hinweis sagt es, und es geht keine schreibende Anfrage raus', `${JSON.stringify(await schlangeJetzt(p))}, ${await hinweis(p)}`);
   await pause(11000);
@@ -646,7 +691,7 @@ try {
   await p.schreibe('#blatt textarea', 'Zu den Hinweisen.');
   await p.tippe('#blatt-knoepfe .gefuellt');
   melde(await p.warte('!document.getElementById("blatt").open') && /^Eintrag k7m-2qa an alpha einsortiert\.$/.test(await hinweis(p) ?? ''), 'Einsortieren schließt das Blatt und zeigt den Hinweis „an alpha einsortiert“', `${await p.stand()}, ${await hinweis(p)}`);
-  await p.werte('location.hash = "#eingang"'); await pause(600);
+  await p.navigiere('#eingang');
   melde(await p.werte('[...document.querySelectorAll("main .karte")].some((k) => /k7m-2qa/.test(k.innerText) && /Einsortieren an alpha noch nicht gesendet/.test(k.innerText))'),
     'die Karte bleibt im Eingang und sagt „Einsortieren an alpha noch nicht gesendet“, bis die Sendung angekommen ist', await p.werte('document.querySelector("main").innerText'));
   p = await seite(t('#erfassen'));
@@ -665,7 +710,7 @@ try {
   const neuePfade = [...qs.dateien.keys()].filter((x) => !SZENARIEN.normal.daten.has(x));
   melde(neuePfade.length >= 4 && neuePfade.every((x) => x.startsWith('entries/')), 'die Dateien liegen unter entries/, nirgends sonst', neuePfade.join(', '));
   melde(qs.protokoll.filter((a) => a.methode === 'PATCH' || a.url.includes('/git/refs/')).every((a) => !String(a.body ?? '').includes('"force":true')), 'der Zweig wird nie mit force verschoben', 'force gefunden');
-  await p.werte('location.hash = "#eingang"'); await pause(800);
+  await p.navigiere('#eingang');
   melde(!(await p.werte('[...document.querySelectorAll("main .karte")].some((k) => /k7m-2qa/.test(k.innerText))')), 'nach dem Abgleich ist der Eintrag aus dem Eingang verschwunden', await p.werte('document.querySelector("main").innerText'));
 
   // Abnahme: alle Urteile liegen als Entwurf da; Antwort senden bringt Nachtrag, Status und Folgeauftrag in einem Commit
@@ -789,7 +834,7 @@ try {
 
   const vorher = { ...q.zaehler };
   await p.tippe('#abgleich-stand button');
-  await p.warte(`document.querySelector("#abgleich-stand button")`, 3000); await pause(400);
+  await p.warte(`document.querySelector("#abgleich-stand button")`, 3000); await bis(() => q.zaehler.baum > vorher.baum);
   melde(q.zaehler.baum === vorher.baum + 1 && q.zaehler.graphql === vorher.graphql && q.zaehler.blob === vorher.blob, 'Jetzt abgleichen ohne Änderung fragt nur den Baum und bekommt 304', `${JSON.stringify(vorher)} -> ${JSON.stringify(q.zaehler)}`);
   melde(q.protokoll.at(-1).kopf.get('if-none-match') !== null, 'die Anfrage trägt If-None-Match', 'ohne If-None-Match');
 
@@ -799,7 +844,8 @@ try {
     'eine neue Datei im Repo erscheint beim nächsten Abgleich: 302 Dateien', await p.werte('document.getElementById("abgleich").textContent'));
   melde(q.zaehler.graphql === vorher.graphql + 1 && q.graphqlGroessen().at(-1) === 1, 'dafür genügte ein GraphQL-Aufruf für die eine neue Datei', `${q.graphqlGroessen()}`);
 
-  await p.werte(`(() => { const s = document.getElementById('takt'); s.value = '60'; s.dispatchEvent(new Event('change')); })()`); await pause(400);
+  await p.werte(`(() => { const s = document.getElementById('takt'); s.value = '60'; s.dispatchEvent(new Event('change')); })()`);
+  await p.warte(`(async () => { const { oeffneDatenbank, einstellung } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const t = await einstellung(db, 'takt'); db.schliesse(); return t === 60; })()`);
   melde(await p.werte(`(async () => { const { oeffneDatenbank, einstellung } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const t = await einstellung(db, 'takt'); db.schliesse(); return t; })()`) === 60,
     'der gewählte Takt liegt in der Datenbank', 'nicht 60');
 
@@ -886,9 +932,11 @@ try {
   await p.bild('neue-fassung');
   // Beim Tippen weicht die Zeile: sie zieht dem Schreibenden nichts unter den Händen weg
   await p.tippe('#leiste a[href="#erfassen"]');
-  await p.werte(`document.querySelector('main input[name="titel"]').focus()`); await pause(300);
+  await p.werte(`document.querySelector('main input[name="titel"]').focus()`);
+  await p.warte('getComputedStyle(document.getElementById("neu")).display === "none"');
   melde(await p.werte('getComputedStyle(document.getElementById("neu")).display') === 'none', 'während der Eingabe ist die Zeile ausgeblendet', await p.werte('getComputedStyle(document.getElementById("neu")).display'));
-  await p.werte('document.activeElement.blur()'); await pause(300);
+  await p.werte('document.activeElement.blur()');
+  await p.warte('getComputedStyle(document.getElementById("neu")).display !== "none"');
   melde(await p.werte('getComputedStyle(document.getElementById("neu")).display') !== 'none', 'nach der Eingabe steht sie wieder da', 'bleibt aus');
   await p.tippe('#leiste a[href="#mehr"]');
   melde(await p.werte(`document.getElementById("neu").hidden && /Neue Fassung geladen/.test(document.querySelector('main .band')?.innerText ?? '')`), 'in Mehr steht das Band bei „Fassung“ und die Zeile unten fehlt', await p.werte('document.querySelector("main .band")?.innerText'));
@@ -925,10 +973,10 @@ try {
   const gesendet = await p.werte('window.__huelle.gesendet');
   melde(gesendet.some((n) => n.art === 'token-setzen' && n.token === TOKEN) && gesendet.some((n) => n.art === 'bereit') && imSpeicher.repo === REPO && !imSpeicher.mitToken,
     'das Token geht an die Hülle, in IndexedDB steht die Anmeldung ohne Token', `${gesendet.map((n) => n.art).join(', ')}; ${JSON.stringify(imSpeicher)}`);
-  await pause(2000);
+  await p.warte(`document.querySelectorAll('main .karte').length > 3`, 15000); await p.ruhig();
   melde(await p.werte('(async () => (await navigator.serviceWorker.getRegistration()) === undefined && navigator.serviceWorker.controller === null)()'),
     'in der Hülle registriert die App keinen Service Worker', 'Service Worker registriert');
-  await p.werte("location.hash = '#mehr'"); await pause(600);
+  await p.navigiere('#mehr');
   melde(await p.werte(`![...document.querySelectorAll('main h2')].some((e) => e.textContent === 'App installieren') && document.querySelector('main').innerText.includes('öffnet den Eintrag in dieser App') && document.getElementById('neu').hidden`),
     'Mehr zeigt in der Hülle keinen Abschnitt App installieren und sagt, dass ein Tipp den Eintrag öffnet', await p.stand());
   await p.werte(`__huelleSchicke({ art: 'teilen', titel: 'Geteilte Seite', text: 'Text aus einer anderen App' })`);
@@ -940,10 +988,10 @@ try {
   await p.werte(`__huelleSchicke({ art: 'teilen', titel: '', text: '', dateien: [{ name: 'Foto.jpg', typ: 'image/jpeg', groesse: 3, daten: 'AQID' },
     { name: 'bericht.pdf', typ: 'application/pdf', groesse: 3000000, fehler: 'zu-gross' }], mehr: 1 })`);
   const mitDateien = await p.warte(`document.querySelector('.gewaehlt li')?.textContent.startsWith('Foto.jpg') && document.querySelector('.anhangwahl [role=status]')?.textContent.includes('bericht.pdf ist 2,9 MiB groß')`, 4000);
-  const dateiEntwurf = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse(); return e; })()`);
+  const dateiEntwurf = await bis(() => p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse(); return e; })()`), (e) => e?.anhaenge?.length === 1);
   melde(mitDateien && dateiEntwurf?.anhaenge?.length === 1 && dateiEntwurf.anhaenge[0].name === 'Foto.jpg' && dateiEntwurf.anhaenge[0].typ === 'image/jpeg' && dateiEntwurf.anhaenge[0].daten === 'AQID',
     'geteilte Dateien hängen in Erfassen an, eine zu große und die über der Grenze nennt ein Satz, der Titel und Text bleiben', `${await p.stand()}, ${JSON.stringify(dateiEntwurf)}`);
-  melde(await p.werte(`document.querySelector('[name=titel]').value === 'Geteilte Seite' && document.querySelector('.anhangwahl [role=status]').textContent.includes('1 weitere Datei ist nicht dabei')`),
+  melde(await p.warte(`document.querySelector('[name=titel]')?.value === 'Geteilte Seite' && document.querySelector('.anhangwahl [role=status]')?.textContent.includes('1 weitere Datei ist nicht dabei')`),
     'Titel und Text des früheren Teilens bleiben, der Satz nennt auch die Datei über der Grenze', await p.werte(`document.querySelector('.anhangwahl [role=status]')?.textContent`));
   await p.werte(`__huelleSchicke({ art: 'oeffnen', adresse: '#eintrag/R2D-4VN' })`);
   const geoeffnet = await p.warte(`location.hash === '#eintrag/r2d4vn'`, 4000);
@@ -954,13 +1002,13 @@ try {
   const fest = { akzent: await farbe('akzent'), grund: await farbe('grund') };
   melde(fest.akzent === '#0b57d0' && fest.grund === '#ffffff', 'ohne Farben der Hülle gelten die festen Farben', JSON.stringify(fest));
   await p.werte(`__huelleSchicke({ art: 'farben', hell: { akzent: '#006e18', 'auf-akzent': '#ffffff', grund: '#f8fef7', tonal: '#99f993', 'auf-tonal': '#002204', text: 'rot', frage: '#ff0000' }, dunkel: { akzent: '#7cdc78' } })`);
-  await pause(300);
+  await p.warte(`getComputedStyle(document.documentElement).getPropertyValue('--akzent').trim() === '#006e18' && getComputedStyle(document.body).backgroundColor === 'rgb(248, 254, 247)'`);
   const gesetzt = { akzent: await farbe('akzent'), grund: await farbe('grund'), tonal: await farbe('tonal'), text: await farbe('text'), frage: await farbe('frage-acc'),
     koerper: await p.werte(`getComputedStyle(document.body).backgroundColor`), knopf: await p.werte(`getComputedStyle(document.querySelector('.gefuellt, #leiste a[aria-current]') ?? document.body).backgroundColor`) };
   melde(gesetzt.akzent === '#006e18' && gesetzt.grund === '#f8fef7' && gesetzt.tonal === '#99f993' && gesetzt.koerper === 'rgb(248, 254, 247)',
     'Farben der Hülle setzen akzent, grund und tonal auf :root, der Körper nimmt den Grund an', JSON.stringify(gesetzt));
   melde(gesetzt.text === '#1b1c1f' && gesetzt.frage === '#00696f', 'ein ungültiger Wert und eine Art (frage) bleiben fest', JSON.stringify({ text: gesetzt.text, frage: gesetzt.frage }));
-  await p.werte("location.hash = '#wartet'; location.reload()"); await pause(800);
+  await p.neuLaden("location.hash = '#wartet'; location.reload()");
   melde(await p.warte('location.hash === "#wartet"', 4000) && await p.hash() === '#wartet', 'nach dem Neuladen bleibt die App angemeldet, das Token kommt aus der Brücke', await p.stand());
   huelleMeldungen.push(...((await p.werte('window.__melde')) ?? []));
   // Eine neue Seite hat einen eigenen sessionStorage: das Token der Hülle wird vorher abgelegt, wie es der Keystore hielte
@@ -1022,11 +1070,11 @@ try {
       await p.werte(`getComputedStyle(document.querySelector('.anhaenge li:nth-child(3) pre.anhang-text')).fontFamily`));
     await p.tippe('.anhaenge li:nth-child(1) button.text');
     let geladen = [];
-    for (let n = 0; n < 40 && !geladen.length; n++) { await pause(250); geladen = (await readdir(downloads)).filter((f) => !f.endsWith('.crdownload')); }
+    for (let n = 0; n < 120 && !geladen.length; n++) { await pause(250); geladen = (await readdir(downloads)).filter((f) => !f.endsWith('.crdownload')); }
     const gespeichert = geladen.length ? await readFile(join(downloads, geladen[0])) : Buffer.alloc(0);
     melde(geladen.join() === 'eingabefelder-standard.png' && Buffer.compare(gespeichert, Buffer.from(FENSTER_PNG)) === 0,
       'Herunterladen im Browser legt die Datei mit Name und gleichen Bytes ab', `Dateien ${JSON.stringify(geladen)}, ${gespeichert.length} Bytes`);
-    melde(/Heruntergeladen\./.test(await p.werte(`document.querySelector('.anhaenge li:nth-child(1)').textContent`)), 'danach steht „Heruntergeladen.“ in der Zeile', 'Meldung fehlt');
+    melde(await p.warte(`/Heruntergeladen\\./.test(document.querySelector('.anhaenge li:nth-child(1)').textContent)`), 'danach steht „Heruntergeladen.“ in der Zeile', 'Meldung fehlt');
     netzAn = false; await p.netz(false);
     await p.tippe('.anhaenge li:nth-child(2) .anhang-kopf');
     melde(await p.warte(`/Ohne Netz/.test(document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent) && /Öffne ihn einmal mit Netz/.test(document.querySelector('.anhaenge li:nth-child(2) .anhang-inhalt').textContent)`, 5000),
@@ -1046,6 +1094,7 @@ try {
     await p.warte(`!!document.querySelector('input[type=file]')`);
     await p.schreibe('[name=titel]', 'Mit Skizze');
     await p.datei('input[type=file]', [skizze, notiz]);
+    await p.warte(`document.querySelectorAll('.gewaehlt li').length === 2`);
     const gewaehlt = await p.werte(`[...document.querySelectorAll('.gewaehlt li')].map((l) => l.textContent).join('|')`);
     melde(gewaehlt === 'skizze.png1,2 KiBEntfernen|notiz.txt16 BEntfernen', 'zwei gewählte Dateien stehen mit Größe und Entfernen unter Datei anhängen', gewaehlt);
     await p.tippe('[data-handlung=anlegen]');
@@ -1062,6 +1111,7 @@ try {
     await p.warte(`!!document.querySelector('input[type=file]')`);
     await p.schreibe('#blatt textarea', 'Mit Notiz.');
     await p.datei('input[type=file]', [notiz]);
+    await p.warte(`document.querySelectorAll('.gewaehlt li').length === 1`);
     await p.tippe('#blatt-knoepfe .gefuellt');
     const beantwortet = await qaWarte(qa, (c) => c.message === `post: answer ${ID}`, 16000);
     const nachtrag = beantwortet ? [...beantwortet.dateien.keys()].filter((x) => x.startsWith(`entries/r2/${ID}/`) && x.endsWith('-addendum.md') && beantwortet.dateien.get(x).includes('Mit Notiz.')) : [];
