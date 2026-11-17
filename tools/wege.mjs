@@ -234,10 +234,17 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = 
     for (let t = 0; t < ms; t += 100) { if (await werte(bedingung)) return true; await pause(100); }
     return false;
   };
+  // Der Accessibility-Baum, wie Chromium ihn den Bedienhilfen gibt: Rolle, Name und Zustand der Knoten, die eine der Rollen tragen
+  const baum = async (rollen) => {
+    await senden('Accessibility.enable', {}, s);
+    const { result: { nodes } } = await senden('Accessibility.getFullAXTree', {}, s);
+    const eig = (n, name) => n.properties?.find((x) => x.name === name)?.value?.value;
+    return nodes.filter((n) => !n.ignored && rollen.includes(n.role?.value)).map((n) => ({ rolle: n.role.value, name: n.name?.value ?? '', checked: eig(n, 'checked'), disabled: eig(n, 'disabled') ?? false, fokussierbar: eig(n, 'focusable') ?? false }));
+  };
   const schliesse = () => senden('Target.closeTarget', { targetId });
   aktuell = schliesse;
   const stand = async () => werte(`[location.hash, document.getElementById('titel').textContent, document.getElementById('zurueck').hidden ? 'ohne Pfeil' : 'mit Pfeil'].join(' | ')`);
-  return { werte, tippe, schreibe, datei, taste, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
+  return { werte, tippe, schreibe, datei, taste, baum, zurueck, medien, netz, quelle, bild, warte, schliesse, stand, hash: () => werte('location.hash'), draussen: async () => await werte('location.href') === 'about:blank' };
 }
 
 // Startet Chromium nicht, ist das BLOCKED und kein FAIL (TXT-14): der Test konnte nicht laufen.
@@ -595,9 +602,24 @@ try {
   // Antwort: ein Tipp, Hinweis mit Rückgängig, Rückgängig nimmt zurück, nichts geht raus
   p = await seite(t(`#eintrag/${ID}/antworten`));
   await p.warte('document.getElementById("blatt").open');
+  // Der Accessibility-Baum sagt den Bedienhilfen, was gewählt ist: vorher keine Zeile, danach genau die getippte; die Gruppe hat einen Namen
+  const radios = async () => (await p.baum(['radio', 'radiogroup'])).map((n) => `${n.rolle}:${n.name}:${n.checked ?? '-'}`);
+  const oben = () => p.werte('document.querySelector("#blatt [data-wahl=A]").getBoundingClientRect().top');
+  const baumVor = await radios(); const hoeheVor = await oben();
+  melde(baumVor.length === 3 && baumVor[0] === 'radiogroup:Möglichkeiten:-' && baumVor.slice(1).every((x) => x.endsWith(':false')),
+    'Accessibility-Baum vor der Wahl: eine Radiogruppe „Möglichkeiten“, alle Radios „false“', baumVor.join(' | '));
   await p.tippe('#blatt [data-wahl="A"]');
-  melde(await p.werte('document.querySelector("#blatt [data-wahl=A]").checked && !document.querySelector("#blatt [data-wahl=B]").checked && document.getElementById("blatt").open'),
+  const baumNach = await radios();
+  melde(baumNach.length === 3 && baumNach[1].startsWith('radio:A ') && baumNach[1].endsWith(':true') && baumNach[2].endsWith(':false'),
+    'Accessibility-Baum nach der Wahl: nur das getippte Radio meldet „true“, das andere „false“', baumNach.join(' | '));
+  melde(await oben() === hoeheVor, 'nach der Wahl rutscht das Blatt nicht (der Satz behält seinen Platz)', `${hoeheVor} -> ${await oben()}`);
+  melde(await p.werte('document.querySelector("#blatt [data-wahl=A]").getAttribute("aria-checked") === "true" && document.getElementById("blatt").open'),
     'ein Tipp auf eine Möglichkeit wählt nur diese, das Blatt bleibt offen', await p.stand());
+  await p.werte('document.querySelector("#blatt [data-wahl=A]").focus()');
+  await p.taste('ArrowDown', 'ArrowDown', 40);
+  melde(await p.werte('document.activeElement?.getAttribute("data-wahl") === "B" && document.querySelector("#blatt [data-wahl=B]").getAttribute("aria-checked") === "true" && document.querySelector("#blatt [data-wahl=A]").getAttribute("aria-checked") === "false"'),
+    'Pfeil nach unten wählt die nächste Möglichkeit und setzt den Fokus dorthin', await p.werte('document.activeElement?.outerHTML?.slice(0, 80)'));
+  await p.tippe('#blatt [data-wahl="A"]');
   await p.tippe('#blatt-knoepfe .gefuellt');
   melde(await p.warte('!document.getElementById("blatt").open') && await p.hash() === `#eintrag/${ID}`
     && /^Antwort „A“ gespeichert$/.test(await hinweis(p) ?? '') && await p.werte('!document.getElementById("hinweis-knopf").hidden && document.getElementById("hinweis-knopf").textContent') === 'Rückgängig',

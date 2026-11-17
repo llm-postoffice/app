@@ -193,7 +193,7 @@ export async function antwortBlatt(welt, k, o, schliessen) {
   const merken = () => {
     const leer = !text.t.value.trim() && !wahl;
     if (senden) senden.disabled = gesperrt || leer;
-    fehlt.hidden = gesperrt || !leer;
+    fehlt.className = leer ? 'neben satz' : 'neben satz still';
     return speichereEntwurf(k.db, key, wert(), leer, k.jetzt());
   };
   const anhang = await anhangWahl(k, key, { gesperrt });
@@ -201,14 +201,39 @@ export async function antwortBlatt(welt, k, o, schliessen) {
     (opt) => k.schreiben.antworten(e.id, { wahl, text: text.t.value.trim(), anhaenge: anhang.liste(), entwurf: { schluessel: key, wert: wert() }, ...opt }),
     () => schliessen());
   if (liste.length) {
-    koerper.push(el('div', { class: 'antworten', role: 'radiogroup', 'aria-label': 'Möglichkeiten' }, liste.map((m) => {
-      const r = el('input', { type: 'radio', name: 'moeglichkeit', value: m.schluessel, 'data-wahl': m.schluessel, checked: wahl === m.schluessel, disabled: gesperrt });
-      r.addEventListener('change', () => { wahl = m.schluessel; merken(); });
-      return el('label', { class: 'wahl' }, r,
-        el('span', { class: 'buchstabe' }, m.schluessel),
-        el('span', { class: 'was' }, m.text, m.empfehlung ? el('span', { class: 'chip-rat' }, ico('check_circle-f'), 'Empfehlung') : null),
-        ico('check_circle-f', 'an'));
-    })));
+    // Radiogruppe nach dem ARIA-Muster: jede Zeile ist selbst das Radio (role, aria-checked), kein verstecktes Eingabefeld in einem
+    // label; so liest eine Bedienhilfe den Zustand direkt von dem Knoten, den man sieht und antippt. Tab erreicht nur die gewählte
+    // (sonst die erste) Zeile, Pfeile wählen die nächste, Leertaste und Eingabe wählen die Zeile im Fokus.
+    const zeilen = liste.map((m) => el('div', { class: 'wahl', role: 'radio', 'data-wahl': m.schluessel, 'aria-checked': 'false', 'aria-disabled': gesperrt ? 'true' : false, tabindex: '-1' },
+      el('span', { class: 'buchstabe' }, m.schluessel),
+      el('span', { class: 'was' }, m.text, m.empfehlung ? el('span', { class: 'chip-rat' }, ico('check_circle-f'), 'Empfehlung') : null),
+      ico('check_circle-f', 'an')));
+    const zeigeWahl = () => {
+      const eine = zeilen.some((z) => z.getAttribute('data-wahl') === wahl) ? wahl : zeilen[0].getAttribute('data-wahl');
+      for (const z of zeilen) {
+        z.setAttribute('aria-checked', String(z.getAttribute('data-wahl') === wahl));
+        z.setAttribute('tabindex', !gesperrt && z.getAttribute('data-wahl') === eine ? '0' : '-1');
+      }
+    };
+    const waehle = (z, fokus) => {
+      if (gesperrt) return;
+      wahl = z.getAttribute('data-wahl'); zeigeWahl(); merken();
+      if (fokus) z.focus();
+    };
+    zeilen.forEach((z, i) => {
+      z.addEventListener('click', () => waehle(z, false));
+      z.addEventListener('keydown', (ev) => {
+        if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+        const schritt = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[ev.key];
+        if (schritt) waehle(zeilen[(i + schritt + zeilen.length) % zeilen.length], true);
+        else if (ev.key === ' ' || ev.key === 'Enter') waehle(z, true);
+        else return;
+        ev.preventDefault();
+      });
+    });
+    const gruppe = el('div', { class: 'antworten', role: 'radiogroup', 'aria-label': 'Möglichkeiten' }, zeilen);
+    zeigeWahl();
+    koerper.push(gruppe);
   }
   text = await textFeld(k, entwurf, 'antwort', liste.length ? 'Eigene Antwort' : 'Deine Antwort', merken);
   koerper.push(text.feld, anhang.platz, fehlt, ablehnung);
@@ -216,7 +241,7 @@ export async function antwortBlatt(welt, k, o, schliessen) {
     if (!wahl && !text.t.value.trim()) return;
     await los(false, ev.currentTarget);
   } });
-  fehlt.hidden = gesperrt || !senden.disabled;
+  fehlt.className = senden.disabled ? 'neben satz' : 'neben satz still';
   return { koerper, knoepfe: [knopf('Abbrechen', { klasse: 'text', an: schliessen }), senden] };
 }
 

@@ -39,7 +39,9 @@ const schliessen = () => { schliessen.n++; };
 schliessen.n = 0;
 const knopfMit = (liste, text) => finde(liste, 'button').find((b) => t(b).trim() === text);
 
-const waehleWahl = async (r) => { for (const f of r.horcher.change) await f(); };
+const waehleWahl = (r) => r.klick();
+const taste = (r, key) => { let verhindert = false; for (const f of r.horcher.keydown ?? []) f({ key, preventDefault() { verhindert = true; } }); return verhindert; };
+const zustand = (r) => finde(r, '[role="radio"]').map((x) => [x.getAttribute('data-wahl'), x.getAttribute('aria-checked'), x.getAttribute('tabindex')]);
 
 test('Antwortblatt: die Möglichkeiten sind eine Radiogruppe, ungewählt, mit Beschriftung aus Buchstabe und Text', async () => {
   const k = await kontext(attrappe());
@@ -47,12 +49,28 @@ test('Antwortblatt: die Möglichkeiten sind eine Radiogruppe, ungewählt, mit Be
   const gruppe = finde(r.koerper, '.antworten')[0];
   assert.equal(gruppe.getAttribute('role'), 'radiogroup');
   assert.equal(gruppe.getAttribute('aria-label'), 'Möglichkeiten');
-  const radios = finde(r.koerper, 'input[type="radio"]');
-  assert.deepEqual(radios.map((x) => x.getAttribute('data-wahl')), ['A', 'B']);
-  assert.ok(radios.every((x) => !x.hasAttribute('checked') && !x.disabled && x.getAttribute('name') === 'moeglichkeit'));
-  const zeilen = finde(r.koerper, 'label.wahl');
+  const zeilen = finde(r.koerper, '.wahl');
   assert.equal(zeilen.length, 2);
-  assert.ok(zeilen.every((z) => finde(z, 'input').length === 1 && finde(z, '.buchstabe').length === 1 && finde(z, '.an').length === 1), 'Zeile = Eingabe, Buchstabe, Text, Haken');
+  assert.ok(zeilen.every((z) => z.getAttribute('role') === 'radio' && !z.hasAttribute('aria-disabled')), 'jede Zeile ist selbst das Radio');
+  assert.deepEqual(zustand(r.koerper), [['A', 'false', '0'], ['B', 'false', '-1']], 'nichts gewählt; Tab erreicht die erste Zeile');
+  assert.equal(finde(r.koerper, 'input[type="radio"]').length, 0, 'kein verstecktes Eingabefeld');
+  assert.ok(zeilen.every((z) => finde(z, '.buchstabe').length === 1 && finde(z, '.an').length === 1), 'Zeile = Buchstabe, Text, Haken');
+  assert.match(t(zeilen[0]), /^A\s*Standardbibliothek/, 'der Name der Zeile kommt aus Buchstabe und Text');
+});
+
+test('Antwortblatt: der Zustand steht in aria-checked, nur die gewählte Zeile ist gewählt und per Tab erreichbar; Pfeile und Leertaste wählen', async () => {
+  const k = await kontext(attrappe());
+  const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
+  const [a, b] = finde(r.koerper, '.wahl');
+  await waehleWahl(b);
+  assert.deepEqual(zustand(r.koerper), [['A', 'false', '-1'], ['B', 'true', '0']]);
+  assert.ok(taste(b, 'ArrowDown'), 'Pfeil wählt die nächste Zeile (zurück an den Anfang)');
+  assert.deepEqual(zustand(r.koerper), [['A', 'true', '0'], ['B', 'false', '-1']]);
+  taste(a, 'ArrowUp');
+  assert.deepEqual(zustand(r.koerper), [['A', 'false', '-1'], ['B', 'true', '0']]);
+  taste(a, ' ');
+  assert.deepEqual(zustand(r.koerper), [['A', 'true', '0'], ['B', 'false', '-1']]);
+  assert.equal(taste(a, 'x'), false, 'andere Tasten bleiben unberührt');
 });
 
 test('Antwortblatt: Wählen sendet nichts; Senden schickt die gewählte Möglichkeit mit dem Text und legt beides in den Entwurf', async () => {
@@ -60,7 +78,7 @@ test('Antwortblatt: Wählen sendet nichts; Senden schickt die gewählte Möglich
   const k = await kontext(s);
   schliessen.n = 0;
   const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
-  await waehleWahl(finde(r.koerper, 'input[data-wahl="B"]')[0]);
+  await waehleWahl(finde(r.koerper, '[data-wahl="B"]')[0]);
   assert.equal(s.aufrufe.length, 0, 'ein Tipp wählt nur');
   assert.deepEqual(await M.entwuerfe.liesEntwurf(k.db, 'antwort/r2d4vn').then((d) => d && { text: d.text, wahl: d.wahl }), { text: '', wahl: 'B' });
   const feld = finde(r.koerper, 'textarea')[0];
@@ -78,12 +96,14 @@ test('Antwortblatt: eine gewählte Möglichkeit allein genügt, ohne Wahl und oh
   const fehlt = finde(r.koerper, 'p.satz')[0];
   assert.ok(knopfMit(r.knoepfe, 'Senden').disabled, 'Senden bleibt gesperrt');
   assert.equal(fehlt.hidden, false);
+  assert.ok(!fehlt.className.includes('still'));
   assert.match(t(fehlt), /Wähle eine Möglichkeit oder schreibe eine eigene Antwort\./);
   await knopfMit(r.knoepfe, 'Senden').klick();
   assert.equal(s.aufrufe.length, 0);
-  await waehleWahl(finde(r.koerper, 'input[data-wahl="A"]')[0]);
+  await waehleWahl(finde(r.koerper, '[data-wahl="A"]')[0]);
   assert.equal(knopfMit(r.knoepfe, 'Senden').disabled, false);
-  assert.equal(fehlt.hidden, true);
+  assert.equal(fehlt.hidden, false, 'der Satz behält seinen Platz, damit das Blatt nicht rutscht');
+  assert.ok(fehlt.className.split(' ').includes('still'), 'er ist nur unsichtbar');
   await knopfMit(r.knoepfe, 'Senden').klick();
   assert.deepEqual(s.aufrufe.map((a) => [a[2].wahl, a[2].text]), [['A', '']]);
 });
@@ -92,13 +112,15 @@ test('Antwortblatt: die Wahl im Entwurf ist beim Öffnen wieder gewählt', async
   const k = await kontext(attrappe());
   await M.entwuerfe.speichereEntwurf(k.db, 'antwort/r2d4vn', { text: '', wahl: 'B' }, false, JETZT);
   const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
-  assert.deepEqual(finde(r.koerper, 'input[type="radio"]').filter((x) => x.hasAttribute('checked')).map((x) => x.getAttribute('data-wahl')), ['B']);
+  assert.deepEqual(zustand(r.koerper), [['A', 'false', '-1'], ['B', 'true', '0']]);
 });
 
 test('Antwortblatt ohne Schreibschicht: die Möglichkeiten sind gesperrt', async () => {
   const k = await kontext(undefined);
   const r = await M.eintrag.antwortBlatt(welt(), k, { id: 'r2d4vn' }, schliessen);
-  assert.ok(finde(r.koerper, 'input[type="radio"]').every((x) => x.disabled));
+  assert.ok(finde(r.koerper, '[role="radio"]').every((x) => x.getAttribute('aria-disabled') === 'true' && x.getAttribute('tabindex') === '-1'));
+  await finde(r.koerper, '.wahl')[0].klick();
+  assert.deepEqual(zustand(r.koerper).map((x) => x[1]), ['false', 'false'], 'eine gesperrte Zeile wählt nichts');
 });
 
 test('Antwortblatt: freier Text geht mit seinem Entwurf mit, damit Rückgängig ihn zurücklegt; ohne Text geschieht nichts', async () => {
