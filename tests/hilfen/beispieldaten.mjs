@@ -141,6 +141,8 @@ export function dateien(liste = eintraege()) {
 }
 
 /** Ein erfundenes Token von GitHub für die Prüfung vor dem Senden; zur Laufzeit verkettet, damit kein Scanner es im Quelltext findet. */
+/** Ein erfundener öffentlicher VAPID-Schlüssel: 65 Byte, das erste ist 4, base64url (nur für das Bild der Probe in Mehr). */
+const SCHLUESSEL = btoa(String.fromCharCode(4, ...Array.from({ length: 64 }, (_, i) => (i * 7 + 1) % 256))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 export const ERFUNDENES_TOKEN = ['gh', 'p_', 'A1b2C3d4'.repeat(4)].join('');
 
 /** Sendungen der Warteschlange, wie die Schreibschicht (Teil E) sie anlegt: eine je Zustand. */
@@ -221,24 +223,35 @@ export const SZENARIEN = {
   'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
   'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
   'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
+  // Alle: die Vorschau setzt den Filter, den ein Nutzer über die Chips wählen würde (js/uebersicht.js)
+  'alle-projekt': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['beta'], sortierung: 'prioritaet' } },
+  'alle-alter': { daten: dateien(), seed: true, live: 'ok', filter: { status: ['dich'], sortierung: 'alter-neu' } },
+  'alle-nichts': { daten: dateien(), seed: true, live: 'ok', filter: { projekt: ['gamma'], art: ['question'] } },
+  // Web-Push als Probe: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden
+  'mehr-webpush': { daten: dateien(), seed: true, live: 'ok', webpush: 'aus', schluessel: SCHLUESSEL, scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-an': { daten: dateien(), seed: true, live: 'ok', webpush: 'an', scroll: 'Web-Push (Probe)' },
+  'mehr-webpush-fehler': { daten: dateien(), seed: true, live: 'ok', webpush: 'fehler', schluessel: SCHLUESSEL, klick: '#webpush-an', scroll: 'Web-Push (Probe)' },
   'suche-treffer': { daten: dateien(), seed: true, live: 'ok', suche: 'tpc-0e0' },
   'suche-nichts': { daten: dateien(), seed: true, live: 'ok', suche: 'zzz-999' },
 };
 
 /** Die Adressen, die die Vorschau je Szenario rendert. */
 export const ADRESSEN = {
-  normal: ['wartet', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
+  normal: ['wartet', 'alle', 'alle/status', 'alle/projekt', 'alle/art', 'alle/prio', 'alle/sortieren', 'abnahmen', 'erfassen', 'mehr', 'mehr/geraet', 'eingang', 'ideen', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten', 'eintrag/m7q2ke',
     'eintrag/q7w2de', 'eintrag/x9k3ft', 'eintrag/8k3m1x', 'eintrag/8k3m1x/schritt/3', 'eintrag/8k3m1x/schritt/3/fail', 'eintrag/p4m7bt/ergebnis',
     'eintrag/k7m2qa', 'eintrag/k7m2qa/einsortieren', 'eintrag/b3cyxm', 'eintrag/zzzzzz'],
   schlange: ['wartet', 'eingang', 'ideen', 'eintrag/p4m7bt', 'eintrag/w2tn4c', 'eintrag/m7q2ke'],
   entwurf: ['abnahmen', 'eintrag/8k3m1x', 'eintrag/8k3m1x/ergebnis'],
-  leer: ['wartet', 'abnahmen', 'eingang', 'ideen', 'suche'],
-  laedt: ['wartet', 'eingang', 'mehr'],
-  fehler: ['wartet', 'ideen', 'mehr'],
+  leer: ['wartet', 'alle', 'abnahmen', 'eingang', 'ideen', 'suche'],
+  laedt: ['wartet', 'alle', 'eingang', 'mehr'],
+  fehler: ['wartet', 'alle', 'ideen', 'mehr'],
   token: ['wartet', 'mehr'],
-  offline: ['wartet', 'eingang', 'mehr', 'eintrag/r2d4vn'],
+  offline: ['wartet', 'alle', 'eingang', 'mehr', 'eintrag/r2d4vn'],
   anmeldung: ['anmelden'],
   'anmeldung-fehler': ['anmelden'],
+  'alle-projekt': ['alle', 'alle/prio'],
+  'alle-alter': ['alle'],
+  'alle-nichts': ['alle'],
   'suche-treffer': ['suche'],
   'suche-nichts': ['suche'],
   antworten: ['eintrag/r2d4vn/antworten'],
@@ -261,4 +274,7 @@ export const ADRESSEN = {
   'mehr-fassung': ['mehr'],
   'mehr-installieren': ['mehr'],
   'mehr-mitteilungen': ['mehr'],
+  'mehr-webpush': ['mehr'],
+  'mehr-webpush-an': ['mehr'],
+  'mehr-webpush-fehler': ['mehr'],
 };

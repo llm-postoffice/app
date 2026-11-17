@@ -14,7 +14,7 @@ before(async () => {
   M = {
     welt: await import('../js/welt.js'), ansichten: await import('../js/ansichten.js'), eintrag: await import('../js/eintrag.js'),
     ablauf: await import('../js/ablauf.js'), erfassen: await import('../js/erfassen.js'), mehr: await import('../js/mehr.js'),
-    speicher: await import('../js/speicher.js'), steuerung: await import('../js/steuerung.js'),
+    speicher: await import('../js/speicher.js'), steuerung: await import('../js/steuerung.js'), uebersicht: await import('../js/uebersicht.js'),
   };
 });
 after(() => aufraeumen());
@@ -276,4 +276,100 @@ test('Der Code ruft nie innerHTML auf (USI-1)', async () => {
   for (const f of await readdir(new URL('../js/', import.meta.url))) {
     assert.doesNotMatch((await readFile(new URL(`../js/${f}`, import.meta.url), 'utf8')).replace(/\/\/.*$/gm, ''), /innerHTML|outerHTML|insertAdjacentHTML/, f);
   }
+});
+
+// ---- Alle
+
+test('Alle: Summe, vier Filter und Sortierung stehen oben, jeder Eintrag ist eine Zeile mit der Art als Chip', async () => {
+  const k = await kontext();
+  const knoten = M.uebersicht.alleAnsicht(welt(), z(), k, M.welt.leererFilter());
+  const text = t(knoten);
+  assert.match(text, /16 offen · 7 für dich · 1 dringend/);
+  assert.match(text, /Abgeglichen um 14:02/);
+  assert.deepEqual(finde(knoten, 'a.fchip').map((a) => a.getAttribute('href')), ['#alle/status', '#alle/projekt', '#alle/art', '#alle/prio']);
+  assert.deepEqual(finde(knoten, 'a.fchip').map((a) => t(a).trim()), ['Status', 'Projekt', 'Art', 'Priorität']);
+  assert.equal(finde(knoten, 'a.sortieren')[0].getAttribute('href'), '#alle/sortieren');
+  assert.match(text, /Nach Projekt gruppiert/);
+  assert.equal(finde(knoten, 'a.zeile').length, 16);
+  assert.equal(finde(knoten, '.chip-art').length, 16, 'jede Zeile nennt die Art mit Symbol und Wort');
+  assert.deepEqual(finde(knoten, 'h2.gruppenkopf').map((h) => t(h).replace(/\s+/g, ' ').trim()),
+    ['alpha 7 offen · 4 für dich', 'beta 5 offen · 2 für dich', 'gamma 2 offen · 1 für dich', 'ohne Projekt 2 offen']);
+  assert.ok(finde(knoten, 'a.zeile').every((a) => /^#eintrag\/[0-9a-z]{6}$/.test(a.getAttribute('href'))), 'jede Zeile öffnet den Eintrag wie in Wartet');
+  assert.equal(finde(knoten, 'a.zeile.dringend').length, 1);
+  assert.match(text, /wartet auf dein Ja seit/);
+  assert.match(text, /in Arbeit bei session:cb56d77f/);
+  assert.match(text, /vor 4 Std\./);
+});
+
+test('Alle: ein Filter zeigt Zahl und Wahl auf dem Chip, die Zeile nennt das Projekt nur, wenn die Liste nicht danach gruppiert ist', async () => {
+  const k = await kontext();
+  const nachProjekt = M.uebersicht.alleAnsicht(welt(), z(), k, { ...M.welt.leererFilter(), projekt: ['gamma'] });
+  assert.match(t(nachProjekt), /2 von 16 offen · 1 für dich/);
+  assert.match(t(finde(nachProjekt, 'a.fchip')[1]), /Projekt: gamma/);
+  assert.equal(finde(nachProjekt, 'a.fchip.an').length, 1);
+  assert.equal(finde(nachProjekt, '.projekt').length, 0, 'das Projekt steht schon im Gruppenkopf');
+  assert.equal(finde(nachProjekt, 'button').filter((b) => t(b) === 'Zurücksetzen').length, 1);
+  const nachPrio = M.uebersicht.alleAnsicht(welt(), z(), k, { ...M.welt.leererFilter(), projekt: ['gamma', 'beta'], sortierung: 'prioritaet' });
+  assert.match(t(finde(nachPrio, 'a.fchip')[1]), /Projekt: 2 gewählt/);
+  assert.ok(finde(nachPrio, '.projekt').length === 7, 'ohne Gruppe nach Projekt trägt jede Zeile das Projekt');
+  assert.match(t(nachPrio), /Nach Priorität gruppiert/);
+  const nachAlter = M.uebersicht.alleAnsicht(welt(), z(), k, { ...M.welt.leererFilter(), sortierung: 'alter-neu' });
+  assert.equal(finde(nachAlter, 'h2.gruppenkopf').length, 0, 'nach Alter gibt es keine Gruppen');
+  assert.equal(finde(nachAlter, 'a.zeile').length, 16);
+});
+
+test('Alle: nichts offen, nichts gefunden, lädt und Fehler haben je einen eigenen Zustand (UFA-10)', async () => {
+  const k = await kontext();
+  assert.match(t(M.uebersicht.alleAnsicht(leer(), z(), k, M.welt.leererFilter())), /Nichts offen/);
+  const nichts = M.uebersicht.alleAnsicht(welt(), z(), k, { ...M.welt.leererFilter(), projekt: ['gamma'], art: ['question'] });
+  assert.match(t(nichts), /Nichts gefunden/);
+  assert.match(t(nichts), /0 von 16 offen/);
+  assert.equal(finde(nichts, 'button').filter((b) => t(b) === 'Filter zurücksetzen').length, 1);
+  assert.match(t(M.uebersicht.alleAnsicht(ohne(), z({ phase: 'laeuft', fortschritt: { phase: 'dateien', fertig: 1, gesamt: 5 }, letzter: null }), k, M.welt.leererFilter())), /Einträge werden geladen/);
+  assert.match(t(M.uebersicht.alleAnsicht(ohne(), z({ phase: 'fehler', fehler: new AbgleichFehler('antwort', 'x', { status: 503 }), letzter: null }), k, M.welt.leererFilter())), /Einträge nicht geladen/);
+});
+
+test('Alle: das Blatt einer Auswahl wendet jede Wahl sofort an und zählt mit; Zurücksetzen leert nur diese Auswahl', async () => {
+  const k = await kontext();
+  let f = M.welt.leererFilter();
+  const mit = { f, uebernehmen: (neu) => { f = neu; } };
+  let zu = 0;
+  const b = M.uebersicht.auswahlBlatt(welt(), k, { ansicht: 'alle', blatt: 'auswahl', welche: 'projekt' }, () => { zu++; }, mit);
+  const felder = finde(b.koerper, 'input');
+  for (const i of felder) i.value = i.getAttribute('value');   // das echte DOM tut das beim Setzen des Attributs
+  assert.deepEqual(felder.map((i) => i.getAttribute('value')), ['alpha', 'beta', 'gamma', '']);
+  assert.match(t(b.koerper), /alpha\s*7/);
+  const zeigen = b.knoepfe.find((x) => x.className.includes('gefuellt'));
+  assert.equal(t(zeigen), '16 Einträge zeigen');
+  const gruppe = finde(b.koerper, '.optionen')[0];
+  felder[2].checked = true;
+  for (const h of gruppe.horcher.change) await h({ target: felder[2] });
+  assert.deepEqual(f.projekt, ['gamma']);
+  assert.equal(t(zeigen), '2 Einträge zeigen');
+  await zeigen.klick();
+  assert.equal(zu, 1, 'Zeigen schließt das Blatt');
+  await b.knoepfe.find((x) => t(x) === 'Zurücksetzen').klick();
+  assert.deepEqual(f.projekt, []);
+  assert.equal(t(zeigen), '16 Einträge zeigen');
+});
+
+test('Alle: das Blatt Sortieren hat eine Wahl je Sortierung und schließt nach der Wahl von allein', async () => {
+  const k = await kontext();
+  let f = M.welt.leererFilter();
+  let zu = 0;
+  const b = M.uebersicht.auswahlBlatt(welt(), k, { ansicht: 'alle', blatt: 'auswahl', welche: 'sortieren' }, () => { zu++; }, { f, uebernehmen: (neu) => { f = neu; } });
+  const radios = finde(b.koerper, 'input');
+  assert.deepEqual(radios.map((i) => i.getAttribute('value')), ['projekt', 'prioritaet', 'art', 'status', 'alter-neu', 'alter-alt']);
+  assert.ok(radios.every((i) => i.getAttribute('type') === 'radio'));
+  for (const h of finde(b.koerper, '.optionen')[0].horcher.change) await h({ target: { value: 'prioritaet' } });
+  assert.equal(f.sortierung, 'prioritaet');
+  assert.equal(zu, 1);
+  assert.deepEqual(b.knoepfe, []);
+});
+
+test('Alle: eine Art im Blatt erscheint als Chip mit Symbol und Wort wie in der Liste', async () => {
+  const k = await kontext();
+  const b = M.uebersicht.auswahlBlatt(welt(), k, { ansicht: 'alle', blatt: 'auswahl', welche: 'art' }, () => {}, { f: M.welt.leererFilter(), uebernehmen() {} });
+  assert.equal(finde(b.koerper, '.chip-art').length, 7);
+  assert.match(t(b.koerper), /Freigabe\s*1/);
 });

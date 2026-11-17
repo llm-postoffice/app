@@ -8,6 +8,7 @@ import { antwortBlatt, einsortierenBlatt, eintragAnsicht } from './eintrag.js';
 import { ergebnisAnsicht, satzBlatt, schrittAnsicht } from './ablauf.js';
 import { erfassenAnsicht } from './erfassen.js';
 import { anmeldenAnsicht } from './anmelden.js';
+import { alleAnsicht, auswahlBlatt } from './uebersicht.js';
 import { geraetBlatt, mehrAnsicht } from './mehr.js';
 import { ladeWelt, zaehler } from './welt.js';
 
@@ -50,6 +51,7 @@ function plakette(welt) {
 async function ansicht(o, welt, z) {
   switch (o.ansicht) {
     case 'wartet': return { inhalt: wartet(welt, z, k) };
+    case 'alle': return { inhalt: alleAnsicht(welt, z, k) };
     case 'abnahmen': return { inhalt: abnahmen(welt, z, k) };
     case 'eingang': return { inhalt: eingang(welt, z, k) };
     case 'ideen': return { inhalt: ideen(welt, z, k) };
@@ -73,6 +75,7 @@ async function blatt(o, welt) {
   if (o.blatt === 'antworten') r = await antwortBlatt(welt, k, o, schliessen);
   else if (o.blatt === 'einsortieren') r = await einsortierenBlatt(welt, k, o, schliessen);
   else if (o.blatt === 'satz') r = await satzBlatt(welt, k, o, schliessen);
+  else if (o.blatt === 'auswahl') r = auswahlBlatt(welt, k, o, schliessen);
   else r = await geraetBlatt(k, schliessen);
   $('blatt-titel').replaceChildren(...(r.symbol ? [el('span', { class: r.rolle }, ico(r.symbol))] : []), titel);
   $('blatt-koerper').replaceChildren(...r.koerper.filter(Boolean));

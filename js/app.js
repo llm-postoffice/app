@@ -8,17 +8,20 @@ import { netzZeile } from './netz.js';
 import { Aktualisierung, pruefeRegelmaessig, zeigeNeuBand } from './aktualisieren.js';
 import { baueHinweis } from './hinweis.js';
 import { Schreiber } from './schreiben.js';
+import { einstellung, setzeEinstellung } from './speicher.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
+import { browserProbe } from './webpush.js';
 import { ladeWelt, ortVon } from './welt.js';
 
 const $ = (id) => document.getElementById(id);
 
 /**
  * `aktualisierung` und `installiert` sind für die Vorschau da: sie zeigt die Zustände „neue Fassung wartet“ und „läuft als
- * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser.
+ * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser. `webpush` ersetzt ebenso die Probe
+ * mit Web-Push (js/webpush.js); `null` lässt den Abschnitt in Mehr weg.
  */
-export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined }) {
+export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined, webpush = undefined }) {
   statusleiste();
   $('zurueck').addEventListener('click', zurueck);
 
@@ -40,8 +43,14 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   const dienst = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
   const eigene = aktualisierung === undefined;
   aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
+  if (webpush === undefined) {
+    webpush = browserProbe({
+      lies: async () => (await einstellung(db, 'webpush'))?.schluessel ?? '',
+      schreibe: (schluessel) => setzeEinstellung(db, 'webpush', { schluessel }),
+    });
+  }
   const k = {
-    db, steuerung, schreiben, jetzt, aktualisierung, installiert, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, aktualisierung, installiert, webpush, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },

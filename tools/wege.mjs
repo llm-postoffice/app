@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Wegetest der App in Chromium (headless, frisches Profil, nur Node ab 22): Anmeldung, Zurück (UNA-3, UNA-4), Blatt
-// (UDI-3), Leiste (UNA-1, UNA-2), ein Knopf je Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe (UEI-6),
+// (UDI-3), Leiste (UNA-1, UNA-2), Alle (fünf Reiter, filtern, sortieren, Eintrag öffnen), ein Knopf je Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe (UEI-6),
 // Statusleiste (UFA-1), Netzzeile (UOF-4), Start ohne Netz (UOF-1), neue Fassung (UOF-5), Installation, Fassung in Mehr und eine fehlerfreie Konsole (CSP, UPL-3). Muster: beispiele/handy/wege.mjs im p94-hig-Klon. Ein Weg je Zeile: PASS, FAIL oder BLOCKED.
 // Dazu IndexedDB und der Abgleich gegen eine nachgebaute GitHub-API: Chromium fängt api.github.com ab, kein Paket
 // geht ins Netz.
@@ -18,7 +18,7 @@ const PROG = 'wege';
 const HILFE = `Aufruf: node tools/wege.mjs [OPTIONEN]
 
 Spielt die Wege der App in Chromium nach: Anmeldung, alle Zurück-Wege der Tabelle, Blätter,
-Navigationsleiste, einen Knopf zu jeder Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe
+Navigationsleiste, die Übersicht Alle (filtern, sortieren, einen Eintrag öffnen), einen Knopf zu jeder Handlung (E13), eine linke Kante je Ansicht (GAN-3), Entwürfe
 über Neuladen, Statusleiste, Netzzeile, den Start ohne Netz, eine zweite Fassung des Service
 Workers (Update wartet, Neu starten), Installation, Fassung in Mehr, IndexedDB, den Abgleich und eine Konsole ohne
 Fehler. Die Daten sind erfunden (tests/hilfen/beispieldaten.mjs).
@@ -341,6 +341,50 @@ try {
   p = await seite(t('#eintrag/R2D-4VN'));
   melde(await p.hash() === `#eintrag/${ID}`, 'eine ID in der Adresse wird ohne Strich und klein geschrieben', await p.stand());
 
+  // 4b. Alle: fünf Reiter in einer Reihe, nach einem Projekt filtern, nach Priorität sortieren, einen Eintrag öffnen und bedienen.
+  //     Die Berührungen werden mitgezählt: jede `tippe` ist eine.
+  p = await seite(t('#wartet'));
+  const reihe = await p.werte(`(() => { const a = [...document.querySelectorAll('#leiste a')]; return { n: a.length, tops: [...new Set(a.map((x) => Math.round(x.getBoundingClientRect().top)))].length, breit: Math.min(...a.map((x) => x.getBoundingClientRect().width)), ueber: document.documentElement.scrollWidth - innerWidth }; })()`);
+  melde(reihe.n === 5 && reihe.tops === 1 && reihe.ueber <= 0, 'fünf Reiter stehen bei 360 px in einer Reihe, ohne waagrecht zu scrollen', JSON.stringify(reihe));
+  let beruehrungen = 0;
+  const tippe = async (sel) => { beruehrungen++; await p.tippe(sel); };
+  await tippe('#leiste a[href="#alle"]');
+  const zeilen = () => p.werte('[...document.querySelectorAll("main a.zeile")].map((a) => a.getAttribute("href").slice(9))');
+  melde(await p.hash() === '#alle' && (await zeilen()).length === 16 && await p.werte('document.querySelector("#leiste [aria-current=page]").dataset.bereich') === 'alle',
+    'der Reiter Alle zeigt alle 16 offenen Einträge, auch die, die nicht auf dich warten', `${await p.stand()}, ${(await zeilen()).length} Zeilen`);
+  melde((await zeilen()).includes('h2n9vz') && await p.werte('!!document.querySelector("main a.zeile .chip-art")'), 'ein Eintrag eines anderen Projekts steht in der Liste, die Art als Chip mit Wort', 'Eintrag fehlt');
+  await tippe('main a.fchip[href="#alle/projekt"]');
+  melde(await p.hash() === '#alle/projekt' && await p.werte('document.getElementById("blatt").open && document.getElementById("blatt-titel").textContent') === 'Projekt', 'der Chip Projekt öffnet die Auswahl als Blatt', await p.stand());
+  await tippe('#blatt .option input[value="gamma"]');
+  melde(await p.werte('document.querySelector("#blatt-knoepfe .gefuellt").textContent') === '2 Einträge zeigen', 'die Wahl im Blatt zählt die Treffer mit', await p.werte('document.querySelector("#blatt-knoepfe .gefuellt")?.textContent'));
+  await tippe('#blatt-knoepfe .gefuellt');
+  const gefiltert = await zeilen();
+  melde(await p.hash() === '#alle' && !await p.werte('document.getElementById("blatt").open') && gefiltert.length === 2 && gefiltert.includes('h2n9vz'), 'Zeigen schließt das Blatt, die Liste nennt nur das gewählte Projekt', `${await p.hash()}, ${gefiltert.join(' ')}`);
+  melde(/Projekt: gamma/.test(await p.werte('document.querySelector("main a.fchip.an").textContent')), 'der Chip nennt die Wahl', await p.werte('document.querySelector("main a.fchip.an")?.textContent'));
+  await tippe('main a.sortieren');
+  await tippe('#blatt .option input[value="prioritaet"]');
+  const gruppen = await p.werte('[...document.querySelectorAll("main h2.gruppenkopf b")].map((b) => b.textContent)');
+  melde(await p.hash() === '#alle' && !await p.werte('document.getElementById("blatt").open') && gruppen.join(',') === 'Normal,Niedrig', 'Sortieren nach Priorität schließt von allein und gruppiert nach Priorität', `${await p.hash()}, ${gruppen.join(',')}`);
+  const nach = beruehrungen;
+  await tippe('main a.zeile[href="#eintrag/h2n9vz"]');
+  melde(await p.hash() === '#eintrag/h2n9vz' && await p.werte('document.querySelector("main .id")?.textContent') === 'h2n-9vz' && await p.werte('!!document.querySelector("#aktion [data-handlung=abnahme]")'),
+    'ein Tipp auf die Zeile öffnet denselben Eintrag mit denselben Knöpfen wie aus Wartet', await p.stand());
+  await p.zurueck();
+  melde(await p.hash() === '#alle' && (await zeilen()).length === 2 && /Projekt: gamma/.test(await p.werte('document.querySelector("main a.fchip.an")?.textContent ?? ""')),
+    'Zurück vom Eintrag führt in Alle mit demselben Filter', `${await p.hash()}, ${(await zeilen()).length} Zeilen`);
+  await tippe('main button.text');
+  await tippe('main a.zeile[href="#eintrag/r2d4vn"]');
+  await tippe('#aktion [data-handlung=antworten]');
+  melde(await p.hash() === '#eintrag/r2d4vn/antworten' && await p.werte('document.getElementById("blatt").open'), 'aus Alle zurückgesetzt, Eintrag geöffnet und Antworten erreicht', await p.stand());
+  await p.taste('Escape', 'Escape', 27); await p.zurueck();
+  melde(await p.hash() === '#alle' && (await zeilen()).length === 16, 'Zurück aus Eintrag und Blatt führt in Alle, der Filter ist zurückgesetzt', `${await p.hash()}, ${(await zeilen()).length}`);
+  console.log(`INFO  Alle: ${nach} Berührungen bis zum Filter Projekt und der Sortierung nach Priorität (Alle, Projekt, Wert, Zeigen, Sortieren, Priorität), ${beruehrungen - nach} weitere bis Antworten`);
+  // Bei Schrift 200 % läuft nichts waagrecht über: Chips brechen um, das Blatt scrollt
+  await p.werte(`document.documentElement.style.setProperty('font-size', '200%', 'important')`); await pause(300);
+  melde(await p.werte('document.documentElement.scrollWidth - innerWidth') <= 0, 'Alle läuft bei Schrift 200 % nicht waagrecht über', await p.werte('document.documentElement.scrollWidth - innerWidth'));
+  await p.werte(`document.documentElement.style.removeProperty('font-size')`);
+  await p.schliesse();
+
   // 5. Fassung, Netzzeile, Statusleiste
   p = await seite(t('#mehr'));
   melde(await p.werte('document.getElementById("fassung").textContent') === VERSION, 'Mehr zeigt die Fassung aus js/version.js', await p.werte('document.getElementById("fassung").textContent'));
@@ -364,7 +408,7 @@ try {
   // 6b. Alle Zurück-Wege der Tabelle (UNA-3): von jeder Adresse aus Schritt für Schritt zurück, bis die App endet.
   //     Ein Blatt zählt als eigene Stufe über der Ansicht, ein tiefer Link baut den Stapel darunter.
   const TABELLE = [
-    ['#wartet', []], ['#abnahmen', ['#wartet']], ['#erfassen', ['#wartet']], ['#mehr', ['#wartet']], ['#mehr/geraet', ['#mehr', '#wartet']],
+    ['#wartet', []], ['#alle', ['#wartet']], ['#alle/projekt', ['#alle', '#wartet']], ['#abnahmen', ['#wartet']], ['#erfassen', ['#wartet']], ['#mehr', ['#wartet']], ['#mehr/geraet', ['#mehr', '#wartet']],
     ['#eingang', ['#wartet']], ['#ideen', ['#mehr', '#wartet']], ['#suche', ['#wartet']],
     [`#eintrag/${ID}`, ['#wartet']], [`#eintrag/${ID}/antworten`, [`#eintrag/${ID}`, '#wartet']],
     [`#eintrag/${EINGANG}`, ['#eingang', '#wartet']], [`#eintrag/${EINGANG}/einsortieren`, [`#eintrag/${EINGANG}`, '#eingang', '#wartet']],
@@ -430,7 +474,7 @@ try {
     const x = liste.map((l) => l[1]);
     return { n: liste.length, min: Math.min(...x), max: Math.max(...x), ab: liste.filter((l) => l[1] !== Math.min(...x)).slice(0, 4).map((l) => l.join('@')) };
   })()`;
-  const KANTE_ANSICHTEN = ['#wartet', '#abnahmen', '#erfassen', '#mehr', '#eingang', '#ideen', '#suche', '#anmelden', `#eintrag/${ID}`, '#eintrag/m7q2ke', '#eintrag/q7w2de',
+  const KANTE_ANSICHTEN = ['#wartet', '#alle', '#abnahmen', '#erfassen', '#mehr', '#eingang', '#ideen', '#suche', '#anmelden', `#eintrag/${ID}`, '#eintrag/m7q2ke', '#eintrag/q7w2de',
     '#eintrag/x9k3ft', `#eintrag/${ABNAHME}`, `#eintrag/${EINGANG}`, '#eintrag/b3cyxm', `#eintrag/${ABNAHME}/schritt/3`, '#eintrag/p4m7bt/ergebnis', '#eintrag/zzzzzz'];
   const kanten = [];
   p = await seite(t('#wartet'));
@@ -801,7 +845,7 @@ try {
   await p.schliesse();
 
   // 8. Konsole: keine Verstöße gegen die CSP, keine Fehler im Skript, in keiner Ansicht
-  const ansichten = ['#wartet', '#abnahmen', '#erfassen', '#mehr', '#eingang', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`, `#eintrag/${ID}/einsortieren`, '#ideen', '#mehr/geraet', '#suche', '#anmelden', `#eintrag/${ID}/antworten`, `#eintrag/${EINGANG}/einsortieren`, `#eintrag/${ABNAHME}/schritt/3/fail`, `#eintrag/${ABNAHME}/ergebnis`];
+  const ansichten = ['#wartet', '#alle', '#alle/status', '#alle/sortieren', '#abnahmen', '#erfassen', '#mehr', '#eingang', `#eintrag/${ID}`, `#eintrag/${ID}/schritt/2`, `#eintrag/${ID}/einsortieren`, '#ideen', '#mehr/geraet', '#suche', '#anmelden', `#eintrag/${ID}/antworten`, `#eintrag/${EINGANG}/einsortieren`, `#eintrag/${ABNAHME}/schritt/3/fail`, `#eintrag/${ABNAHME}/ergebnis`];
   const meldungen = [];
   for (const a of ansichten) {
     p = await seite(t(a));

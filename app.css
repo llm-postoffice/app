@@ -226,6 +226,45 @@ details[open] > summary::after { transform: rotate(180deg); }
 .mehr-liste > li { container-type: inline-size; }
 @container (max-width: 12em) { .karte.ruhig .rund { display: none; } }
 
+/* Alle: Summe, Filterleiste, Gruppen nach Projekt und dichte Zeilen (Variante A des Entwurfs, Chip der Art aus Variante C) */
+.summe { margin: 4px 0 8px; font-size: 0.9375rem; line-height: 1.375rem; color: var(--neben); }
+.summe b { color: var(--text); font-weight: 600; }
+.stand-zeile { margin: 0 0 8px; }
+.fleiste { margin: 0 0 4px; }
+.reihe { display: flex; flex-wrap: wrap; gap: 8px; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 48px; padding: 6px 12px 6px 16px; border: 1px solid var(--neben); border-radius: 12px; background: none; font-size: 0.875rem; font-weight: 500; color: var(--text); text-decoration: none; }
+.fchip .wort { min-width: 0; }
+.fchip .ico { flex: none; width: 20px; height: 20px; }
+.fchip.an { background: var(--tonal); color: var(--auf-tonal); border-color: var(--tonal); padding-left: 12px; }
+.reihe .text { padding: 0 12px; }
+.sortzeile { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 8px; font-size: 0.875rem; line-height: 1.25rem; color: var(--neben); }
+.sortieren { display: inline-flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 8px 0 12px; color: var(--akzent); font-weight: 500; text-decoration: none; }
+.sortieren .ico { width: 20px; height: 20px; }
+.gruppenkopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; margin: 16px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--flaeche); font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; color: var(--neben); }
+.gruppenkopf b { font-size: 1rem; line-height: 1.5rem; font-weight: 700; color: var(--text); }
+.gruppe { margin: 0; padding: 0; list-style: none; }
+.zeile { display: grid; gap: 4px; min-height: 72px; padding: 12px 0; border-bottom: 1px solid var(--linie); color: var(--text); text-decoration: none; }
+.zeile:active { background: var(--flaeche); }
+.zeile .kopfz { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.8125rem; line-height: 1.25rem; }
+.zeile .projekt { font-size: 0.9375rem; line-height: 1.375rem; font-weight: 700; }
+.zeile .projekt .rest, .zeile .kopfz > .rest { font-weight: 400; font-size: 0.875rem; }
+.zeile .projekt.keins { font-weight: 400; color: var(--neben); font-size: 0.875rem; }
+.zeile .t { font-size: 1rem; line-height: 1.375rem; font-weight: 600; }
+.zeile .m { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--neben); }
+.zeile .prio { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; color: var(--text); }
+.zeile .prio.hoch { color: var(--f-acc); }
+.zeile .prio .ico { width: 1.25em; height: 1.25em; }
+/* die rote Kante steht im Rand links vom Text; der Text beginnt wie in jeder Ansicht bei 16 px (GAN-3) */
+.zeile.dringend { position: relative; }
+.zeile.dringend::before { content: ""; position: absolute; left: -12px; top: 0; bottom: 0; width: 4px; background: var(--f-acc); }
+/* Auswahl im Blatt: Reihen von 56 px mit Kästchen oder Kreis, Wort und Zahl */
+.optionen { display: grid; margin: 0 0 8px; }
+.option { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 4px 0; font-size: 1rem; line-height: 1.5rem; }
+.option input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--akzent); }
+.option .wort { flex: 1; min-width: 0; }
+.option .chip-art { flex: none; }
+.option .n { margin-left: auto; font-size: 0.875rem; color: var(--neben); }
+
 /* Übersicht oben in Wartet und Abnahmen: Ergebnis zuerst, groß (GRM-6) */
 .uebersicht { margin: 8px 0 16px; display: grid; gap: 8px; }
 .uebersicht .zahl { margin: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 600; }
@@ -380,10 +419,10 @@ body:has(:is(main, #blatt) :is(input, textarea, select):focus) #neu { display: n
 body:has(#leiste[hidden]) .aktion { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 .aktion .satz { flex: 1 1 100%; margin: 0; }
 
-/* Untere Leiste: Hinweis, Aktion und Navigation kleben unten und verdecken nichts (UAN-4); bei Schrift 200 % bricht sie um */
+/* Untere Leiste: Hinweis, Aktion und Navigation kleben unten und verdecken nichts (UAN-4); fünf Reiter passen bei 360 px in eine Reihe (4,5 rem je Reiter), bei Schrift 200 % bricht sie um */
 .unten { position: sticky; bottom: 0; z-index: 2; }
 .leiste {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
   padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background: var(--flaeche);
 }

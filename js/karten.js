@@ -2,7 +2,7 @@
 // mit el() aus dom.js: Text aus Einträgen geht ausschließlich als Text in den Baum (USI-1). Farbe, Symbol und Wort
 // gehören zusammen; Farbe steht nie allein (UFA-2, UFA-7). Maße und Farben stehen in app.css.
 import { el, ico } from './dom.js';
-import { absenderText } from './ansichtstexte.js';
+import { PRIO_WORTE, absenderText } from './ansichtstexte.js';
 
 /** Chip der Art: Symbol und Wort in der Farbe der Art. */
 export const chipArt = (art) => el('span', { class: `chip-art ${art.klasse}` }, ico(art.symbol), art.wort);
@@ -45,6 +45,20 @@ export function karte(m, href) {
     el('span', { class: 'titel' }, m.titel),
     zustandsZeile(m.zustand),
     m.von ? vonZeile(m.von) : null));
+}
+
+/**
+ * Eine Zeile der Übersicht „Alle“: die Art als Chip mit Symbol und Wort, ID, Projekt (nur wenn die Liste nicht nach Projekt
+ * gruppiert ist), Titel, Zustand, Priorität und Alter. Als Ganzes ein Ziel; ohne Karte, damit viele Einträge dicht stehen.
+ */
+export function zeile(m, href, { mitProjekt = true } = {}) {
+  const prio = m.dringend ? el('span', { class: 'prio hoch' }, ico('flag-f'), 'Dringend') : el('span', { class: 'prio' }, PRIO_WORTE.find((o) => o.wert === m.stufe).text);
+  return el('li', {}, el('a', { class: `zeile ${m.art.klasse}${m.dringend ? ' dringend' : ''}`, href },
+    el('span', { class: 'kopfz' }, chipArt(m.art), idSpan(m.idText),
+      mitProjekt ? projektSpan(m.projekt, m.an) : (m.an ? el('span', { class: 'rest' }, m.an) : null)),
+    el('span', { class: 't' }, m.titel),
+    zustandsZeile(m.zustand),
+    el('span', { class: 'm' }, prio, ` · ${m.alter}`)));
 }
 
 /** Liste von Karten. */

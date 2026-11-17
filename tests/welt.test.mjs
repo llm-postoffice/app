@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { abnahmeSchritte, abnahmenListe, abnahmenNachRechner, annahmeVon, baueWelt, eingangListe, handlungenVon, ideenListe, karteVon, moeglichkeiten, offenSatz, ortVon, suche, wartetListe, zaehler, zustandVon, fadenVon } from '../js/welt.js';
 import { stapelUnter } from '../js/adressen.js';
+import { auswahlOptionen, filtere, gruppiere, hatFilter, leererFilter, uebersichtModelle } from '../js/welt.js';
 import { JETZT, dateien, entwuerfe, schlange } from './hilfen/beispieldaten.mjs';
 
 const welt = (extra = {}) => baueWelt({ pfade: dateien(), jetzt: JETZT, ...extra });
@@ -127,4 +128,77 @@ test('Karte: Art, Projekt, Rechner und Absender; Text aus dem Eintrag bleibt Tex
   rohe.set('entries/aa/aaaaaa/0-entry.md', '# Titel\u001b[31m rot\n\n- Kind: note\n- To: user\n- From: user, handy, 2026-11-14T10:00Z\n\nText');
   const y = baueWelt({ pfade: rohe, jetzt: JETZT });
   assert.equal(karteVon(y, { e: y.eintraege.get('aaaaaa'), st: y.buch.zustand(y.eintraege.get('aaaaaa')) }).titel, 'Titel^[[31m rot');
+});
+
+// ---- Alle: offene Einträge aller Projekte, filtern, sortieren, gruppieren
+
+const alle = () => uebersichtModelle(welt());
+const idsM = (liste) => liste.map((m) => m.id);
+const filter = (teil) => ({ ...leererFilter(), ...teil });
+
+test('Alle: jeder offene Eintrag steht drin, auch die, die nicht auf dich warten; Erledigtes und Verworfenes nicht', () => {
+  const m = alle();
+  assert.equal(m.length, 16);
+  for (const id of ['tpc0e0', 'w3a9ck', 'p1cb2x', 'k7m2qa', 'b3cyxm']) assert.ok(idsM(m).includes(id), id);
+  for (const id of ['d5n8vk', 'f6s3ga']) assert.ok(!idsM(m).includes(id), `${id} ist geschlossen`);
+  const lage = (id) => m.find((x) => x.id === id).lage;
+  assert.deepEqual(['q7w2de', 'tpc0e0', 'w3a9ck', 'p1cb2x'].map(lage), ['dich', 'arbeit', 'andere', 'offen']);
+  assert.equal(m.find((x) => x.id === 'q7w2de').alter, 'vor 4 Std.');
+  assert.deepEqual(m.filter((x) => x.lage === 'dich').map((x) => x.id).sort(), ids(wartetListe(welt())).sort(), 'Für dich ist genau die Liste Wartet');
+});
+
+test('Alle: ein leerer Filter lässt alles durch; jede Dimension verengt, mehrere Werte einer Dimension gelten als oder, Dimensionen als und', () => {
+  const m = alle();
+  assert.equal(hatFilter(leererFilter()), false);
+  assert.equal(filtere(m, leererFilter()).length, 16);
+  assert.deepEqual(idsM(filtere(m, filter({ projekt: ['gamma'] }))).sort(), ['h2n9vz', 'z6bt3f']);
+  assert.equal(filtere(m, filter({ projekt: ['gamma', 'beta'] })).length, 7);
+  assert.deepEqual(idsM(filtere(m, filter({ projekt: [''] }))).sort(), ['k7m2qa', 'w2tn4c'], 'ohne Projekt');
+  assert.deepEqual(idsM(filtere(m, filter({ status: ['arbeit', 'andere'] }))).sort(), ['tpc0e0', 'w3a9ck']);
+  assert.deepEqual(idsM(filtere(m, filter({ art: ['question', 'approval'] }))).sort(), ['q7w2de', 'r2d4vn']);
+  assert.deepEqual(idsM(filtere(m, filter({ projekt: ['beta'], status: ['dich'] }))).sort(), ['p4m7bt', 'r2d4vn']);
+  assert.equal(hatFilter(filter({ sortierung: 'art' })), false, 'die Sortierung ist kein Filter');
+  assert.equal(hatFilter(filter({ prio: ['hoch'] })), true);
+});
+
+test('Alle: Priorität filtert Dringend als eigenes Merkmal und Hoch, Normal, Niedrig nach dem Rang', () => {
+  const m = alle();
+  assert.deepEqual(idsM(filtere(m, filter({ prio: ['dringend'] }))), ['q7w2de']);
+  assert.deepEqual(idsM(filtere(m, filter({ prio: ['hoch'] }))), ['q7w2de'], 'Rang 1 ist Hoch, auch wenn er dringend ist');
+  assert.equal(filtere(m, filter({ prio: ['niedrig'] })).length, 6);
+  assert.equal(filtere(m, filter({ prio: ['niedrig', 'dringend'] })).length, 7);
+});
+
+test('Alle: die Zahlen einer Auswahl zählen mit den anderen Filtern, nicht mit dem eigenen', () => {
+  const m = alle();
+  const zahlen = (f, dim) => Object.fromEntries(auswahlOptionen(m, f, dim).map((o) => [o.wert, o.n]));
+  assert.deepEqual(zahlen(leererFilter(), 'status'), { dich: 7, arbeit: 1, andere: 1, offen: 7 });
+  assert.deepEqual(zahlen(filter({ projekt: ['beta'] }), 'status'), { dich: 2, arbeit: 0, andere: 1, offen: 2 });
+  assert.deepEqual(zahlen(filter({ projekt: ['beta'] }), 'projekt'), { alpha: 7, beta: 5, gamma: 2, '': 2 }, 'das Projekt zählt sich nicht selbst');
+  assert.deepEqual(auswahlOptionen(m, leererFilter(), 'art').map((o) => o.text), ['Frage', 'Freigabe', 'Abnahme', 'Auftrag', 'Nachricht', 'Idee', 'Notiz']);
+  assert.deepEqual(auswahlOptionen(m, leererFilter(), 'projekt').map((o) => o.text), ['alpha', 'beta', 'gamma', 'ohne Projekt'], 'ohne Projekt steht zuletzt');
+  assert.deepEqual(auswahlOptionen(m, leererFilter(), 'prio').map((o) => o.text), ['Dringend', 'Hoch', 'Normal', 'Niedrig']);
+  assert.ok(auswahlOptionen([], filter({ projekt: ['alpha'] }), 'projekt').some((o) => o.wert === 'alpha'), 'ein gewählter Wert bleibt abwählbar');
+});
+
+test('Alle: Gruppen nach Projekt, Priorität, Art und Status; innerhalb zählt der Rang', () => {
+  const m = alle();
+  const gruppen = (s) => gruppiere(m, s).map((g) => `${g.titel}:${g.eintraege.length}`);
+  assert.deepEqual(gruppen('projekt'), ['alpha:7', 'beta:5', 'gamma:2', 'ohne Projekt:2']);
+  assert.deepEqual(idsM(gruppiere(m, 'projekt')[0].eintraege).slice(0, 2), ['q7w2de', '8k3m1x'], 'Dringendes zuerst, dann ältere Anlage');
+  assert.deepEqual(gruppen('prioritaet'), ['Dringend:1', 'Normal:9', 'Niedrig:6']);
+  assert.deepEqual(gruppen('art'), ['Frage:1', 'Freigabe:1', 'Abnahme:3', 'Auftrag:3', 'Nachricht:3', 'Idee:4', 'Notiz:1']);
+  assert.deepEqual(gruppen('status'), ['Wartet auf dich:7', 'In Arbeit:1', 'Wartet auf anderes:1', 'Offen:7']);
+  assert.equal(gruppiere(m, 'projekt')[0].fuerDich, 4);
+  assert.equal(gruppiere(m, 'projekt').reduce((n, g) => n + g.eintraege.length, 0), 16, 'kein Eintrag geht verloren');
+});
+
+test('Alle: nach Alter eine Liste ohne Gruppentitel, neue oder alte zuerst; leer ergibt keine Gruppe', () => {
+  const m = alle();
+  const neu = gruppiere(m, 'alter-neu');
+  assert.equal(neu.length, 1);
+  assert.equal(neu[0].titel, null);
+  assert.deepEqual(idsM(neu[0].eintraege).slice(0, 3), ['w3a9ck', 'p1cb2x', 'r2d4vn']);
+  assert.deepEqual(idsM(gruppiere(m, 'alter-alt')[0].eintraege).slice(0, 2), ['z6bt3f', 'h2n9vz']);
+  for (const s of ['projekt', 'prioritaet', 'art', 'status', 'alter-neu', 'alter-alt']) assert.deepEqual(gruppiere([], s), [], s);
 });

@@ -19,7 +19,7 @@ arbeitet offline mit einer Warteschlange.
   Parameter) kennen den Browser nicht selbst. Die Ansichten (Teil D) bauen ihren Baum nur mit `el()` und `ico()` aus
   `dom.js` (nie `innerHTML`, Daten nur über `textContent`; ein Test erzwingt es), lesen den Stand über `welt.js` (rein,
   unter `node --test`) und laufen über `anzeigen.js`; `app.js` verbindet alles und ist für `start.js` und die Vorschau
-  derselbe Einstieg. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0); jedes benutzte
+  derselbe Einstieg. Alle (`uebersicht.js`) hält den Filter im Speicher der Seite; Filter und Sortierung rechnet `welt.js` (rein), eine Auswahl ist ein Blatt mit Adresse `#alle/NAME`; die Vorschau setzt den Filter über `filter` im Szenario. Symbole stehen als Sprite in `index.html` und sind Material Symbols (Apache-2.0); jedes benutzte
   Symbol muss im Sprite stehen und jedes im Sprite benutzt sein (`tests/geruest.test.mjs`).
 - Schreiben (Teil E): `js/schreiben.js` ist die Schreibschicht (`k.schreiben`, ein `Schreiber`): `antworten`, `urteilSenden`,
   `erledigen`, `einsortieren`, `anlegen` reihen eine Sendung in die Warteschlange (Speicher `schlange`) und geben
@@ -50,6 +50,11 @@ arbeitet offline mit einer Warteschlange.
   (Bilder von unteren Abschnitten in Mehr) laufen nicht im Standardlauf von `tools/rendern.mjs`, weil der Renderer beim
   Scrollen „unter der Statusleiste“ meldet. Der Wegetest ändert den Cache-Namen des Service Workers über den Server und
   belegt Start ohne Netz und Update-Weg in Chromium.
+- Web-Push als Probe (Auftrag phzd86): `js/webpush.js` (`WebPushProbe`, Browser und Speicher des Schlüssels sind Parameter), der Abschnitt
+  „Web-Push (Probe)“ in `js/mehr.js` (fehlt, wenn `k.webpush` fehlt) und die Handler `push` und `notificationclick` in `sw.js` (Logik
+  in `js/swlogik.js`). Der Push trägt keinen Text; das Postwerkzeug sendet ihn (`claude-post webpush`). Die Berechtigung für
+  Mitteilungen fragt nur der Tipp auf **Einschalten**. Entfernen: diese drei Stellen, die Zeile in `app.js` und die Szenarien
+  `mehr-webpush*`.
 - Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe README) und überspringt
   sich ohne sie; mit ihnen endet die Prüfung des Postwerkzeugs auf der Sandbox mit Exit 0.
 - Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten
