@@ -271,6 +271,16 @@ test('Mehr: Mitteilungen sagen in Worten, was ID kopieren tut und was ein Tipp �
   assert.match(text, /Tippe auf \+, nicht auf einen Link/);
 });
 
+test('Mehr in der Android-Hülle: ohne App installieren, ein Tipp öffnet den Eintrag', async () => {
+  const k = await kontext();
+  k.huelle = {};
+  const text = t(await M.mehr.mehrAnsicht(welt(), z(), k));
+  assert.doesNotMatch(text, /App installieren/);
+  assert.doesNotMatch(text, /Install and create shortcut/);
+  assert.match(text, /öffnet den Eintrag in dieser App/);
+  assert.match(text, /Fassung/);
+});
+
 test('Der Code ruft nie innerHTML auf (USI-1)', async () => {
   const { readdir, readFile } = await import('node:fs/promises');
   for (const f of await readdir(new URL('../js/', import.meta.url))) {

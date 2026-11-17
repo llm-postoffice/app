@@ -119,6 +119,22 @@ const WAECHTER = `window.__melde = [];
   addEventListener('error', (e) => __melde.push('Fehler ' + e.message));
   addEventListener('unhandledrejection', (e) => __melde.push('Zusage abgelehnt ' + e.reason));`;
 
+// Die Brücke der Android-Hülle, nachgebaut (js/huelle.js): Das Token liegt im sessionStorage der Seite statt im Keystore,
+// jede Nachricht der Seite steht geparst in __huelle.gesendet, und auf bereit schickt sie __huelle.anstehend, wenn gesetzt.
+const BRUECKE = `
+  window.__huelle ??= { gesendet: [], anstehend: null };
+  window.llmpost = { onmessage: null, postMessage(s) {
+    const n = JSON.parse(s);
+    __huelle.gesendet.push(n);
+    const antworte = (a) => setTimeout(() => llmpost.onmessage({ data: JSON.stringify(a) }), 0);
+    if (n.art === 'token-holen') antworte({ nr: n.nr, art: 'token', token: sessionStorage.getItem('__token') });
+    else if (n.art === 'token-setzen') {
+      if (n.token === null) sessionStorage.removeItem('__token'); else sessionStorage.setItem('__token', n.token);
+      antworte({ nr: n.nr, art: 'ok' });
+    } else if (n.art === 'bereit' && __huelle.anstehend) antworte(__huelle.anstehend);
+  } };
+  window.__huelleSchicke = (m) => llmpost.onmessage({ data: JSON.stringify(m) });`;
+
 // Chromium fängt api.github.com ab und beantwortet die Anfragen aus der Mock-Quelle q (wirft sie, fällt das Netz aus).
 // Es geht nichts ins Netz; die Anfragen stehen in q.protokoll.
 const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'etag, retry-after, date, x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset' };
@@ -147,7 +163,7 @@ let aktuell = null;   // die zuletzt geöffnete Seite; die nächste schließt si
  * Öffnet eine Seite in einem Fenster der Größe breite × hoehe. Sie startet mit dem, was auf dem Gerät liegt (vorbereiten legt
  * Anmeldung und Stand ab); die Anfragen an api.github.com beantwortet `abgefangen`.
  */
-async function seite(url, breite = 360, hoehe = 800, ohneNetz = false) {
+async function seite(url, breite = 360, hoehe = 800, ohneNetz = false, vorher = '') {
   if (aktuell) { await aktuell(); aktuell = null; }
   const { result: { targetId } } = await senden('Target.createTarget', { url: 'about:blank' });
   const { result: { sessionId: s } } = await senden('Target.attachToTarget', { targetId, flatten: true });
@@ -156,7 +172,7 @@ async function seite(url, breite = 360, hoehe = 800, ohneNetz = false) {
   await senden('Page.enable', {}, s);
   await senden('Network.enable', {}, s);
   await senden('Fetch.enable', { patterns: [{ urlPattern: 'https://api.github.com/*' }] }, s);
-  await senden('Page.addScriptToEvaluateOnNewDocument', { source: WAECHTER }, s);
+  await senden('Page.addScriptToEvaluateOnNewDocument', { source: WAECHTER + vorher }, s);
   // ohneNetz: das Netz ist schon aus, wenn die Seite zum ersten Mal geladen wird (Start ohne Netz, UOF-1)
   if (ohneNetz) await senden('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, s);
   await senden('Page.navigate', { url }, s); await pause(700);
@@ -842,6 +858,48 @@ try {
   zweiteFassung = false;
   p = await seite(t('#wartet'));
   if (await p.warte('!document.getElementById("neu").hidden', 15000)) { await p.tippe('#neu-knopf'); await p.warte('(async () => (await caches.keys()).length === 1 && (await caches.keys())[0] === ' + JSON.stringify(`postfach-${VERSION}`) + ')()', 15000); }
+  await p.schliesse();
+
+  // 7c. Android-Hülle: Brücke nachgebaut, auf der Herkunft localhost (frisch: kein Service Worker, leere IndexedDB)
+  abgefangen = fange(standardQuelle());
+  const h = (x) => basis.replace('127.0.0.1', 'localhost') + x;
+  const huelleMeldungen = [];
+  p = await seite(h('#wartet'), 360, 800, false, BRUECKE);
+  const vorAnmeldung = await p.hash();
+  await p.schreibe('[name=repo]', REPO); await p.schreibe('[name=token]', TOKEN); await p.schreibe('[name=geraet]', 'handy');
+  await p.tippe('#anmelden-knopf');
+  melde(vorAnmeldung === '#anmelden' && await p.warte('location.hash === "#wartet"', 4000) && await p.warte(`document.querySelectorAll('main .karte').length > 3`, 15000),
+    'in der Hülle öffnet die App die Anmeldung und danach Wartet mit den Einträgen', `${vorAnmeldung}, ${await p.stand()}`);
+  const imSpeicher = await p.werte(`(async () => { const { oeffneDatenbank, einstellung } = await import('/js/speicher.js'); const db = await oeffneDatenbank();
+    const a = await einstellung(db, 'anmeldung'); db.schliesse(); return { repo: a?.repo, mitToken: !!a && 'token' in a }; })()`);
+  const gesendet = await p.werte('window.__huelle.gesendet');
+  melde(gesendet.some((n) => n.art === 'token-setzen' && n.token === TOKEN) && gesendet.some((n) => n.art === 'bereit') && imSpeicher.repo === REPO && !imSpeicher.mitToken,
+    'das Token geht an die Hülle, in IndexedDB steht die Anmeldung ohne Token', `${gesendet.map((n) => n.art).join(', ')}; ${JSON.stringify(imSpeicher)}`);
+  await pause(2000);
+  melde(await p.werte('(async () => (await navigator.serviceWorker.getRegistration()) === undefined && navigator.serviceWorker.controller === null)()'),
+    'in der Hülle registriert die App keinen Service Worker', 'Service Worker registriert');
+  await p.werte("location.hash = '#mehr'"); await pause(600);
+  melde(await p.werte(`![...document.querySelectorAll('main h2')].some((e) => e.textContent === 'App installieren') && document.querySelector('main').innerText.includes('öffnet den Eintrag in dieser App') && document.getElementById('neu').hidden`),
+    'Mehr zeigt in der Hülle keinen Abschnitt App installieren und sagt, dass ein Tipp den Eintrag öffnet', await p.stand());
+  await p.werte(`__huelleSchicke({ art: 'teilen', titel: 'Geteilte Seite', text: 'Text aus einer anderen App' })`);
+  const geteilt = await p.warte(`location.hash === '#erfassen' && document.querySelector('[name=titel]')?.value === 'Geteilte Seite' && document.querySelector('main textarea')?.value.includes('Text aus einer anderen App')`, 4000);
+  const geteilterEntwurf = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'erfassen'); db.schliesse(); return e; })()`);
+  melde(geteilt && geteilterEntwurf?.titel === 'Geteilte Seite' && geteilterEntwurf?.text === 'Text aus einer anderen App',
+    'geteilter Text öffnet Erfassen mit Titel und Text, beides steht im Entwurf', `${await p.stand()}, ${JSON.stringify(geteilterEntwurf)}`);
+  await p.werte(`__huelleSchicke({ art: 'oeffnen', adresse: '#eintrag/R2D-4VN' })`);
+  const geoeffnet = await p.warte(`location.hash === '#eintrag/r2d4vn'`, 4000);
+  await p.zurueck();
+  melde(geoeffnet && await p.hash() === '#erfassen', 'ein Link der Hülle öffnet den Eintrag, Zurück führt nach Erfassen', await p.stand());
+  await p.werte("location.hash = '#wartet'; location.reload()"); await pause(800);
+  melde(await p.warte('location.hash === "#wartet"', 4000) && await p.hash() === '#wartet', 'nach dem Neuladen bleibt die App angemeldet, das Token kommt aus der Brücke', await p.stand());
+  huelleMeldungen.push(...((await p.werte('window.__melde')) ?? []));
+  // Eine neue Seite hat einen eigenen sessionStorage: das Token der Hülle wird vorher abgelegt, wie es der Keystore hielte
+  p = await seite(h('#erfassen'), 360, 800, false, `sessionStorage.setItem('__token', ${JSON.stringify(TOKEN)});` + BRUECKE
+    + "window.__huelle.anstehend = { art: 'teilen', titel: '', text: 'Beim Start geteilt' };");
+  melde(await p.warte(`location.hash === '#erfassen' && document.querySelector('main textarea')?.value.includes('Beim Start geteilt')`, 4000),
+    'Teilen beim Kaltstart legt den Text in Erfassen', `${await p.stand()}, ${await p.werte("document.querySelector('main textarea')?.value")}`);
+  huelleMeldungen.push(...((await p.werte('window.__melde')) ?? []));
+  melde(huelleMeldungen.length === 0, 'die Seiten der Hülle bleiben frei von CSP-Verstößen und Skriptfehlern', huelleMeldungen.join('; '));
   await p.schliesse();
 
   // 8. Konsole: keine Verstöße gegen die CSP, keine Fehler im Skript, in keiner Ansicht

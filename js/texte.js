@@ -165,3 +165,9 @@ export const MITTEILUNGEN = {
   ] },
   neben: ['Ein Abo über einen Link empfängt nichts. Fehlt der Knopf **ID kopieren** im Hinweis, ist ntfy älter als Fassung 1.23.0; die ID steht dann im Text des Hinweises.'],
 };
+
+/** Der Abschnitt Mitteilungen in der Android-Hülle: Ein Tipp öffnet den Eintrag, wenn das Postsystem die Adresse mitschickt. */
+export const MITTEILUNGEN_HUELLE = {
+  ...MITTEILUNGEN,
+  absaetze: ['Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet den Eintrag in dieser App, wenn das Postsystem die Adresse dazu mitschickt; sonst öffnet er ntfy.', MITTEILUNGEN.absaetze[1]],
+};

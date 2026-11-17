@@ -61,7 +61,8 @@ if (sz?.neu) {
 }
 // Die Vorschau sendet nie von allein: der Zeitgeber der Schreibschicht und des Hinweises steht still, so bleibt jeder Zustand
 // (noch nicht gesendet, Hinweis mit Rückgängig) für das Bild stehen. Der Abgleich läuft mit seinem eigenen Zeitgeber.
-await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert });
+await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert,
+  huelle: sz?.huelle ? { verbinde() {}, bereit() {} } : undefined });
 // Tipps, die ein Szenario braucht (ein Hinweis nach dem Senden, eine abgelehnte Eingabe): wie ein Nutzer, über die Knöpfe
 for (const wahl of [].concat(sz?.klick ?? [])) {
   const erst = Date.now();
