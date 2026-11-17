@@ -794,7 +794,7 @@ try {
   // Start ohne Netz: die Seite lädt aus dem Cache, nichts kommt vom Server, die Einträge stehen da, die ruhige Zeile sagt es
   const vorOhneNetz = zugriffe.length;
   p = await seite(t('#wartet'), 360, 800, true);
-  const ohne = await p.warte(`document.title === 'Postfach' && document.querySelectorAll('main .karte').length > 3`, 8000);
+  const ohne = await p.warte(`document.title === 'LLM-Post' && document.querySelectorAll('main .karte').length > 3`, 8000);
   const geholt = zugriffe.slice(vorOhneNetz).filter((z) => z !== '/sw.js' && !z.startsWith('/js/swlogik'));
   melde(ohne, 'ohne Netz startet die App aus dem Cache und zeigt die Einträge vom letzten Abgleich (UOF-1)', `Titel ${await p.werte('document.title')}, ${await p.werte('document.querySelectorAll("main .karte").length')} Karten`);
   melde(geholt.length === 0, 'beim Start ohne Netz holt die Seite nichts vom Server', geholt.join(', '));

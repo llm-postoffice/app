@@ -118,7 +118,7 @@ test('die Installation: nummerierte Schritte mit Ort vor Aktion, der Wortlaut de
 
 test('die installierte App sagt das und erklärt die Anmeldung der App gegenüber dem Browsertab', () => {
   const app = installationAnzeige(true);
-  assert.equal(app.satz, 'Das Postfach läuft als installierte App.');
+  assert.equal(app.satz, 'LLM-Post läuft als installierte App.');
   assert.deepEqual(app.schritte, []);
   assert.match(app.hinweise.join(' '), /Anmeldung der App, nicht die eines Browsertabs/);
   assert.match(installationAnzeige(false).hinweise.join(' '), /Anmeldung der App, nicht die eines Browsertabs/);

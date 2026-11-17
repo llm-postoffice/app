@@ -1,4 +1,4 @@
-# Postfach
+# LLM-Post
 
 Installierbare Web-App für das Handy (Android, Vanadium unter GrapheneOS, Chrome): zeigt, was auf den Nutzer wartet,
 beantwortet Fragen, beurteilt Abnahmen Schritt für Schritt, erfasst Einträge und sortiert den Eingang. Die Daten liegen

@@ -72,7 +72,7 @@ export async function anmeldenAnsicht(k, { fertig }) {
   });
   zeichne();
   return { inhalt: [el('h2', { class: 'titel-gross' }, 'Dieses Gerät mit GitHub verbinden'),
-    el('p', {}, 'Das Postfach braucht für dieses Gerät ein Token und einen Namen.'), schritte(), form],
+    el('p', {}, 'LLM-Post braucht für dieses Gerät ein Token und einen Namen.'), schritte(), form],
   // Der Knopf klebt unten in Daumenreichweite (UAN-3) und gehört über das Attribut form zum Formular
   aktion: [knopf('Anmelden', { klasse: 'gefuellt', typ: 'submit', id: 'anmelden-knopf', form: 'anmelden-formular' })] };
 }

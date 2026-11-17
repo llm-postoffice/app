@@ -259,7 +259,7 @@ test('Mehr: App installieren als nummerierte Liste im Browser, ein Satz in der i
   assert.doesNotMatch(t(browser), /läuft als installierte App/);
   k.installiert = true;
   const app = t(await M.mehr.mehrAnsicht(welt(), z(), k));
-  assert.match(app, /Das Postfach läuft als installierte App\./);
+  assert.match(app, /LLM-Post läuft als installierte App\./);
   assert.doesNotMatch(app, /Install and create shortcut/);
   assert.match(app, /Anmeldung der App, nicht die eines Browsertabs/);
 });
