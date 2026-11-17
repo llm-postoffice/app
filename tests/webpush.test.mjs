@@ -174,12 +174,12 @@ test('das Ziel des Tipps: ohne Nutzlast Wartet, mit gültiger Nutzlast der Eintr
   assert.equal(pushZiel('kein json'), './#wartet');
   assert.equal(pushZiel('{"ziel":"#eintrag/R2D-4VN"}'), './#eintrag/R2D-4VN');
   assert.equal(pushZiel('{"ziel":"#abnahmen"}'), './#abnahmen');
-  for (const boese of ['{"ziel":"https://fremd.example/x"}', '{"ziel":"//fremd.example"}', '{"ziel":"#eintrag/a/../b"}', '{"ziel":"#eintrag/"}', '{"ziel":7}', 'null', '[]']) {
+  for (const boese of ['{"ziel":"http://127.0.0.1:1/x"}', '{"ziel":"//127.0.0.1"}', '{"ziel":"#eintrag/a/../b"}', '{"ziel":"#eintrag/"}', '{"ziel":7}', 'null', '[]']) {
     assert.equal(pushZiel(boese), './#wartet', boese);
   }
   assert.equal(hinweisOptionen('i.png', pushZiel('{"ziel":"#eintrag/R2D-4VN"}')).data.ziel, './#eintrag/R2D-4VN');
   assert.equal(klickZiel({ ziel: './#eintrag/R2D-4VN' }), './#eintrag/R2D-4VN');
-  assert.equal(klickZiel({ ziel: 'https://fremd.example/' }), './#wartet');
+  assert.equal(klickZiel({ ziel: 'http://127.0.0.1:1/' }), './#wartet');
   assert.equal(klickZiel(undefined), './#wartet');
 });
 
@@ -192,12 +192,12 @@ test('ein Tipp holt das sichtbare Fenster, sonst das erste, sonst öffnet er ein
 });
 
 test('der Plan eines Tipps: absolute Adresse im Bereich des Service Workers, Fenster oder neu', () => {
-  const basis = 'https://app.example/app/';
+  const basis = 'http://localhost:8080/app/';
   const f = { visibilityState: 'visible' };
-  assert.deepEqual(klickPlan([f], { ziel: './#wartet' }, basis), { art: 'fenster', fenster: f, adresse: 'https://app.example/app/#wartet' });
-  assert.deepEqual(klickPlan([], { ziel: './#eintrag/R2D-4VN' }, basis), { art: 'neu', adresse: 'https://app.example/app/#eintrag/R2D-4VN' });
-  assert.equal(klickPlan([], undefined, basis).adresse, 'https://app.example/app/#wartet', 'ohne Daten Wartet');
-  assert.equal(klickPlan([], { ziel: 'https://fremd.example/' }, basis).adresse, 'https://app.example/app/#wartet', 'ein fremdes Ziel gilt nicht');
+  assert.deepEqual(klickPlan([f], { ziel: './#wartet' }, basis), { art: 'fenster', fenster: f, adresse: 'http://localhost:8080/app/#wartet' });
+  assert.deepEqual(klickPlan([], { ziel: './#eintrag/R2D-4VN' }, basis), { art: 'neu', adresse: 'http://localhost:8080/app/#eintrag/R2D-4VN' });
+  assert.equal(klickPlan([], undefined, basis).adresse, 'http://localhost:8080/app/#wartet', 'ohne Daten Wartet');
+  assert.equal(klickPlan([], { ziel: 'http://127.0.0.1:1/' }, basis).adresse, 'http://localhost:8080/app/#wartet', 'ein fremdes Ziel gilt nicht');
 });
 
 test('sw.js: push zeigt den Hinweis, notificationclick schließt ihn, holt oder öffnet das Fenster und leitet es zum Ziel', async () => {
@@ -207,7 +207,7 @@ test('sw.js: push zeigt den Hinweis, notificationclick schließt ihn, holt oder 
   const geoeffnet = [];
   globalThis.self = {
     addEventListener: (n, f) => { handler[n] = f; },
-    registration: { scope: 'https://app.example/app/', showNotification: async (titel, o) => { hinweise.push([titel, o]); } },
+    registration: { scope: 'http://localhost:8080/app/', showNotification: async (titel, o) => { hinweise.push([titel, o]); } },
     clients: { matchAll: async (o) => { hinweise.push(['matchAll', o]); return fenster; }, openWindow: async (u) => { geoeffnet.push(u); }, claim: async () => {} },
   };
   try {
@@ -230,11 +230,11 @@ test('sw.js: push zeigt den Hinweis, notificationclick schließt ihn, holt oder 
       return geschlossen;
     };
     assert.equal(await klick({ ziel: './#wartet' }), true);
-    assert.deepEqual(geoeffnet, ['https://app.example/app/#wartet'], 'ohne Fenster öffnet der Tipp die App auf Wartet');
+    assert.deepEqual(geoeffnet, ['http://localhost:8080/app/#wartet'], 'ohne Fenster öffnet der Tipp die App auf Wartet');
     const ablauf = [];
     fenster = [{ visibilityState: 'visible', focus: async () => { ablauf.push('fokus'); }, navigate: async (u) => { ablauf.push(['navigate', u]); } }];
     await klick({ ziel: './#eintrag/R2D-4VN' });
-    assert.deepEqual([ablauf, geoeffnet.length], [['fokus', ['navigate', 'https://app.example/app/#eintrag/R2D-4VN']], 1], 'mit Fenster holt er es nach vorn und leitet es zum Eintrag, ohne ein zweites zu öffnen');
+    assert.deepEqual([ablauf, geoeffnet.length], [['fokus', ['navigate', 'http://localhost:8080/app/#eintrag/R2D-4VN']], 1], 'mit Fenster holt er es nach vorn und leitet es zum Eintrag, ohne ein zweites zu öffnen');
     fenster = [{ visibilityState: 'hidden', focus: async () => {}, navigate: async () => { throw new Error('nicht gesteuert'); } }];
     assert.equal(await klick({}), true, 'ein Fenster, das sich nicht leiten lässt, bricht den Tipp nicht ab');
     assert.deepEqual(hinweise.find((h) => h[0] === 'matchAll')[1], { type: 'window', includeUncontrolled: true });
