@@ -8,11 +8,13 @@ import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { starteVorschau } from './vorschau.mjs';
+import { pruefeBilder } from './bilder.mjs';
 import { ADRESSEN, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
 
 const PROG = 'rendern';
 const JOB_MB = 1200;   // gemessen: Spitze eines Jobs (Renderer, Chromium und alle seine Prozesse, Summe PSS) bei 15 Adressen in MB
 const MAX_JOBS = 6;
+const MAX_BEFUNDE = 8;   // Zeilen je Szenario für leere oder doppelte Bilder
 const KURZ = `Aufruf: node tools/rendern.mjs [OPTIONEN] [SZENARIO...]
 
 Rendert die Ansichten der App mit erfundenen Daten in Chromium und schreibt Bilder und Protokoll nach ORDNER.
@@ -31,6 +33,9 @@ Optionen:
   -h, --help           diese Hilfe zeigen; --help all zeigt alles
 `;
 const ALLES = `${KURZ}      --warte MS       Pause nach dem Laden, bevor der Renderer prüft (Vorgabe: 1500)
+
+Danach prüft das Werkzeug jedes Bild: ein leeres Bild, ein fehlendes oder dasselbe Bild für zwei Adressen eines Szenarios ist ein FAIL
+(der Renderer meldet dafür PASS, wenn die Seite nach einem Fehler beim Start nur die leere Hülle zeigt).
 
 Jedes Szenario läuft in beiden Handy-Größen, hell, dunkel, mit Schrift 200 % und ohne Netz. Die Bilder liegen
 unter ORDNER/SZENARIO/, das Protokoll in ORDNER/lauf.txt. Ohne SZENARIO rendert es alle außer diesen:
@@ -117,7 +122,18 @@ const rang = { 0: 0, 3: 1, 1: 2 };
 szenarien.forEach((sz, i) => {
   const r = ergebnis[i];
   const zeilen = r.aus.split('\n').filter((z) => /^(PASS|WARN|FAIL|SKIP|BLOCKED)/.test(z)).map((z) => `${sz}: ${z}`);
-  protokoll += `${zeilen.join('\n')}\n${sz}: ${r.aus.trim().split('\n').pop()}\n`;
+  // Der Renderer prüft den Aufbau der Seite; ob die Bilder etwas zeigen, prüft erst dieser Schritt (tools/bilder.mjs)
+  let summe = r.aus.trim().split('\n').pop();
+  if (r.code === 0 || r.code === 1) {
+    const befunde = pruefeBilder(join(a.values.ausgabe, sz), ADRESSEN[sz]);
+    if (befunde.length) {
+      zeilen.push(...befunde.slice(0, MAX_BEFUNDE).map((t) => `${sz}: FAIL     Bilder  ${t}`));
+      if (befunde.length > MAX_BEFUNDE) zeilen.push(`${sz}: FAIL     Bilder  und ${befunde.length - MAX_BEFUNDE} weitere`);
+      summe = `${summe}, 1 FAIL (Bilder)`;
+      r.code = 1;
+    } else zeilen.push(`${sz}: PASS     Bilder  alle Bilder zeigen etwas und unterscheiden sich je Adresse`);
+  }
+  protokoll += `${zeilen.join('\n')}\n${sz}: ${summe}\n`;
   if ((rang[r.code] ?? 2) > (rang[schlimmster] ?? 0)) schlimmster = r.code;
 });
 server.close();

@@ -4,8 +4,8 @@
 // echte Seite; in der App selbst steht kein Hook für Attrappen. Offline lädt der Einstieg keine Beispieldaten nach und
 // liest, was beim letzten Laden auf dem Gerät blieb. Genutzt von tools/rendern.mjs; zum Ansehen: node tools/vorschau.mjs.
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { readFile, readdir } from 'node:fs/promises';
+import { dirname, extname, join, normalize, relative } from 'node:path';
 import { JETZT, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
 import { farbenNachricht } from '../tests/hilfen/farbrollen.mjs';
 
@@ -23,6 +23,19 @@ function farbenCode(name) {
   systemfarbenVon()?.uebernimm(${JSON.stringify(farbenNachricht(f))});
 }
 `;
+}
+
+/** Alle Dateien, die der Einstieg über tests/hilfen/ lädt (Pfade ab der Wurzel), mit ihren Importen. */
+async function hilfsdateien() {
+  const aus = (await readdir(join(wurzel, 'tests/hilfen'))).filter((d) => d.endsWith('.mjs')).map((d) => `tests/hilfen/${d}`);
+  const alle = new Set();
+  for (let datei; (datei = aus.pop()) !== undefined;) {
+    if (alle.has(datei)) continue;
+    alle.add(datei);
+    const quelle = await readFile(join(wurzel, datei), 'utf8');
+    for (const m of quelle.matchAll(/\bfrom\s+'(\.\.?\/[^']+)'/g)) aus.push(relative(wurzel, join(wurzel, dirname(datei), m[1])));
+  }
+  return [...alle].sort();
 }
 
 /** Der Einstieg eines Szenarios als Quelltext eines Moduls (liegt unter /SZENARIO/js/start.js). */
@@ -120,9 +133,11 @@ export async function starteVorschau() {
         return;
       }
       if (name && pfad === '/sw.js') {
-        // Der Einstieg lädt die Beispieldaten nach; ohne Netz müssen sie in der Hülle liegen, sonst bricht der Start ab,
-        // sobald der Renderer den Service Worker vom Netz trennt und eine weitere Adresse öffnet.
-        const sw = (await readFile(join(wurzel, 'sw.js'), 'utf8')).replace("'./',", "'./', '../tests/hilfen/beispieldaten.mjs', '../tests/hilfen/mockquelle.mjs',");
+        // Der Einstieg lädt die Beispieldaten nach, und die laden weitere Dateien, auch aus js/ unter der Wurzel statt unter /SZENARIO/.
+        // Ohne Netz müssen alle in der Hülle liegen, sonst bricht der Start ab, sobald der Renderer den Service Worker vom Netz trennt
+        // und eine weitere Adresse öffnet; zurück bleibt die leere Hülle, und die Prüfungen des Renderers melden trotzdem PASS.
+        // Darum folgt die Liste den Importen statt einer Auswahl, die beim nächsten Import veraltet.
+        const sw = (await readFile(join(wurzel, 'sw.js'), 'utf8')).replace("'./',", `'./', ${(await hilfsdateien()).map((d) => `'../${d}'`).join(', ')},`);
         a.writeHead(200, { 'content-type': TYP['.js'], 'cache-control': 'no-store' });
         a.end(sw);
         return;
