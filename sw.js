@@ -10,7 +10,7 @@ const DATEIEN = [
   './js/abgleich.js', './js/ablauf.js', './js/aktualisieren.js', './js/abnahme.js', './js/absenden.js', './js/adressen.js', './js/anmelden.js', './js/anmeldung.js',
   './js/anhaenge.js', './js/anhaengeansicht.js', './js/anhangholer.js', './js/anhangwahl.js', './js/ansichten.js', './js/ansichtstexte.js', './js/anzeigen.js', './js/app.js', './js/dateien.js', './js/dom.js', './js/eintrag.js',
   './js/entwuerfe.js', './js/erfassen.js', './js/erzeugen.js', './js/farben.js', './js/format.js', './js/frist.js', './js/hinweis.js', './js/huelle.js', './js/karten.js', './js/markdown.js',
-  './js/mehr.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pytext.js', './js/schlange.js', './js/schreiben.js', './js/senden.js',
+  './js/mehr.js', './js/navigation.js', './js/netz.js', './js/pruefen.js', './js/pushklick.js', './js/pytext.js', './js/schlange.js', './js/schreiben.js', './js/senden.js',
   './js/speicher.js', './js/start.js', './js/statusleiste.js',
   './js/steuerung.js', './js/swlogik.js', './js/texte.js', './js/uebersicht.js', './js/urteil.js', './js/verkleinern.js', './js/version.js', './js/webpush.js', './js/welt.js', './js/zustand.js',
   './symbole/symbol-192.png', './symbole/symbol-512.png', './symbole/maskierbar-512.png',
@@ -32,8 +32,8 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;   // Daten gehen ans Netz
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r || fetch(e.request)));
 });
-// Web-Push als Probe: ein Push ohne Text zeigt einen festen Hinweis; ein Tipp holt das Fenster der App nach vorn und öffnet Wartet
-// (oder den Eintrag, den eine Nutzlast nennt) oder öffnet die App. Chromium verlangt für jeden Push einen sichtbaren Hinweis
+// Web-Push als Probe: ein Push ohne Text zeigt einen festen Hinweis; ein Tipp holt das Fenster der App nach vorn oder öffnet die App; die App
+// gleicht dann ab und öffnet Wartet, den neuesten neuen Eintrag oder den, den eine Nutzlast nennt. Chromium verlangt für jeden Push einen sichtbaren Hinweis
 // (userVisibleOnly). Die Entscheidungen stehen in js/swlogik.js.
 self.addEventListener('push', (e) => {
   const text = e.data ? e.data.text() : '';
@@ -45,6 +45,6 @@ self.addEventListener('notificationclick', (e) => {
     const plan = klickPlan(fenster, e.notification.data, self.registration.scope);
     if (plan.art === 'neu') return self.clients.openWindow(plan.adresse);
     await plan.fenster.focus();
-    try { await plan.fenster.navigate?.(plan.adresse); } catch { /* ein nicht gesteuertes Fenster bleibt, wo es ist */ }
+    plan.fenster.postMessage(plan.nachricht);   // die App gleicht ab und öffnet dann das Ziel (js/pushklick.js)
   }));
 });

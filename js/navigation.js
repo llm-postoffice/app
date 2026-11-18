@@ -39,6 +39,20 @@ export function gehe(adresse) {
   anzeigen();
 }
 
+/**
+ * Öffnet `adresse` so, dass Zurück nach Wartet führt (ein Tipp auf eine Mitteilung): erst den Stapel bis Wartet abbauen, dann
+ * die Adresse obenauf. Steht sie schon, bleibt alles, wie es ist.
+ */
+export function geheUeberWartet(adresse) {
+  const ziel = parse(adresse);
+  if (!ziel || ziel.adresse === ort().adresse) return;
+  const t = tiefe();
+  if (!t) { gehe(adresse); return; }
+  ueberspringen = true;
+  addEventListener('popstate', () => { ueberspringen = false; gehe(adresse); }, { once: true });
+  history.go(-t);
+}
+
 /** Ersetzt die aktuelle Ansicht durch eine andere auf derselben Ebene, ohne den Verlauf zu verlängern (Schritt zu Schritt). */
 export function ersetze(adresse) {
   const ziel = parse(adresse);
