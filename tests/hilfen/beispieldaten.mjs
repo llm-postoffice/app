@@ -324,7 +324,7 @@ export const ADRESSEN = {
   laedt: ['wartet', 'alle', 'eingang', 'mehr'],
   fehler: ['wartet', 'alle', 'ideen', 'mehr'],
   token: ['wartet', 'mehr'],
-  offline: ['wartet', 'alle', 'eingang', 'mehr', 'eintrag/r2d4vn'],
+  offline: ['wartet', 'alle', 'eingang', 'mehr', 'eintrag/r2d4vn', 'eintrag/zzzzzz'],
   anmeldung: ['anmelden'],
   'anmeldung-fehler': ['anmelden'],
   'alle-projekt': ['alle', 'alle/prio'],

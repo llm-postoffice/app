@@ -141,6 +141,16 @@ test('Unbekannter Eintrag und fehlender Stand haben einen Zustand statt eines le
   assert.match(t(M.eintrag.eintragAnsicht(ohne(), z({ phase: 'laeuft', letzter: null }), k, { id: 'r2d4vn' }).inhalt), /Eintrag wird geladen/);
 });
 
+test('Fehlt der Eintrag auch nach dem Abgleich, sagt der Text warum und führt zu Wartet', async () => {
+  const k = await kontext();
+  const ok = t(M.eintrag.eintragAnsicht(welt(), z({ phase: 'bereit', fertig: true }), k, { id: 'zzzzzz' }).inhalt);
+  assert.match(ok, /Auch nach dem Abgleich/);
+  assert.match(ok, /Zu Wartet/);
+  const netz = t(M.eintrag.eintragAnsicht(welt(), z({ phase: 'fehler', fertig: true, ohneNetz: true }), k, { id: 'zzzzzz' }).inhalt);
+  assert.match(netz, /Abgleich ist gescheitert/);
+  assert.match(netz, /Zu Wartet/);
+});
+
 test('Ein Link auf einen unbekannten Eintrag zeigt „lädt“, solange der erste Abgleich dieser Sitzung läuft', async () => {
   const k = await kontext();
   const laeuft = M.eintrag.eintragAnsicht(welt(), z({ phase: 'laeuft', fertig: false }), k, { id: 'zzzzzz' }).inhalt;

@@ -3,7 +3,7 @@
 // Die Schreibschicht (schreiben.js) baut die App selbst, wenn ein `fetch` kommt; ein Test kann einen fertigen `schreiben`
 // geben. Ohne beides liest die App nur und sagt es.
 import { anzeigen, setzeKontext, setzeSuchText, suchText } from './anzeigen.js';
-import { blattGeschlossen, ersetze, gehe, ort as navigationOrt, schliesseUndGehe, starten, zurueck } from './navigation.js';
+import { blattGeschlossen, ersetze, gehe, geheUeberWartet, ort as navigationOrt, schliesseUndGehe, starten, zurueck } from './navigation.js';
 import { netzZeile } from './netz.js';
 import { starteFristen } from './frist.js';
 import { Aktualisierung, pruefeRegelmaessig, zeigeNeuBand } from './aktualisieren.js';
@@ -13,6 +13,8 @@ import { Schreiber } from './schreiben.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
 import { statusleiste } from './statusleiste.js';
 import { verbinde } from './steuerung.js';
+import { folgeTipp as tippFolgen, idsVon, kamDurchTipp } from './pushklick.js';
+import { gueltigesZiel, zielAusNachricht } from './swlogik.js';
 import { browserProbe } from './webpush.js';
 import { ladeWelt, ortVon } from './welt.js';
 import { adresseAusHuelle, mitGeteiltem, mitGeteiltenDateien } from './huelle.js';
@@ -80,6 +82,15 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   $('suche-eingabe').value = suchText();
   $('suchen').addEventListener('click', () => setTimeout(() => $('suche-eingabe').focus(), 0));
 
+  // Ein Tipp auf die Web-Push-Mitteilung (js/pushklick.js): erst abgleichen, dann das Ziel öffnen. Ein neues Fenster kommt mit `?push`
+  // in der Adresse (die Kennung fällt hier weg, sonst bliebe sie an jeder späteren Adresse), ein offenes bekommt eine Nachricht.
+  const tippStart = kamDurchTipp(globalThis.location?.search);
+  if (tippStart) history.replaceState(history.state, '', `${location.pathname}${location.hash}`);
+  const folgeTipp = (ziel, vorher = null) => tippFolgen({
+    ziel, vorher, abgleichen: () => steuerung.lauf('push'), ladeWelt: () => ladeWelt(db, jetzt()),
+    gesperrt: () => navigationOrt().ansicht === 'anmelden', oeffne: geheUeberWartet,
+  });
+
   // Der Stapel unter einem tiefen Link hängt davon ab, woher der Eintrag kommt (Eingang, Ideensammlung, Abnahmen)
   const welt0 = await ladeWelt(db, jetzt());
   if (!(await steuerung.anmeldung())) history.replaceState({ tiefe: 0 }, '', '#anmelden');
@@ -123,6 +134,11 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
     if (z.phase === 'laeuft' && !gedrosselt) gedrosselt = setTimeout(() => { gedrosselt = null; k.neuZeichnen(); }, 400);
   });
   verbinde(steuerung);
+  if (tippStart) folgeTipp(gueltigesZiel(location.hash), idsVon(welt0));
+  if (dienst) {
+    dienst.addEventListener('message', (m) => { const ziel = zielAusNachricht(m.data); if (ziel) folgeTipp(ziel); });
+    dienst.startMessages?.();
+  }
 
   // Schreiben: Liegengebliebenes geht beim Start los; mit Netz und nach jedem Abgleich räumt die Schlange auf
   if (schreiben) {

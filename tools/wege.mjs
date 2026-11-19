@@ -928,6 +928,45 @@ try {
     'Mehr zeigt im Browser den Abschnitt Web-Push (Probe) mit Feld und Einschalten', await p.stand());
   await p.schliesse();
 
+  // 7c. Tipp auf eine Web-Push-Mitteilung (js/pushklick.js): die App gleicht zuerst ab und öffnet dann den neuen Eintrag, Zurück führt
+  //     nach Wartet. Die Nachricht des Service Workers wird in der Seite nachgestellt (ein Tipp auf einen echten Hinweis lässt sich
+  //     ohne Gerät nicht auslösen; der Weg im Service Worker steht in tests/webpush.test.mjs). Die Quelle bekommt den neuen
+  //     Eintrag erst nach dem Start der Seite, wie ein Push, der zwischen zwei Abgleichen kommt.
+  const tippDaten = new Map(SZENARIEN.normal.daten);
+  abgefangen = fange(mockQuelle({ dateien: tippDaten, repo: REPO, token: TOKEN, serverzeit: () => Date.now() }));
+  const neuerEintrag = (nr, titel) => tippDaten.set(`entries/${nr.slice(0, 2)}/${nr}/0-entry.md`,
+    `# ${titel}\n\n- Kind: message\n- To: user\n- Project: alpha\n- From: session:cb56d77f, rechner-a, ${new Date().toISOString().replace(/:\d\d\.\d{3}Z$/, 'Z')}\n- Priority: 2\n\nEin Hinweis für den Tipp-Test.\n`);
+  const tippText = (x) => `document.querySelector('main').innerText.includes(${JSON.stringify(x)})`;
+  // offene App auf einer anderen Ansicht (Mehr, eine Ebene über Wartet)
+  p = await seite(t('#mehr'));
+  await p.warte(`document.getElementById('titel').textContent === 'Mehr'`, 8000);
+  neuerEintrag('nz4qk7', 'Tipp-Test: erster Hinweis');
+  await p.werte(`navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { art: 'push-klick', ziel: '#wartet' } }))`);
+  melde(await p.warte(`location.hash === '#eintrag/nz4qk7' && ${tippText('Tipp-Test: erster Hinweis')}`, 15000),
+    'Tipp bei offener App ohne Nutzlast: die App gleicht ab und öffnet den neuen Eintrag, nicht „nicht gefunden“', await p.stand());
+  await p.zurueck();
+  melde(await p.hash() === '#wartet', 'Zurück vom Eintrag nach dem Tipp führt nach Wartet', await p.stand());
+  // Nutzlast: der Eintrag der Nutzlast, auch wenn er schon da ist, ohne zweiten Eintrag im Verlauf
+  neuerEintrag('nz6bt2', 'Tipp-Test: zweiter Hinweis');
+  await p.werte(`navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { art: 'push-klick', ziel: '#eintrag/nz6bt2' } }))`);
+  melde(await p.warte(`location.hash === '#eintrag/nz6bt2' && ${tippText('Tipp-Test: zweiter Hinweis')}`, 15000), 'Tipp mit Nutzlast öffnet den Eintrag der Nutzlast nach dem Abgleich', await p.stand());
+  // Eintrag fehlt auch nach dem Abgleich: der Text führt zurück
+  await p.werte(`navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { art: 'push-klick', ziel: '#eintrag/zzzzzz' } }))`);
+  melde(await p.warte(`location.hash === '#eintrag/zzzzzz' && ${tippText('Auch nach dem Abgleich')} && !!document.querySelector('main a[href="#wartet"]')`, 15000),
+    'fehlt der Eintrag auch nach dem Abgleich, sagt die Ansicht warum und bietet Zu Wartet an', await p.stand());
+  await p.schliesse();
+  // geschlossene App: ein neues Fenster mit ?push (nach dem Tippen auf den Hinweis); das Gerät kennt Eintrag 1 und 2, Eintrag 3 ist neu
+  neuerEintrag('nz8hd5', 'Tipp-Test: dritter Hinweis');
+  p = await seite(t('?push#wartet'));
+  melde(await p.warte(`location.hash === '#eintrag/nz8hd5' && ${tippText('Tipp-Test: dritter Hinweis')}`, 15000),
+    'Tipp bei geschlossener App (?push): die App gleicht ab und öffnet den neuesten neuen Eintrag', await p.stand());
+  melde(await p.werte('location.search') === '', 'die Kennung ?push fällt nach dem Start aus der Adresse', await p.werte('location.href'));
+  await p.zurueck();
+  melde(await p.hash() === '#wartet', 'Zurück nach einem Tipp bei geschlossener App führt nach Wartet', await p.stand());
+  await p.schliesse();
+  abgefangen = fange(standardQuelle());
+  await vorbereiten();   // Anmeldung und Stand der Beispieldaten wiederherstellen
+
   // Start ohne Netz: die Seite lädt aus dem Cache, nichts kommt vom Server, die Einträge stehen da, die ruhige Zeile sagt es
   const vorOhneNetz = zugriffe.length;
   p = await seite(t('#wartet'), 360, 800, true);

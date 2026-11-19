@@ -25,10 +25,13 @@ import { anhangWahl } from './anhangwahl.js';
 /** Die ID im Wortlaut der Ansicht: „Abnahme k7m-2qa“. */
 export const eintragsZeile = (art, id) => el('p', { class: 'eintragszeile' }, `${art} `, idSpan(idMitStrich(id)));
 
-const fehltEintrag = (welt, id) => platz({
+/** Der Eintrag liegt auch nach dem Abgleich nicht vor: sagt warum und führt zurück (ein Tipp auf eine Mitteilung endet hier, wenn der Eintrag fehlt). */
+const fehltEintrag = (welt, id, z) => platz({
   bild: 'blau', symbol: 'search_off-f', titel: 'Eintrag nicht gefunden',
-  saetze: [`Ein Eintrag mit der ID ${idMitStrich(id)} liegt nicht auf diesem Gerät. Gleiche in Mehr ab oder suche den Eintrag.`],
-  knoepfe: [linkKnopf('Suchen', '#suche', { symbol: 'search' })],
+  saetze: z.fehler || z.ohneNetz
+    ? [`Der Eintrag ${idMitStrich(id)} liegt noch nicht auf diesem Gerät. Der letzte Abgleich ist gescheitert.`, 'Gleiche in Mehr ab, sobald du Netz hast.']
+    : [`Auch nach dem Abgleich liegt kein Eintrag ${idMitStrich(id)} auf diesem Gerät.`, 'Er wurde vielleicht verschoben oder gelöscht.'],
+  knoepfe: [linkKnopf('Zu Wartet', '#wartet', { klasse: 'gefuellt', symbol: 'inbox' }), linkKnopf('Suchen', '#suche', { symbol: 'search' })],
 });
 
 /** Ein Link auf einen Eintrag, den dieses Gerät noch nicht kennt, während der erste Abgleich dieser Sitzung läuft. */
@@ -133,7 +136,7 @@ export function eintragAnsicht(welt, z, k, o) {
   const e = welt.eintraege.get(o.id);
   const platzhalter = ohneStand(welt, z, k, { geladen: 'Eintrag wird geladen', nichtGeladen: 'Eintrag nicht geladen' });
   if (platzhalter) return { inhalt: platzhalter };
-  if (!e) return { inhalt: [z.fertig === false ? ladeEintrag() : fehltEintrag(welt, o.id)] };
+  if (!e) return { inhalt: [z.fertig === false ? ladeEintrag() : fehltEintrag(welt, o.id, z)] };
   const st = welt.buch.zustand(e);
   const eintrag = { e, st };
   const m = karteVon(welt, eintrag, { ohneNetz: z.ohneNetz });

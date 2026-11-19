@@ -1,5 +1,13 @@
 # Änderungen
 
+## 20261119.01 (2026-11-19)
+
+Ein Tipp auf einen Web-Push-Hinweis öffnet jetzt den Eintrag, um den es geht. Die App gleicht vorher ab, damit der Eintrag schon da ist.
+
+- Kommt der Hinweis ohne Angabe zum Eintrag, öffnet die App den neuesten neuen Eintrag an dich, sonst **Wartet**. **Zurück** führt nach **Wartet**.
+- Fehlt der Eintrag auch nach dem Abgleich, sagt die Ansicht warum und bietet **Zu Wartet** an.
+- Die Fassung bringt einen neuen Service Worker mit: tippe nach dem Laden auf **Neu starten**.
+
 ## 20261118.02 (2026-11-18)
 
 Web-Push ist als Probe wieder da: **Mehr** kann im Browser Hinweise auch über den Push-Dienst von Google zustellen, ntfy bleibt der Standard.

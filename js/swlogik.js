@@ -46,12 +46,28 @@ export const fensterWaehlen = (fenster) => fenster.find((f) => f.visibilityState
 /** Das Ziel eines Hinweises aus seinen Daten; ein fremder oder fehlender Wert fällt auf Wartet. */
 export const klickZiel = (daten) => (typeof daten?.ziel === 'string' && ZIEL_MUSTER.test(daten.ziel.replace(/^\.\//, '')) ? daten.ziel : PUSH_HINWEIS.ziel);
 
+/** Gültiges Ziel (`#wartet`, `#abnahmen`, `#eintrag/ID`) oder Wartet. */
+export const gueltigesZiel = (ziel) => (typeof ziel === 'string' && ZIEL_MUSTER.test(ziel) ? ziel : '#wartet');
+
+/** Die Nachricht an ein offenes Fenster und die Kennung der Adresse eines neuen: beide sagen der App, dass ein Tipp kam und sie vor dem Öffnen abgleichen soll. */
+export const PUSH_KLICK = 'push-klick';
+export const PUSH_FRAGE = 'push';
+
+/** Das Ziel aus der Nachricht eines Tipps; `null`, wenn die Nachricht keiner ist. */
+export const zielAusNachricht = (daten) => (daten?.art === PUSH_KLICK ? gueltigesZiel(daten.ziel) : null);
+
 /**
- * Was tut ein Tipp: ein offenes Fenster nach vorn holen und dorthin leiten, sonst ein neues öffnen. `basis` ist der Bereich des
- * Service Workers; daraus wird die Adresse absolut (navigate und openWindow verlangen den eigenen Ursprung).
+ * Was tut ein Tipp: ein offenes Fenster nach vorn holen und ihm das Ziel melden, sonst ein neues öffnen. Beide Wege führen in die App,
+ * die zuerst abgleicht und dann öffnet (js/pushklick.js): das Fenster bekommt eine Nachricht (kein Neuladen, kein Verlust im Fenster),
+ * das neue Fenster eine Adresse mit `?push`. `basis` ist der Bereich des Service Workers; daraus wird die Adresse absolut
+ * (openWindow verlangt den eigenen Ursprung).
  */
 export function klickPlan(fenster, daten, basis) {
-  const adresse = new URL(klickZiel(daten), basis).href;
+  const ziel = klickZiel(daten);
+  const kurz = ziel.replace(/^\.\//, '');
   const f = fensterWaehlen(fenster);
-  return f ? { art: 'fenster', fenster: f, adresse } : { art: 'neu', adresse };
+  if (f) return { art: 'fenster', fenster: f, nachricht: { art: PUSH_KLICK, ziel: kurz } };
+  const adresse = new URL(ziel, basis);
+  adresse.search = `?${PUSH_FRAGE}`;
+  return { art: 'neu', adresse: adresse.href };
 }
