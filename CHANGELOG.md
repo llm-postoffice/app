@@ -7,6 +7,7 @@ Ein Tipp auf einen Web-Push-Hinweis öffnet jetzt den Eintrag, um den es geht. D
 - Kommt der Hinweis ohne Angabe zum Eintrag, öffnet die App den neuesten neuen Eintrag an dich, sonst **Wartet**. **Zurück** führt nach **Wartet**.
 - Fehlt der Eintrag auch nach dem Abgleich, sagt die Ansicht warum und bietet **Zu Wartet** an.
 - Die Fassung bringt einen neuen Service Worker mit: tippe nach dem Laden auf **Neu starten**.
+- Für Entwickler: `make check` lässt zuerst nur die leichten Stufen (Tests, Fremdhosts, gitleaks) gleichzeitig laufen, danach Rendern und Wegetest nacheinander allein; unter Last auf einem Rechner mit 4 Kernen scheiterte das Rendern sonst mit „nichts gezeichnet“.
 
 ## 20261118.02 (2026-11-18)
 

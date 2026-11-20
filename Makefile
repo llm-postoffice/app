@@ -10,15 +10,20 @@ NODE ?= node
 SZENARIEN ?=
 JOBS ?=
 
-.PHONY: check stufen test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release symbole
+.PHONY: check test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release symbole
 
-# Die fünf Stufen teilen weder Ports (jede wählt einen freien) noch Dateien (Profile in eigenen Temp-Ordnern, Bilder nur in
-# BILDER), darum laufen sie gleichzeitig. -k lässt jede Stufe zu Ende laufen, damit alle Fehler auf einmal erscheinen;
-# --output-sync=target druckt die Ausgabe je Stufe am Stück, wenn sie fertig ist. Ein Fehler jeder Stufe lässt check scheitern.
+# Die Stufen teilen weder Ports (jede wählt einen freien) noch Dateien (Profile in eigenen Temp-Ordnern, Bilder nur in
+# BILDER). Gleichzeitig laufen nur die leichten (test, fremdhost, secrets); render und wege starten Chromium und laufen danach
+# nacheinander allein: render wählt seine Jobs nach Kernen und freiem Speicher und zählt andere Stufen nicht mit, und unter
+# Last wird eine Ansicht nicht fertig gezeichnet, bevor gemessen wird (UEW-2). Jede Gruppe läuft zu Ende (-k, Stufen nach
+# einem Fehler laufen weiter), damit alle Fehler auf einmal erscheinen; --output-sync=target druckt die Ausgabe je Stufe am
+# Stück. Ein Fehler irgendeiner Stufe lässt check scheitern.
 check:
-	@$(MAKE) --no-print-directory -j -k --output-sync=target stufen
-
-stufen: test fremdhost secrets render wege
+	@rc=0; \
+	$(MAKE) --no-print-directory -j -k --output-sync=target test fremdhost secrets || rc=1; \
+	$(MAKE) --no-print-directory render || rc=1; \
+	$(MAKE) --no-print-directory wege || rc=1; \
+	exit $$rc
 
 test:
 	$(NODE) --test tests/
