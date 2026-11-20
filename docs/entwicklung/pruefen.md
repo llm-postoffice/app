@@ -14,8 +14,8 @@ Endet `make wege` mit `BLOCKED`, startet Chromium nicht. Ein Pfad in `$TMPDIR` �
 ein kurzes, etwa `TMPDIR=/tmp make wege`.
 
 Der Wegetest wartet auf Zustände, nicht auf feste Zeiten: `tippe` wartet, bis das Ziel an stabiler Stelle steht, `neuLaden` und `navigiere`
-bis die neue Ansicht steht, `warte` gilt das Dreifache der genannten Zeit (mindestens 15 s), weil `make check` die Stufen gleichzeitig
-laufen lässt. Ein neuer Weg setzt keine Pause vor eine Prüfung, sondern wartet mit `warte` oder `bis` auf das, was er prüft; fest bleibt
+bis die neue Ansicht steht, `warte` gilt das Dreifache der genannten Zeit (mindestens 15 s), weil Chromium auf einem ausgelasteten Rechner
+langsamer zeichnet. Ein neuer Weg setzt keine Pause vor eine Prüfung, sondern wartet mit `warte` oder `bis` auf das, was er prüft; fest bleibt
 nur, was beweist, dass nichts passiert.
 
 ## Schnell iterieren
@@ -28,9 +28,11 @@ Beim Arbeiten nur das laufen lassen, was die Änderung berührt; den vollen `mak
 | `node --test tests/NAME.test.mjs` | ein Test statt aller |
 | `make render JOBS=3` | drei Szenarien gleichzeitig statt der Vorgabe |
 
-`make check` führt die fünf Stufen gleichzeitig aus (`make -j -k --output-sync=target`): jede wählt ihre Ports selbst und
-legt Profile in eigene Temp-Ordner. Die Ausgabe einer Stufe erscheint am Stück, wenn sie fertig ist; scheitert eine, laufen
-die anderen zu Ende, und `make check` endet mit Fehler. Das Rendern rendert bis zu sechs Szenarien gleichzeitig, jedes in
+`make check` führt zuerst die leichten Stufen test, fremdhost und secrets gleichzeitig aus (`make -j -k --output-sync=target`),
+danach render und wege nacheinander, jede allein: beide starten Chromium, und das Rendern wählt seine Jobs nach Kernen und
+freiem Speicher, ohne andere Stufen mitzuzählen. Jede Stufe wählt ihre Ports selbst und legt Profile in eigene Temp-Ordner. Die
+Ausgabe einer Stufe erscheint am Stück, wenn sie fertig ist; scheitert eine, laufen die anderen zu Ende, und `make check` endet
+mit Fehler. Das Rendern rendert bis zu sechs Szenarien gleichzeitig, jedes in
 einem eigenen Chromium (je Job bis etwa 1,2 GB). Die Vorgabe ist die Hälfte der Kerne, höchstens 6 und höchstens so viele
 Jobs, wie in den freien Speicher passen (`MemAvailable`); `--jobs 1` rendert nacheinander. `lauf.txt` steht in der
 Reihenfolge der Szenarien, nicht der Fertigstellung.
