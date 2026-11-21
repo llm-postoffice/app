@@ -46,7 +46,7 @@ Nenne sie mit Namen, um ihre Bilder zu sehen.
 
 Jobs: Jedes Szenario läuft in einem eigenen Renderer mit eigenem Chromium, Profil und Temp-Ordner; ein Job braucht
 etwa ${JOB_MB} MB. Die Vorgabe ist die Hälfte der Kerne, höchstens ${MAX_JOBS} und höchstens so viele, wie in den freien Speicher
-(MemAvailable) passen. Mit --jobs 1 laufen die Szenarien nacheinander. lauf.txt steht immer in der Reihenfolge der Szenarien.
+(MemAvailable) passen; ist CLAUDE_JOBS eine positive Zahl, nie mehr als sie. Mit --jobs 1 laufen die Szenarien nacheinander. lauf.txt steht immer in der Reihenfolge der Szenarien.
 
 Exit-Status: 0 alles PASS, 1 mindestens ein FAIL, 2 falscher Aufruf, 3 etwas nicht prüfbar (BLOCKED).
 `;
@@ -81,6 +81,8 @@ if (a.values.jobs !== undefined) {
   jobs = Number(a.values.jobs);
 } else {
   jobs = Math.max(1, Math.min(MAX_JOBS, Math.floor(availableParallelism() / 2), frei === null ? MAX_JOBS : Math.floor(frei / JOB_MB)));
+  // CLAUDE_JOBS (positive ganze Zahl) ist der Anteil, den der Aufrufer diesem Lauf zugesteht; alles andere gilt als nicht gesetzt
+  if (/^[1-9]\d*$/.test(process.env.CLAUDE_JOBS ?? '')) jobs = Math.min(jobs, Number(process.env.CLAUDE_JOBS));
 }
 jobs = Math.min(jobs, szenarien.length);
 mkdirSync(a.values.ausgabe, { recursive: true });
