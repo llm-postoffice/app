@@ -9,19 +9,28 @@ BILDER ?= bilder
 NODE ?= node
 SZENARIEN ?=
 JOBS ?=
+# Jobs, die alle Stufen von make check zusammen nutzen dürfen; make check rechnet sie einmal und gibt sie an die Stufen weiter.
+# Ohne BUDGET (eine Stufe allein) wählt der Renderer selbst. Ein Job ist 1,2 GB (JOB_MB in tools/rendern.mjs).
+BUDGET ?=
+# Gleichzeitige Testdateien von node --test; die Vorgabe von node (Kerne minus 1) zählt die Chromium-Stufen nicht mit.
+TEST_JOBS ?= 2
 
 .PHONY: check stufen test fremdhost secrets render wege apk apk-test sdk-vorhanden signatur apk-release symbole
 
 # Die fünf Stufen teilen weder Ports (jede wählt einen freien) noch Dateien (Profile in eigenen Temp-Ordnern, Bilder nur in
 # BILDER), darum laufen sie gleichzeitig. -k lässt jede Stufe zu Ende laufen, damit alle Fehler auf einmal erscheinen;
 # --output-sync=target druckt die Ausgabe je Stufe am Stück, wenn sie fertig ist. Ein Fehler jeder Stufe lässt check scheitern.
+# -j5 ist die Zahl der Stufen, nicht der Prozesse: die Last begrenzt BUDGET (aus claude-jobs mit 1,2 GB je Chromium;
+# ohne claude-jobs 2).
 check:
-	@$(MAKE) --no-print-directory -j -k --output-sync=target stufen
+	@b="$(BUDGET)"; [ -n "$$b" ] || b=$$(claude-jobs --mem 1.2 2>/dev/null || echo 2); \
+	$(MAKE) --no-print-directory -j5 -k --output-sync=target stufen BUDGET=$$b
 
-stufen: test fremdhost secrets render wege
+# render und wege laufen am längsten, darum zuerst
+stufen: render wege test fremdhost secrets
 
 test:
-	$(NODE) --test tests/
+	$(NODE) --test --test-concurrency=$(TEST_JOBS) tests/
 
 fremdhost:
 	$(NODE) tools/fremdhost.mjs
@@ -38,7 +47,7 @@ render:
 	  echo "make: Fehler: $(HIG)/beispiele/rendern-mobil.mjs fehlt" >&2; \
 	  echo "Gib den Klon von p94-hig an: make check HIG=PFAD" >&2; exit 1; }
 	@mkdir -p "$(BILDER)"
-	$(NODE) tools/rendern.mjs --hig "$(HIG)" -o "$(BILDER)" $(if $(JOBS),--jobs $(JOBS)) $(SZENARIEN)
+	$(NODE) tools/rendern.mjs --hig "$(HIG)" -o "$(BILDER)" $(if $(JOBS),--jobs $(JOBS),$(if $(BUDGET),--jobs $$(b=$(BUDGET); echo $$(( b > 2 ? b - 1 : 1 ))))) $(SZENARIEN)
 	@if grep -q '^[a-z-]*: WARN' "$(BILDER)/lauf.txt"; then echo "make: Fehler: das Rendern meldet WARN, verlangt ist PASS" >&2; echo "Die Zeilen mit WARN stehen in $(BILDER)/lauf.txt." >&2; exit 1; fi
 
 wege:
@@ -66,11 +75,11 @@ sdk-vorhanden:
 
 # Debug-APK der Hülle; JVM-Tests der Hülle
 apk: sdk-vorhanden
-	$(GRADLEW) assembleDebug
+	$(GRADLEW) --max-workers=$$(claude-jobs --mem 2 --max 8 2>/dev/null || nproc) assembleDebug
 	@echo "make: APK liegt in android/app/build/outputs/apk/debug/app-debug.apk"
 
 apk-test: sdk-vorhanden
-	$(GRADLEW) testDebugUnitTest
+	$(GRADLEW) --max-workers=$$(claude-jobs --mem 2 --max 8 2>/dev/null || nproc) testDebugUnitTest
 
 # Signierschlüssel für Releases, einmal: legt ihn nur an, wenn er fehlt, und gibt nie etwas davon aus
 signatur:

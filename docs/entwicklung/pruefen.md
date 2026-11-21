@@ -26,14 +26,24 @@ Beim Arbeiten nur das laufen lassen, was die Änderung berührt; den vollen `mak
 | --- | --- |
 | `make render SZENARIEN="leer fehler"` | rendert nur diese Szenarien (`node tools/rendern.mjs --liste` nennt alle) |
 | `node --test tests/NAME.test.mjs` | ein Test statt aller |
-| `make render JOBS=3` | drei Szenarien gleichzeitig statt der Vorgabe |
+| `make render JOBS=3` | drei Szenarien gleichzeitig statt der Vorgabe oder des Budgets |
 
-`make check` führt die fünf Stufen gleichzeitig aus (`make -j -k --output-sync=target`): jede wählt ihre Ports selbst und
+`make check` führt die fünf Stufen gleichzeitig aus (`make -j5 -k --output-sync=target`): jede wählt ihre Ports selbst und
 legt Profile in eigene Temp-Ordner. Die Ausgabe einer Stufe erscheint am Stück, wenn sie fertig ist; scheitert eine, laufen
-die anderen zu Ende, und `make check` endet mit Fehler. Das Rendern rendert bis zu sechs Szenarien gleichzeitig, jedes in
-einem eigenen Chromium (je Job bis etwa 1,2 GB). Die Vorgabe ist die Hälfte der Kerne, höchstens 6 und höchstens so viele
-Jobs, wie in den freien Speicher passen (`MemAvailable`); `--jobs 1` rendert nacheinander. `lauf.txt` steht in der
-Reihenfolge der Szenarien, nicht der Fertigstellung.
+die anderen zu Ende, und `make check` endet mit Fehler.
+
+Die Last begrenzt ein Budget an Jobs für alle Stufen zusammen: `make check` fragt einmal `claude-jobs --mem 1.2` (Kerne, freier
+Speicher und Last, 1,2 GB je Chromium; ohne `claude-jobs` gilt 2) und gibt die Zahl als `BUDGET` an die Stufen weiter. Das Rendern
+nimmt davon einen Job weniger (einen belegt der Wegetest, mindestens 1); `make check BUDGET=N` setzt das Budget selbst. Die Tests
+laufen mit `--test-concurrency=2` (`TEST_JOBS=N` ändert das), weil die Vorgabe von node (Kerne minus 1) die Chromium-Stufen nicht
+mitzählt.
+
+Ohne Budget, etwa bei `make render`, rendert der Renderer bis zu sechs Szenarien gleichzeitig, jedes in einem eigenen Chromium
+(je Job bis etwa 1,2 GB). Die Vorgabe ist die Hälfte der Kerne, höchstens 6, höchstens so viele Jobs, wie in den freien Speicher
+passen (`MemAvailable`), und höchstens `CLAUDE_JOBS`, wenn das eine positive Zahl ist; `--jobs 1` rendert nacheinander.
+`lauf.txt` steht in der Reihenfolge der Szenarien, nicht der Fertigstellung.
+
+`make apk` und `make apk-test` geben Gradle `--max-workers` nach `claude-jobs --mem 2 --max 8` (ohne das Werkzeug: Zahl der Kerne).
 
 `make render` prüft nach dem Renderer jedes Bild (`tools/bilder.mjs`): ein leeres oder fehlendes Bild und dasselbe Bild für zwei Adressen
 eines Szenarios sind ein FAIL in `lauf.txt` mit Adresse und Variante. Der Renderer selbst meldet PASS, wenn der Start der Seite abbricht
