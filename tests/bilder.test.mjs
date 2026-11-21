@@ -1,7 +1,7 @@
 // Die Bildprüfung von tools/rendern.mjs: leere, fehlende und doppelte Bilder sind Befunde, echte Bilder nicht.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync, crc32 } from 'node:zlib';
@@ -118,4 +118,20 @@ test('Vorschau: der Service Worker eines Szenarios hält alle Dateien, die der E
     // anhangdaten.mjs importiert js/anhaenge.js über die Wurzel, nicht über /leer/: ohne Eintrag blieb die Hülle leer
     for (const d of ['../tests/hilfen/beispieldaten.mjs', '../tests/hilfen/anhangdaten.mjs', '../js/anhaenge.js']) assert.ok(sw.includes(`'${d}'`), d);
   } finally { server.close(); }
+});
+
+test('Vorschau: der Einstieg jedes Szenarios setzt window.fertig zuletzt, und das Rendern wartet darauf statt auf eine feste Pause', async () => {
+  const { starteVorschau } = await import('../tools/vorschau.mjs');
+  const { ADRESSEN } = await import('./hilfen/beispieldaten.mjs');
+  const { server, basis } = await starteVorschau();
+  try {
+    for (const name of Object.keys(ADRESSEN)) {
+      const start = await (await fetch(`${basis}/${name}/js/start.js`)).text();
+      assert.ok(start.trimEnd().endsWith('window.fertig = true;'), `${name}: window.fertig steht nicht am Ende des Einstiegs`);
+    }
+  } finally { server.close(); }
+  // Das Rendern gibt dem Renderer die Bedingung mit (--bereit); die Pause --warte ist nur noch die Obergrenze
+  const rendern = readFileSync(new URL('../tools/rendern.mjs', import.meta.url), 'utf8');
+  assert.match(rendern, /`--bereit=\$\{BEREIT\}`/);
+  assert.match(rendern, /BEREIT = '[^']*window\.fertig === true/);
 });

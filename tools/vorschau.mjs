@@ -48,6 +48,10 @@ import { setzeFilter } from './uebersicht.js';
 import { SPEICHER, oeffneOderRueckfall, setzeEinstellung } from './speicher.js';
 
 const NAME = ${JSON.stringify(name)};
+// Der Renderer lädt dieselbe Adresse in einem Tab mehrmals neu (hell, dunkel, Größen, ohne Netz). Hat der Tipp eines Szenarios (klick)
+// die Adresse schon geändert, nähme das Neuladen die neue, und der Knopf fehlte. Darum gilt die erste Adresse des Tabs für jedes Neuladen.
+const ANFANG = sessionStorage.getItem('vorschau-anfang') ?? (sessionStorage.setItem('vorschau-anfang', location.hash), location.hash);
+if (location.hash !== ANFANG) history.replaceState(null, '', ANFANG);
 const JETZT = ${JETZT};
 ${farbenCode(name)}const db = await oeffneOderRueckfall();
 let fetchen = () => Promise.reject(new TypeError('Failed to fetch'));
@@ -123,7 +127,7 @@ for (const wahl of [].concat(sz?.klick ?? [])) {
   const erst = Date.now();
   let knopf = null;
   while (!(knopf = document.querySelector(wahl)) && Date.now() - erst < 4000) await new Promise((r) => setTimeout(r, 100));
-  if (!knopf) throw new Error('Knopf fehlt: ' + wahl);
+  if (!knopf) continue;   // ein Szenario mit mehreren Adressen tippt nur dort, wo der Knopf steht (erfassen-senden: nicht in wartet)
   await new Promise((r) => setTimeout(r, 400));
   (document.querySelector(wahl) ?? knopf).click();   // neu suchen: ein Abgleich kann die Ansicht in der Pause neu gezeichnet haben
   await new Promise((r) => setTimeout(r, 400));
@@ -145,6 +149,12 @@ if (sz?.formular) {
   }
   form.requestSubmit();
 }
+// Marke für den Renderer (--bereit in tools/rendern.mjs): der Abgleich beim Start ist zu Ende (er zeichnet die Ansicht neu; bei
+// „haengt“ endet er nie), alle Schritte des Szenarios sind durch und zwei Bilder sind gezeichnet. Unter Last braucht das länger
+// als jede feste Pause.
+if (sz?.live !== 'haengt') await new Promise((ok) => { if (steuerung.zustand.fertig) ok(); else steuerung.beiAenderung((z) => { if (z.fertig) ok(); }); });
+await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+window.fertig = true;
 `;
 }
 
