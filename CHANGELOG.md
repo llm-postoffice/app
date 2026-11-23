@@ -1,5 +1,16 @@
 # Änderungen
 
+## 20261123.01 (2026-11-23)
+
+Die App richtet sich nach dem Netzstand des Geräts und zeigt in **Alle** und auf den Karten wieder alles richtig an.
+
+- **Alle**: die Zeilen unter der Zahl („Abgleich läuft“, „Nächster Abgleich …“) stehen je in einer eigenen Zeile; vorher liefen sie ineinander und zeigten Programmtext statt der Frist.
+- Karten und Kopfkarte nennen Datum und Uhrzeit hinter der Herkunft („von session:xyz auf rechner1 • 2026-11-20 10:03:12“).
+- Ohne Netz startet die App keinen Abgleich und keine Sendung; ein Lauf bricht ab, wenn das Gerät offline geht. Die Sendung wartet und geht raus, sobald Netz da ist.
+- Bekannte Grenze: im Flugmodus mit dauerhaft eingeschaltetem VPN meldet der Browser weiter „online“. Die App merkt dann den Ausfall erst an der Zeitüberschreitung.
+- Beurteilst du einen Schritt einer Abnahme mit **FAIL**, geht der Folgeauftrag an das Projekt und auch an die Sitzung, die die Abnahme angelegt hat.
+- Für Entwickler: `make check` rendert die Ansichten stabil auch unter Last, weil es auf die gezeichnete Ansicht wartet statt auf eine feste Pause.
+
 ## 20261119.01 (2026-11-19)
 
 Ein Tipp auf einen Web-Push-Hinweis öffnet jetzt den Eintrag, um den es geht. Die App gleicht vorher ab, damit der Eintrag schon da ist.
