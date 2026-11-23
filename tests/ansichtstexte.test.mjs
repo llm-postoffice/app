@@ -1,7 +1,7 @@
 // Wortlaut der Ansichten: Zeiten, Mehrzahlen, Absender und die Wörter der Warteschlange (TXT-6, TXT-10, TXT-12, UOF-3).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { absenderText, adressText, artVon, entwurfZeile, kurz, schlangeZeile, schritte, sendungText, um, vor, zeitpunkt } from '../js/ansichtstexte.js';
+import { datumZeit, absenderText, adressText, artVon, entwurfZeile, kurz, schlangeZeile, schritte, sendungText, um, vor, zeitpunkt } from '../js/ansichtstexte.js';
 
 const jetzt = new Date(2026, 10, 14, 14, 7).getTime();
 const am = (t, h, m) => new Date(2026, 10, t, h, m).getTime();
@@ -65,4 +65,8 @@ test('kurz: Alter einer Zeile in Kurzform mit richtiger Mehrzahl (TXT-10)', () =
   assert.equal(kurz(jetzt - 21 * 86400000, jetzt), 'vor 3 Wochen');
   assert.equal(kurz(jetzt - 95 * 86400000, jetzt), 'vor 3 Mon.');
   assert.equal(kurz(jetzt + 60000, jetzt), 'gerade eben', 'eine Uhr, die vorgeht, ergibt kein negatives Alter');
+});
+
+test('datumZeit: Datum und Uhrzeit mit Sekunden', () => {
+  assert.equal(datumZeit(new Date(2026, 10, 20, 10, 3, 12).getTime()), '2026-11-20 10:03:12');
 });

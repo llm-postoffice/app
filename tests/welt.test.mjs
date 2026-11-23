@@ -123,7 +123,9 @@ test('Karte: Art, Projekt, Rechner und Absender; Text aus dem Eintrag bleibt Tex
   assert.equal(m.art.wort, 'Abnahme');
   assert.equal(m.an, 'an rechner-a');
   assert.equal(m.projekt, 'alpha');
-  assert.deepEqual(m.von, { wer: 'session:cb56d77f', wo: 'rechner-a', trenner: ' auf ' });
+  const { wann, ...vonOhne } = m.von;
+  assert.deepEqual(vonOhne, { wer: 'session:cb56d77f', wo: 'rechner-a', trenner: ' auf ' });
+  assert.match(wann, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
   const rohe = new Map(dateien());
   rohe.set('entries/aa/aaaaaa/0-entry.md', '# Titel\u001b[31m rot\n\n- Kind: note\n- To: user\n- From: user, handy, 2026-11-14T10:00Z\n\nText');
   const y = baueWelt({ pfade: rohe, jetzt: JETZT });
