@@ -24,12 +24,12 @@ export const idSpan = (text) => el('span', { class: 'id' }, text);
 /** Sitzung in Monospace ohne Farbe. */
 export const sitzungSpan = (text) => el('span', { class: 'sitzung' }, text);
 
-/** „von session:cb56d77f auf rechner-a“: die Sitzung in Monospace. Gibt null zurück, wenn kein Absender bekannt ist. */
+/** „von session:cb56d77f auf rechner-a • 2026-11-20 10:03:12“ (Datum nur mit `wann`): die Sitzung in Monospace. Gibt null zurück, wenn kein Absender bekannt ist. */
 export function vonZeile(von, klasse = 'von') {
   const a = typeof von === 'string' || von == null ? absenderText(von) : von;
   if (!a) return null;
   const wer = a.wer.startsWith('session:') ? sitzungSpan(a.wer) : a.wer;
-  return el('span', { class: klasse }, 'von ', wer, a.wo ? `${a.trenner}${a.wo}` : '');
+  return el('span', { class: klasse }, 'von ', wer, a.wo ? `${a.trenner}${a.wo}` : '', a.wann ? ` • ${a.wann}` : '');
 }
 
 /** Projektname fett, Zusatz („an rechner-a“, „Niedrig“) leichter; ohne Projekt „ohne Projekt“ in Nebenfarbe. */

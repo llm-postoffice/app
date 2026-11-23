@@ -3,7 +3,7 @@
 // rendern-mobil.mjs aus dem p94-hig-Klon jedes Szenario in beiden Größen, hell, dunkel, Schrift 200 % und ohne Netz
 // prüfen. Die Bilder liegen je Szenario in einem Ordner: ORDNER/SZENARIO/ADRESSE-GROESSE-MODUS.png.
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -14,6 +14,8 @@ import { ADRESSEN, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
 const PROG = 'rendern';
 const JOB_MB = 1200;   // gemessen: Spitze eines Jobs (Renderer, Chromium und alle seine Prozesse, Summe PSS) bei 15 Adressen in MB
 const MAX_JOBS = 6;
+// Ausdruck für --bereit des Renderers: die Vorschau setzt window.fertig am Ende des Einstiegs (tools/vorschau.mjs); dazu muss im Hauptbereich Text stehen (so misst der Renderer UEW-2)
+const BEREIT = 'window.fertig === true && (document.querySelector("main") ?? document.body).innerText.trim().length >= 10';
 const MAX_BEFUNDE = 8;   // Zeilen je Szenario für leere oder doppelte Bilder
 const KURZ = `Aufruf: node tools/rendern.mjs [OPTIONEN] [SZENARIO...]
 
@@ -32,7 +34,8 @@ Optionen:
       --liste          Szenarien und Adressen nennen und beenden
   -h, --help           diese Hilfe zeigen; --help all zeigt alles
 `;
-const ALLES = `${KURZ}      --warte MS       Pause nach dem Laden, bevor der Renderer prüft (Vorgabe: 1500)
+const ALLES = `${KURZ}      --warte MS       Obergrenze, wie lange der Renderer nach dem Laden auf die gezeichnete Ansicht wartet (Vorgabe: 10000);
+                       er prüft, sobald sie steht, nicht erst nach Ablauf
 
 Danach prüft das Werkzeug jedes Bild: ein leeres Bild, ein fehlendes oder dasselbe Bild für zwei Adressen eines Szenarios ist ein FAIL
 (der Renderer meldet dafür PASS, wenn die Seite nach einem Fehler beim Start nur die leere Hülle zeigt).
@@ -54,7 +57,7 @@ Exit-Status: 0 alles PASS, 1 mindestens ein FAIL, 2 falscher Aufruf, 3 etwas nic
 let a;
 try {
   a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true,
-    options: { hig: { type: 'string', default: '../p94-hig' }, ausgabe: { type: 'string', short: 'o', default: 'bilder' }, liste: { type: 'boolean' }, jobs: { type: 'string', short: 'j' }, warte: { type: 'string', default: '1500' }, help: { type: 'boolean', short: 'h' } } });
+    options: { hig: { type: 'string', default: '../p94-hig' }, ausgabe: { type: 'string', short: 'o', default: 'bilder' }, liste: { type: 'boolean' }, jobs: { type: 'string', short: 'j' }, warte: { type: 'string', default: '10000' }, help: { type: 'boolean', short: 'h' } } });
 } catch (e) {
   process.stderr.write(`${PROG}: Fehler: ${e.message}\nHilfe: node tools/rendern.mjs --help\n`);
   process.exit(2);
@@ -69,6 +72,8 @@ const unbekannt = szenarien.find((s) => !ADRESSEN[s]);
 if (unbekannt) { process.stderr.write(`${PROG}: Fehler: unbekanntes Szenario „${unbekannt}“\nMögliche: ${Object.keys(ADRESSEN).join(', ')}\n`); process.exit(2); }
 const renderer = join(a.values.hig, 'beispiele/rendern-mobil.mjs');
 const fehler = (text) => { process.stderr.write(`${PROG}: Fehler: ${text}\nHilfe: node tools/rendern.mjs --help\n`); process.exit(2); };
+// Ein Renderer vor p94-hig 20261121.01 kennt --bereit nicht und lehnte den Aufruf mit Exit 2 ab: das melden wir vorher klar
+if (existsSync(renderer) && !readFileSync(renderer, 'utf8').includes('--bereit')) fehler(`${renderer} kennt --bereit nicht; der Klon von p94-hig muss mindestens Fassung 20261121.01 haben (git pull im Klon)`);
 
 /** Speicher, der für neue Prozesse frei ist (MemAvailable), in MB; null, wenn /proc/meminfo fehlt. */
 function freierSpeicherMB() {
@@ -92,7 +97,7 @@ const lauf = (sz) => new Promise((ok) => {
   const ordner = join(a.values.ausgabe, sz);
   const urls = ADRESSEN[sz].map((adr) => `${basis}/${sz}/#${adr}`);
   // Jeder Renderer legt sein Profil und seinen Server selbst an (mkdtemp, Port 0): Jobs stoßen sich nicht
-  const kind = spawn(process.execPath, [renderer, '-o', ordner, `--warte=${a.values.warte}`, ...urls], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const kind = spawn(process.execPath, [renderer, '-o', ordner, `--warte=${a.values.warte}`, `--bereit=${BEREIT}`, ...urls], { stdio: ['ignore', 'pipe', 'pipe'] });
   let aus = '';
   kind.stdout.on('data', (d) => { aus += d; });
   kind.stderr.on('data', (d) => { aus += d; });

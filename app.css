@@ -232,6 +232,7 @@ details[open] > summary::after { transform: rotate(180deg); }
 .summe { margin: 4px 0 8px; font-size: 0.9375rem; line-height: 1.375rem; color: var(--neben); }
 .summe b { color: var(--text); font-weight: 600; }
 .stand-zeile { margin: 0 0 8px; }
+.stand-zeile .neben { margin: 0; }
 .fleiste { margin: 0 0 4px; }
 .reihe { display: flex; flex-wrap: wrap; gap: 8px; }
 .fchip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 48px; padding: 6px 12px 6px 16px; border: 1px solid var(--neben); border-radius: 12px; background: none; font-size: 0.875rem; font-weight: 500; color: var(--text); text-decoration: none; }

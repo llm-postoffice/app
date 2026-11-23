@@ -7,7 +7,7 @@ import { leseStand } from './abgleich.js';
 import { absender, adressen, anDich, dateienNachId, finde, Hauptbuch, imEingang, istIdeeAnDich, ladeEintraege, ladeProjekte, projektDes, vergleiche, vertrauen, wartetAufDich } from './zustand.js';
 import { fruehereErgebnisse, leseSchritte, sichtbar } from './urteil.js';
 import { idMitStrich, normId, ulidZeit } from './format.js';
-import { ARTEN, PRIO_WORTE, SORT_WORTE, STATUS_WORTE, absenderText, adressText, artVon, entwurfZeile, kurz, schlangeZeile, schritte as schritteText, um, zeitpunkt } from './ansichtstexte.js';
+import { ARTEN, PRIO_WORTE, SORT_WORTE, STATUS_WORTE, absenderText, adressText, datumZeit, artVon, entwurfZeile, kurz, schlangeZeile, schritte as schritteText, um, zeitpunkt } from './ansichtstexte.js';
 
 const OFFEN_WORTE = new Set(['PASS', 'SKIP']);
 const geschlossen = (st) => st.status === 'done' || st.status === 'dropped';
@@ -183,7 +183,8 @@ export function zustandVon(w, e, st, { ohneNetz = false } = {}) {
 /** Alles, was eine Karte der Liste und die Kopfkarte zeigen. */
 export function karteVon(w, { e, st }, optionen = {}) {
   const kind = e.head.get('Kind');
-  const von = absenderText(e.head.get('From'));
+  const absender = absenderText(e.head.get('From'));
+  const von = absender && { ...absender, wann: datumZeit(st.created) };
   const hosts = hostsVon(e);
   return {
     id: e.id, idText: idMitStrich(e.id), kind, art: artVon(kind), dringend: st.urgent, rang: st.priority,

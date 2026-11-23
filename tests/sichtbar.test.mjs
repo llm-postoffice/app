@@ -10,7 +10,7 @@ let M;
 before(async () => {
   aufraeumen = installiereFakeDom();
   M = { welt: await import('../js/welt.js'), ansichten: await import('../js/ansichten.js'), schlange: await import('../js/schlange.js'),
-    texte: await import('../js/ansichtstexte.js'), frist: await import('../js/frist.js'), dom: await import('../js/dom.js') };
+    texte: await import('../js/ansichtstexte.js'), uebersicht: await import('../js/uebersicht.js'), frist: await import('../js/frist.js'), dom: await import('../js/dom.js') };
 });
 after(() => aufraeumen());
 
@@ -120,4 +120,22 @@ test('Zeilen unter der Zahl: Abgleich läuft, nächster Abgleich mit Frist, ohne
 test('Karten: nächster Versuch steht mit Uhrzeit in der Zeile', () => {
   const s = schlangeWeiter().versuch[0];
   assert.equal(M.texte.schlangeZeile(s, { jetzt: JETZT }).text, 'Antwort „A“ noch nicht gesendet, nächster Versuch um 14:07');
+});
+
+test('Alle: die Zeilen unter der Zahl stehen je in einem eigenen Absatz, die Frist ist ein Element und kein Text „[object …]“', () => {
+  const k = { jetzt: () => JETZT, neuZeichnen() {}, ersetze() {}, meldung: () => true, schreiben: {} };
+  const knoten = M.uebersicht.alleAnsicht(welt(), z({ naechster: JETZT + 120_000 }), k, M.welt.leererFilter());
+  const stand = finde(knoten, '.stand-zeile')[0];
+  assert.ok(stand, 'die Zeilen stehen im Block stand-zeile');
+  const absaetze = finde(stand, 'p');
+  assert.equal(absaetze.length, 2, 'eine Zeile je Absatz');
+  assert.equal(t(absaetze[0]), 'Abgeglichen um 14:02');
+  assert.equal(t(absaetze[1]), 'Nächster Abgleich in etwa 2 min');
+  assert.equal(finde(absaetze[1], '[data-bis]').length, 1, 'die Frist ist ein Element');
+  assert.doesNotMatch(t(knoten), /\[object|,\s*,/);
+});
+
+test('el: verschachtelte Listen von Kindern werden ganz geglättet, nie zu Text gemacht', () => {
+  const e = M.dom.el('p', {}, ['a', ['b', M.dom.el('span', {}, 'c')]], [[['d']]]);
+  assert.equal(t(e), 'abcd');
 });

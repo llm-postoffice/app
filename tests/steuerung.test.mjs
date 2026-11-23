@@ -26,13 +26,13 @@ function falscheUhr() {
   return u;
 }
 
-async function aufbau({ angemeldet = true, takt, quelle = {}, sichtbar = () => true } = {}) {
+async function aufbau({ angemeldet = true, takt, quelle = {}, sichtbar = () => true, amNetz, fetch } = {}) {
   const q = mockQuelle({ dateien: dateien(), ...quelle });
   const db = speicherDatenbank();
   if (angemeldet) await setzeEinstellung(db, 'anmeldung', { repo: 'org/daten', token: 'TESTTOKEN' });
   if (takt !== undefined) await setzeEinstellung(db, 'takt', takt);
   const uhr = falscheUhr();
-  const s = new Abgleichsteuerung({ db, fetch: q.fetch, jetzt: uhr.uhr, zeitgeber: uhr.zeitgeber, sichtbar });
+  const s = new Abgleichsteuerung({ db, fetch: fetch ?? q.fetch, jetzt: uhr.uhr, zeitgeber: uhr.zeitgeber, sichtbar, ...(amNetz && { amNetz }) });
   const verlauf = [];
   s.beiAenderung((z) => verlauf.push(z.phase));
   return { q, db, uhr, s, verlauf };
@@ -185,4 +185,55 @@ test('der Zeitgeber der Vorgabe ruft setTimeout und clearTimeout ohne Empfänger
   const t = s.zeitgeber.setze.call({}, () => { gerufen = true; }, 1_000_000);
   s.zeitgeber.loesche.call({}, t);
   assert.equal(gerufen, false);
+});
+
+test('Meldet das Gerät kein Netz, startet kein Abgleich: nie „läuft“, sofort „ohne Netz“, Frage alle 10 s', async () => {
+  let netz = false;
+  const { q, uhr, s, verlauf } = await aufbau({ amNetz: () => netz });
+  await s.start();
+  assert.equal(q.protokoll.length, 0, 'keine Anfrage');
+  assert.deepEqual(verlauf.filter((p, i, a) => a[i - 1] !== p), ['fehler'], 'nie die Phase laeuft');
+  assert.equal(s.zustand.ohneNetz, true);
+  assert.deepEqual(uhr.wartende(), [OFFLINE_FRAGE_MS]);
+  netz = true;
+  s.netzDa();
+  await s.laufend;
+  assert.equal(s.zustand.ohneNetz, false);
+  assert.equal(s.zustand.phase, 'bereit');
+});
+
+test('Das Ereignis offline bricht einen laufenden Abgleich ab und setzt „ohne Netz“, ohne die Zeitüberschreitung abzuwarten', async () => {
+  let netz = true;
+  const hing = [];
+  // Eine Anfrage, die nie antwortet und nur auf das Signal hört
+  const haengt = (url, init) => new Promise((ja, nein) => {
+    hing.push(url);
+    init.signal.addEventListener('abort', () => nein(Object.assign(new Error('abgebrochen'), { name: 'AbortError' })));
+  });
+  const { s } = await aufbau({ amNetz: () => netz, fetch: haengt });
+  const start = s.start();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(s.zustand.phase, 'laeuft');
+  netz = false;
+  s.netzWeg();
+  await start;
+  assert.equal(hing.length, 1);
+  assert.equal(s.zustand.phase, 'fehler');
+  assert.equal(s.zustand.fehler.art, 'netz');
+  assert.equal(s.zustand.ohneNetz, true);
+});
+
+test('offline im Ruhezustand: „ohne Netz“ gilt sofort, mit Netz wieder aufgehoben', async () => {
+  let netz = true;
+  const { uhr, s } = await aufbau({ amNetz: () => netz });
+  await s.start();
+  assert.equal(s.zustand.ohneNetz, false);
+  netz = false;
+  await s.netzWeg();
+  assert.equal(s.zustand.ohneNetz, true);
+  assert.deepEqual(uhr.wartende(), [OFFLINE_FRAGE_MS]);
+  netz = true;
+  s.netzDa();
+  await s.laufend;
+  assert.equal(s.zustand.ohneNetz, false);
 });

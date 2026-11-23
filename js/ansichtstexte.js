@@ -8,6 +8,9 @@ const zwei = (n) => String(n).padStart(2, '0');
 const tag = (d) => `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-${zwei(d.getDate())}`;
 const istHeute = (ms, jetzt) => tag(new Date(ms)) === tag(new Date(jetzt));
 
+/** 2026-11-20 10:03:12: Datum und Uhrzeit mit Sekunden in der Zeitzone des Geräts (ISO 8601, TXT-6). */
+export const datumZeit = (ms) => { const d = new Date(ms); return `${tag(d)} ${zwei(d.getHours())}:${zwei(d.getMinutes())}:${zwei(d.getSeconds())}`; };
+
 /** seit 13:47 (heute) oder seit 2026-11-12 18:13 (ISO 8601, TXT-6); der Aufrufer setzt „seit“ davor. */
 export const zeitpunkt = (ms, jetzt) => (istHeute(ms, jetzt) ? uhrzeit(ms) : `${tag(new Date(ms))} ${uhrzeit(ms)}`);
 
