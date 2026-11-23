@@ -48,7 +48,7 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
     return fehler ? { ok: false, fehler } : { ok: true };
   };
   if (!schreiben && fetch) {
-    schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), hinweis: hinweis.zeige, meldung: hinweis.meldung, zeitgeber, beiAenderung: () => k.neuZeichnen() });
+    schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), amNetz: () => steuerung.amNetz(), hinweis: hinweis.zeige, meldung: hinweis.meldung, zeitgeber, beiAenderung: () => k.neuZeichnen() });
   }
   // Neue Fassung (UOF-5): ein ruhiges Band unten und in Mehr; die App lädt nie von selbst neu
   // In der Hülle kein Service Worker: die Dateien liegen im APK, Updates kommen als APK
@@ -151,6 +151,7 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
       }
     });
     schreiben.aufraeumenBeimStart();
+    globalThis.addEventListener?.('online', () => schreiben.weckeNetz());
   }
 
   // Start ohne Netz (UOF-1): der Service Worker hält die Hülle der App. Er ist ein Modul (js/swlogik.js).

@@ -3,6 +3,8 @@
 // Es läuft immer höchstens ein Abgleich. Auf Background Sync verlässt sich die App nicht (B1, 5.5).
 // Ohne Netz gilt, wer am Netz scheitert (UOF-4): die App fragt dann alle 10 s erneut, weil mit einem VPN kein Ereignis
 // online kommt. Fehler, die nur der Nutzer beheben kann (Token, Rechte, Repo), lösen keinen Takt aus.
+// Das Gerät meldet Netz (navigator.onLine, `amNetz`) oder nicht (Ereignis offline): ohne Netz startet kein Abgleich, ein laufender
+// wird abgebrochen und beides gilt sofort als „ohne Netz“, statt die Zeitüberschreitung der Anfrage abzuwarten.
 // Alles Äußere kommt als Parameter (fetch, Uhr, Zeitgeber, Sichtbarkeit), damit node --test es ohne Browser prüft.
 import { AbgleichFehler, abgleichen, leseStand } from './abgleich.js';
 import { einstellung } from './speicher.js';
@@ -24,6 +26,7 @@ export class Abgleichsteuerung {
     this.timer = null;
     this.faellig = false;
     this.laufend = null;
+    this.abbruch = null;
     this.zustand = { phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: null, naechster: null, fertig: false };
   }
 
@@ -72,9 +75,12 @@ export class Abgleichsteuerung {
       this.setze({ phase: 'ohne-anmeldung', fortschritt: null, fehler: null, ohneNetz: false, naechster: null, fertig: true });
       return null;
     }
-    this.setze({ phase: 'laeuft', fortschritt: { phase: 'baum' }, fehler: null });
+    const abbruch = this.abbruch = new AbortController();
     try {
-      const r = await abgleichen({ fetch: this.fetch, db: this.db, quelle, jetzt: this.jetzt, bei: (f) => this.setze({ fortschritt: f }) });
+      // Meldet das Gerät kein Netz, gibt es nichts zu versuchen und die Ansicht zeigt nie „Gleicht gerade ab“
+      if (!this.amNetz()) throw new AbgleichFehler('netz', 'Das Gerät meldet kein Netz');
+      this.setze({ phase: 'laeuft', fortschritt: { phase: 'baum' }, fehler: null });
+      const r = await abgleichen({ fetch: this.fetch, db: this.db, quelle, jetzt: this.jetzt, signal: abbruch.signal, bei: (f) => this.setze({ fortschritt: f }) });
       await merkeUhr(this.db, r.serverzeit, this.jetzt());   // Uhr des Geräts gegen den Date-Kopf (Teil E ordnet Dateien nach ihr)
       const geprueft = (await this.db.lies('baum', 'stand'))?.geprueft ?? this.jetzt();
       this.setze({ phase: 'bereit', fortschritt: null, fehler: null, ohneNetz: false, letzter: { geprueft, dateien: r.dateien }, fertig: true });
@@ -82,11 +88,15 @@ export class Abgleichsteuerung {
       return r;
     } catch (e) {
       // Ein Fehler im eigenen Code zeigt sich wie jeder andere, statt eine Zusage unbemerkt abzulehnen
-      const fehler = e instanceof AbgleichFehler ? e : new AbgleichFehler('intern', String(e?.message ?? e));
+      let fehler = e instanceof AbgleichFehler ? e : new AbgleichFehler('intern', String(e?.message ?? e));
+      // Abgebrochen hat nur netzWeg: das Gerät hat das Netz verloren
+      if (fehler.art === 'abgebrochen' && !this.amNetz()) fehler = new AbgleichFehler('netz', 'Das Gerät meldet kein Netz');
       // Eine Antwort des Servers, auch eine Ablehnung, hebt "ohne Netz" auf (UOF-4)
       this.setze({ phase: 'fehler', fortschritt: null, fehler, ohneNetz: fehler.art === 'netz', fertig: true });
       await this.plane();
       return null;
+    } finally {
+      if (this.abbruch === abbruch) this.abbruch = null;
     }
   }
 
@@ -122,6 +132,14 @@ export class Abgleichsteuerung {
     if (this.amNetz()) this.lauf('netz');
   }
 
+  /** Das Gerät meldet kein Netz mehr: ein laufender Abgleich bricht ab, sonst gilt „ohne Netz“ sofort. */
+  netzWeg() {
+    if (this.abbruch) { this.abbruch.abort(); return; }
+    if (this.laufend || this.amNetz() || this.zustand.ohneNetz || !this.zustand.letzter) return;
+    this.setze({ ohneNetz: true });
+    return this.plane();
+  }
+
   /** Der Knopf Jetzt abgleichen. */
   jetztAbgleichen() {
     return this.lauf('knopf');
@@ -136,6 +154,7 @@ export class Abgleichsteuerung {
 /** Verbindet die Steuerung mit dem Browser: Öffnen, online, Sichtbarkeit. Gibt die Steuerung zurück. */
 export function verbinde(steuerung, ziel = globalThis, dokument = globalThis.document) {
   ziel.addEventListener('online', () => steuerung.netzDa());
+  ziel.addEventListener('offline', () => steuerung.netzWeg());
   dokument.addEventListener('visibilitychange', () => { if (dokument.visibilityState === 'visible') steuerung.sichtbarWurde(); });
   steuerung.start();
   return steuerung;

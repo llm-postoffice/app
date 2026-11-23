@@ -32,6 +32,7 @@ import { idMitStrich, ulidZeit } from './format.js';
 import { uhrzeit } from './texte.js';
 import { einstellung } from './speicher.js';
 import { schreibTakt, sendeCommit } from './senden.js';
+import { AbgleichFehler } from './abgleich.js';
 import { Fehler } from './urteil.js';
 import { abnahmeSchritte, ladeWelt } from './welt.js';
 import { absender, adressListe, finde, imEingang, umadressierungen, wirksamerKopf } from './zustand.js';
@@ -126,9 +127,9 @@ export class Schreiber {
    * @param {object} [o.takt]        schreibTakt(): Abstand der schreibenden Anfragen
    * @param {(n:number)=>Uint8Array} [o.zufall]
    */
-  constructor({ db, fetch, jetzt = () => Date.now(), abgleich, anmeldung, hinweis = () => {}, meldung = () => true, beiAenderung = () => {},
+  constructor({ db, fetch, jetzt = () => Date.now(), abgleich, anmeldung, hinweis = () => {}, meldung = () => true, amNetz = () => true, beiAenderung = () => {},
     zeitgeber = { setze: (f, ms) => setTimeout(f, ms), loesche: (t) => clearTimeout(t) }, takt = schreibTakt(), zufall = zufallsbytes, rueckgaengigMs = RUECKGAENGIG_MS }) {
-    Object.assign(this, { db, fetch, jetzt, abgleich, anmeldung, hinweis, meldung, beiAenderung, zeitgeber, takt, zufall, rueckgaengigMs });
+    Object.assign(this, { db, fetch, jetzt, abgleich, anmeldung, hinweis, meldung, amNetz, beiAenderung, zeitgeber, takt, zufall, rueckgaengigMs });
     this.timer = null;
     this.laeuft = null;
     this.nochmal = false;
@@ -373,7 +374,7 @@ export class Schreiber {
   async sendeEine(s0) {
     const quelle = await this.anmeldung();
     if (!quelle) return 'halt';
-    let s = await this.setze(s0, { zustand: 'sendet' });
+    let s = s0;
     const liegen = async (teil) => { await this.setze(s, { zustand: 'liegt', warteArt: undefined, gewartet: true, ...teil }); return 'halt'; };
     // Fehler des Abgleichs und des Sendens: netz und limit bleiben liegen, 401 wird zum Token, der Rest steht in der Zeile
     const behandle = async (f) => {
@@ -391,6 +392,9 @@ export class Schreiber {
       await this.setze(s, { zustand: 'fehler', grund: `GitHub lehnt die Sendung ab (${f.message ?? f.art}).` });
       return 'halt';
     };
+    // Meldet das Gerät kein Netz, wartet die Sendung gleich, ohne je „wird gesendet“ zu zeigen
+    if (!this.amNetz()) return behandle(new AbgleichFehler('netz', 'Das Gerät meldet kein Netz'));
+    s = await this.setze(s0, { zustand: 'sendet' });
     let dateien = s.dateien;
     let nachricht = s.nachricht;
     let schonDa = false;

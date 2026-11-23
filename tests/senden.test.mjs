@@ -146,6 +146,26 @@ test('Ohne Netz bleibt die Sendung liegen und geht beim nächsten Lauf raus', as
   assert.equal(eigene(a.q).length, 1);
 });
 
+test('Meldet das Gerät kein Netz, zeigt die Sendung nie „wird gesendet“ und wartet gleich auf Netz', async () => {
+  let netz = false;
+  const zustaende = [];
+  const a = await aufbau({ schreiber: { amNetz: () => netz } });
+  const alt = a.db.schreibe.bind(a.db);
+  a.db.schreibe = async (speicher, wert) => { if (speicher === 'schlange') zustaende.push(wert.zustand); return alt(speicher, wert); };
+  await a.schreiber.erledigen('m7q2ke');
+  const vorher = a.q.protokoll.length;
+  await a.sende();
+  assert.equal(a.q.protokoll.length, vorher, 'keine Anfrage');
+  assert.equal(zustaende.includes('sendet'), false);
+  const s = (await schlange(a))[0];
+  assert.equal(s.zustand, 'liegt');
+  assert.equal(s.warteArt, 'netz');
+  assert.equal(a.meldungen.length, 1);
+  netz = true;
+  await a.schreiber.weckeNetz();
+  assert.equal(eigene(a.q).length, 1);
+});
+
 test('Der Hinweis nach der Antwort nennt eigenen Text und Anhänge', async () => {
   const a = await aufbau();
   const bild = { name: 'a.png', groesse: 4, typ: 'image/png', daten: 'AAAA' };
