@@ -4,7 +4,9 @@
 // Ohne Netz gilt, wer am Netz scheitert (UOF-4): die App fragt dann alle 10 s erneut, weil mit einem VPN kein Ereignis
 // online kommt. Fehler, die nur der Nutzer beheben kann (Token, Rechte, Repo), lösen keinen Takt aus.
 // Das Gerät meldet Netz (navigator.onLine, `amNetz`) oder nicht (Ereignis offline): ohne Netz startet kein Abgleich, ein laufender
-// wird abgebrochen und beides gilt sofort als „ohne Netz“, statt die Zeitüberschreitung der Anfrage abzuwarten.
+// wird abgebrochen und beides gilt sofort als „ohne Netz“, statt die Zeitüberschreitung der Anfrage abzuwarten. Wo onLine
+// lügt (VPN im Flugmodus), prüft js/netzprobe.js das Netz mit einer kurzen Probe: `pruefeNetz` läuft vor jedem Abgleich,
+// `beiNetzFehler` nach einem Fehler am Netz.
 // Alles Äußere kommt als Parameter (fetch, Uhr, Zeitgeber, Sichtbarkeit), damit node --test es ohne Browser prüft.
 import { AbgleichFehler, abgleichen, leseStand } from './abgleich.js';
 import { einstellung } from './speicher.js';
@@ -20,8 +22,8 @@ export class Abgleichsteuerung {
   // Die Zeitgeber stehen in Funktionen, die setTimeout und clearTimeout ohne Empfänger rufen: als Methode eines anderen
   // Objekts werfen sie im Browser "Illegal invocation".
   constructor({ db, fetch, jetzt = () => Date.now(), zeitgeber = { setze: (f, ms) => setTimeout(f, ms), loesche: (t) => clearTimeout(t) },
-    sichtbar = () => true, amNetz = () => true }) {
-    Object.assign(this, { db, fetch, jetzt, zeitgeber, sichtbar, amNetz });
+    sichtbar = () => true, amNetz = () => true, pruefeNetz = async () => {}, beiNetzFehler = () => {} }) {
+    Object.assign(this, { db, fetch, jetzt, zeitgeber, sichtbar, amNetz, pruefeNetz, beiNetzFehler });
     this.horcher = new Set();
     this.timer = null;
     this.faellig = false;
@@ -77,7 +79,9 @@ export class Abgleichsteuerung {
     }
     const abbruch = this.abbruch = new AbortController();
     try {
-      // Meldet das Gerät kein Netz, gibt es nichts zu versuchen und die Ansicht zeigt nie „Gleicht gerade ab“
+      // Meldet das Gerät kein Netz, gibt es nichts zu versuchen und die Ansicht zeigt nie „Gleicht gerade ab“; die Probe
+      // (js/netzprobe.js) fängt ein Netz ab, das navigator.onLine nicht sieht (VPN im Flugmodus)
+      await this.pruefeNetz();
       if (!this.amNetz()) throw new AbgleichFehler('netz', 'Das Gerät meldet kein Netz');
       this.setze({ phase: 'laeuft', fortschritt: { phase: 'baum' }, fehler: null });
       const r = await abgleichen({ fetch: this.fetch, db: this.db, quelle, jetzt: this.jetzt, signal: abbruch.signal, bei: (f) => this.setze({ fortschritt: f }) });
@@ -93,6 +97,7 @@ export class Abgleichsteuerung {
       if (fehler.art === 'abgebrochen' && !this.amNetz()) fehler = new AbgleichFehler('netz', 'Das Gerät meldet kein Netz');
       // Eine Antwort des Servers, auch eine Ablehnung, hebt "ohne Netz" auf (UOF-4)
       this.setze({ phase: 'fehler', fortschritt: null, fehler, ohneNetz: fehler.art === 'netz', fertig: true });
+      if (fehler.art === 'netz') this.beiNetzFehler();
       await this.plane();
       return null;
     } finally {

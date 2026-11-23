@@ -127,9 +127,9 @@ export class Schreiber {
    * @param {object} [o.takt]        schreibTakt(): Abstand der schreibenden Anfragen
    * @param {(n:number)=>Uint8Array} [o.zufall]
    */
-  constructor({ db, fetch, jetzt = () => Date.now(), abgleich, anmeldung, hinweis = () => {}, meldung = () => true, amNetz = () => true, beiAenderung = () => {},
+  constructor({ db, fetch, jetzt = () => Date.now(), abgleich, anmeldung, hinweis = () => {}, meldung = () => true, amNetz = () => true, pruefeNetz = async () => {}, beiAenderung = () => {},
     zeitgeber = { setze: (f, ms) => setTimeout(f, ms), loesche: (t) => clearTimeout(t) }, takt = schreibTakt(), zufall = zufallsbytes, rueckgaengigMs = RUECKGAENGIG_MS }) {
-    Object.assign(this, { db, fetch, jetzt, abgleich, anmeldung, hinweis, meldung, amNetz, beiAenderung, zeitgeber, takt, zufall, rueckgaengigMs });
+    Object.assign(this, { db, fetch, jetzt, abgleich, anmeldung, hinweis, meldung, amNetz, pruefeNetz, beiAenderung, zeitgeber, takt, zufall, rueckgaengigMs });
     this.timer = null;
     this.laeuft = null;
     this.nochmal = false;
@@ -393,6 +393,7 @@ export class Schreiber {
       return 'halt';
     };
     // Meldet das Gerät kein Netz, wartet die Sendung gleich, ohne je „wird gesendet“ zu zeigen
+    await this.pruefeNetz();   // Probe: ein VPN hält navigator.onLine im Flugmodus auf true
     if (!this.amNetz()) return behandle(new AbgleichFehler('netz', 'Das Gerät meldet kein Netz'));
     s = await this.setze(s0, { zustand: 'sendet' });
     let dateien = s.dateien;

@@ -63,6 +63,8 @@ const TYP = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; char
 // Teil F: `zweiteFassung` lässt den Server einen Service Worker mit anderem Cache-Namen ausliefern (eine neue Fassung der Hülle);
 // `zugriffe` zählt, was der Server ausliefert, damit der Test zeigt, dass der Start ohne Netz nichts vom Server holt.
 let zweiteFassung = false;
+let probeAus = false;
+const haengende = new Set();
 const zugriffe = [];
 const server = createServer(async (q, a) => {
   try {
@@ -71,6 +73,8 @@ const server = createServer(async (q, a) => {
     if (!p.startsWith(wurzel)) { a.writeHead(403); a.end(); return; }
     zugriffe.push(pfad);
     a.writeHead(200, { 'content-type': TYP[extname(p)] || 'application/octet-stream' });
+    // VPN im Flugmodus: onLine bleibt true, die Probe auf den eigenen Ursprung (HEAD mit ?netz=) bekommt keine Antwort
+    if (probeAus && q.method === 'HEAD' && new URL(q.url, 'http://localhost').searchParams.has('netz')) { haengende.add(a); return; }
     if (zweiteFassung && pfad === '/sw.js') { a.end((await readFile(p, 'utf8')).replace(`postfach-${VERSION}`, `postfach-${VERSION}-zwei`)); return; }
     a.end(await readFile(p));
   } catch { if (!a.headersSent) a.writeHead(404); a.end(); }
@@ -794,6 +798,23 @@ try {
   ausfallE = null;
   abgefangen = fange(standardQuelle());
   await vorbereiten();   // Anmeldung und Stand der Beispieldaten wiederherstellen, Schlange und Entwürfe leer
+
+  // VPN im Flugmodus: navigator.onLine bleibt true, die Probe scheitert nach 3 s; die Sendung wartet, obwohl die Quelle antworten würde
+  probeAus = true;
+  p = await seite(t('#eintrag/x9k3ft'));
+  const vorVpn = eigeneCommits().length;
+  await p.tippe('#aktion [data-handlung=erledigt]');
+  const vpnUm = Date.now();
+  melde(await p.werte('navigator.onLine') === true, 'der Browser meldet weiter online (wie unter einem VPN im Flugmodus)', 'onLine false');
+  melde(await p.warte('/noch nicht gesendet, wartet auf Netz/.test(document.querySelector("main .kopfkarte")?.innerText ?? "")', 25000)
+    && Date.now() - vpnUm <= 20000 && eigeneCommits().length === vorVpn,
+  `ohne antwortenden Ursprung wartet die Sendung auf Netz, obwohl onLine true ist (nach ${Math.round((Date.now() - vpnUm) / 100) / 10} s)`, `${eigeneCommits().length - vorVpn} Commits, ${await p.werte('document.querySelector("main .kopfkarte")?.innerText')}`);
+  probeAus = false;
+  for (const a of haengende) a.destroy();
+  haengende.clear();
+  melde(await p.warte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const n = await db.zaehle('schlange'); db.schliesse(); return n === 0; })()`, 90000)
+    && eigeneCommits().length === vorVpn + 1, 'antwortet der Ursprung wieder, geht die Sendung von allein raus', `${eigeneCommits().length - vorVpn} Commits`);
+  await vorbereiten();
 
   // 7. IndexedDB und Abgleich: das Schema in Chromium, die Bitte um dauerhaften Speicher, dann ein Abgleich gegen ein
   //    nachgebautes Repo mit allen Zuständen aus Mehr. Das Token ist ein Testwert; Chromium beantwortet die Anfragen.
