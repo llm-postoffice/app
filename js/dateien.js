@@ -174,7 +174,11 @@ export function urteilDateien(ctx, e, st, antwortText, { nachtrag = false } = {}
     const z = Array.from(titel);
     if (z.length > 120) titel = `${z.slice(0, 119).join('')}…`;
     const projekt = projektDes(e);
-    const an = projekt ? `project:${projekt}` : absender(e.head);
+    const fragende = absender(e.head);
+    let an = projekt ? `project:${projekt}` : fragende;
+    // Die Sitzung, die die Abnahme anlegte, bekommt den Folgeauftrag auch (save_answer im Postwerkzeug). Die App antwortet nie
+    // selbst als Sitzung, darum entfällt dort der Vergleich mit der antwortenden Sitzung.
+    if (/^session:\S+$/.test(fragende) && fragende !== an) an = `${an}, ${fragende}`;
     const kopf = [['Kind', 'task'], ['To', an], ...(projekt ? [['Project', projekt]] : []), ['From', ctx.stempel]];
     if (aus.label) kopf.push(['Labels', aus.label]);
     if (st.priority !== 2) kopf.push(['Priority', String(st.priority)]);

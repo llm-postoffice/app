@@ -30,6 +30,33 @@
    }
   },
   {
+   "name": "Bug ist wie ein Auftrag offen",
+   "at": "2026-11-14T12:00Z",
+   "entries": {
+    "k7m2qd": {
+     "0-entry.md": "# Neuer Bug\n\n- Kind: bug\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText des Eintrags.\n"
+    }
+   },
+   "expect": {
+    "k7m2qd": {
+     "ready_reason": null,
+     "holder": null,
+     "until": null,
+     "priority": 2,
+     "urgent": false,
+     "conditions": [],
+     "status": "open",
+     "ready": true,
+     "to": [
+      "project:demo"
+     ],
+     "project": "demo",
+     "inbox": false,
+     "for_user": false
+    }
+   }
+  },
+  {
    "name": "Übernommen mit Frist in der Zukunft ist in Arbeit",
    "at": "2026-11-14T12:00Z",
    "entries": {
@@ -1206,7 +1233,7 @@
    "expect": [
     {
      "path": "entries/{id2}/{id}/0-entry.md",
-     "content": "# Abnahme q2ytn0, Runde 1: Schritt 2 nicht bestanden: Abnahme der Liste\n\n- Kind: task\n- To: project:demo\n- Project: demo\n- From: user, handy-a, 2026-11-14T12:00Z\n- Labels: bug\n- Parent: q2ytn0\n\nAbnahme q2ytn0 „Abnahme der Liste“, Runde 1: FAIL.\n\n2. Pipe\n   werkzeug | cat\n   Erwartet: keine Farbe.\n   Ergebnis: FAIL Die Pipe zeigt Farbe.\n\nDanach kommt die Abnahme q2ytn0 mit den offenen Schritten zu dir zurück; vorher in einem Nachtrag zu q2ytn0 sagen, was sich geändert hat.\n"
+     "content": "# Abnahme q2ytn0, Runde 1: Schritt 2 nicht bestanden: Abnahme der Liste\n\n- Kind: task\n- To: project:demo, session:aaaa0000\n- Project: demo\n- From: user, handy-a, 2026-11-14T12:00Z\n- Labels: bug\n- Parent: q2ytn0\n\nAbnahme q2ytn0 „Abnahme der Liste“, Runde 1: FAIL.\n\n2. Pipe\n   werkzeug | cat\n   Erwartet: keine Farbe.\n   Ergebnis: FAIL Die Pipe zeigt Farbe.\n\nDanach kommt die Abnahme q2ytn0 mit den offenen Schritten zu dir zurück; vorher in einem Nachtrag zu q2ytn0 sagen, was sich geändert hat.\n"
     },
     {
      "path": "entries/q2/q2ytn0/{ulid}-addendum.md",
