@@ -10,7 +10,7 @@ export function el(tag, attr = {}, ...kinder) {
   for (const [k, v] of Object.entries(attr)) {
     if (v !== false && v !== null && v !== undefined) e.setAttribute(k, v === true ? '' : v);
   }
-  e.append(...kinder.flat().filter((k) => k !== null && k !== false && k !== undefined));
+  e.append(...kinder.flat(Infinity).filter((k) => k !== null && k !== false && k !== undefined));
   return e;
 }
 

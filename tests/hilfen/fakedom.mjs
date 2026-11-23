@@ -21,7 +21,8 @@ export class Knoten {
   set value(v) { this.wert = String(v); }
   get disabled() { return this.attr.has('disabled'); }
   set disabled(v) { if (v) this.attr.set('disabled', ''); else this.attr.delete('disabled'); }
-  append(...kinder) { for (const k of kinder) { const n = typeof k === 'string' ? new Text(k) : k; n.eltern = this; this.kinder.push(n); } }
+  // Wie der Browser: ein Knoten bleibt Knoten, alles andere wird Text (ein Array also „a,b“, ein Element „[object HTMLSpanElement]“).
+  append(...kinder) { for (const k of kinder) { const n = typeof k === 'string' ? new Text(k) : (k instanceof Knoten || k instanceof Text ? k : new Text(String(k))); n.eltern = this; this.kinder.push(n); } }
   replaceChildren(...kinder) { this.kinder = []; this.append(...kinder); }
   replaceWith(neu) { const i = this.eltern.kinder.indexOf(this); neu.eltern = this.eltern; this.eltern.kinder[i] = neu; }
   addEventListener(name, f) { (this.horcher[name] ??= []).push(f); }

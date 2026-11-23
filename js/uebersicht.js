@@ -69,7 +69,7 @@ export function alleAnsicht(welt, z, k, f = filter) {
   const sichtbar = filtere(alle, f);
   const gefiltert = hatFilter(f);
   const kopf = [...oben, el('p', { class: 'summe' }, ...summe(alle, sichtbar, gefiltert)),
-    stand ? el('p', { class: 'neben stand-zeile' }, stand) : null, filterLeiste(alle, f, k)];
+    stand.length ? el('div', { class: 'stand-zeile' }, stand.map((zeile) => el('p', { class: 'neben' }, zeile))) : null, filterLeiste(alle, f, k)];
   if (!sichtbar.length) {
     return [...kopf, platz({
       bild: 'blau', symbol: 'search_off-f', titel: 'Nichts gefunden',
