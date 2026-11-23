@@ -6,7 +6,7 @@
 import { createServer } from 'node:http';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative } from 'node:path';
-import { JETZT, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
+import { ADRESSEN, JETZT, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
 import { farbenNachricht } from '../tests/hilfen/farbrollen.mjs';
 
 const wurzel = new URL('../', import.meta.url).pathname;
@@ -53,6 +53,7 @@ const NAME = ${JSON.stringify(name)};
 const ANFANG = sessionStorage.getItem('vorschau-anfang') ?? (sessionStorage.setItem('vorschau-anfang', location.hash), location.hash);
 if (location.hash !== ANFANG) history.replaceState(null, '', ANFANG);
 const JETZT = ${JETZT};
+const MEHRERE_ADRESSEN = ${(ADRESSEN[name]?.length ?? 1) > 1};
 ${farbenCode(name)}const db = await oeffneOderRueckfall();
 let fetchen = () => Promise.reject(new TypeError('Failed to fetch'));
 let sz = null;
@@ -127,7 +128,9 @@ for (const wahl of [].concat(sz?.klick ?? [])) {
   const erst = Date.now();
   let knopf = null;
   while (!(knopf = document.querySelector(wahl)) && Date.now() - erst < 4000) await new Promise((r) => setTimeout(r, 100));
-  if (!knopf) continue;   // ein Szenario mit mehreren Adressen tippt nur dort, wo der Knopf steht (erfassen-senden: nicht in wartet)
+  // Ein Szenario mit mehreren Adressen tippt nur dort, wo der Knopf steht (erfassen-senden: nicht in wartet); mit einer Adresse ist ein
+  // fehlender Knopf ein Fehler des Szenarios
+  if (!knopf) { if (MEHRERE_ADRESSEN) continue; throw new Error('Knopf fehlt: ' + wahl); }
   await new Promise((r) => setTimeout(r, 400));
   (document.querySelector(wahl) ?? knopf).click();   // neu suchen: ein Abgleich kann die Ansicht in der Pause neu gezeichnet haben
   await new Promise((r) => setTimeout(r, 400));
@@ -152,7 +155,10 @@ if (sz?.formular) {
 // Marke für den Renderer (--bereit in tools/rendern.mjs): der Abgleich beim Start ist zu Ende (er zeichnet die Ansicht neu; bei
 // „haengt“ endet er nie), alle Schritte des Szenarios sind durch und zwei Bilder sind gezeichnet. Unter Last braucht das länger
 // als jede feste Pause.
-if (sz?.live !== 'haengt') await new Promise((ok) => { if (steuerung.zustand.fertig) ok(); else steuerung.beiAenderung((z) => { if (z.fertig) ok(); }); });
+// Die Wartezeit ist begrenzt (5 s, unter der Obergrenze --warte des Renderers): endet der Abgleich in einem Szenario nie, hält das nicht
+// die Prüfung auf; document.documentElement.dataset.fertig sagt, wie die Marke zustande kam (abgleich, haengt oder frist).
+const abgleichFertig = sz?.live === 'haengt' ? Promise.resolve('haengt') : new Promise((ok) => { if (steuerung.zustand.fertig) ok('abgleich'); else steuerung.beiAenderung((z) => { if (z.fertig) ok('abgleich'); }); });
+document.documentElement.dataset.fertig = await Promise.race([abgleichFertig, new Promise((ok) => setTimeout(() => ok('frist'), 5000))]);
 await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 window.fertig = true;
 `;

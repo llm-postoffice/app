@@ -46,7 +46,7 @@ passen (`MemAvailable`), und höchstens `CLAUDE_JOBS`, wenn das eine positive Za
 Das Rendern wartet nicht auf eine feste Pause, sondern auf die Seite: der Einstieg der Vorschau setzt `window.fertig`, wenn der Abgleich beim Start
 zu Ende ist und die Ansicht gezeichnet steht (Szenarien mit `live: 'haengt'` warten nicht auf den Abgleich, er endet dort nie), und `tools/rendern.mjs` gibt dem Renderer
 das als `--bereit` mit. `--warte` (Vorgabe 10 s) ist nur die Obergrenze; auf einem ausgelasteten Rechner dauert das Zeichnen länger, die Prüfung
-folgt ihm. Das braucht einen p94-hig-Klon ab Fassung 20261121.01 (`--bereit` im Renderer).
+folgt ihm. Die Vorschau begrenzt das Warten auf den Abgleich auf 5 s (`data-fertig` am Wurzelelement nennt `abgleich`, `haengt` oder `frist`; gemessen am 2026-11-23: alle Szenarien enden mit `abgleich`, `laedt` mit `haengt`, am längsten nach 1,1 s). Ein Tipp (`klick`) ohne Knopf ist nur in Szenarien mit mehreren Adressen erlaubt, sonst ein Fehler. Das braucht einen p94-hig-Klon ab Fassung 20261121.01 (`--bereit` im Renderer); `tools/rendern.mjs` lehnt einen älteren mit Exit 2 ab.
 
 `make apk` und `make apk-test` geben Gradle `--max-workers` nach `claude-jobs --mem 2 --max 8` (ohne das Werkzeug: Zahl der Kerne).
 

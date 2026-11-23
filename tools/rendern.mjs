@@ -3,7 +3,7 @@
 // rendern-mobil.mjs aus dem p94-hig-Klon jedes Szenario in beiden Größen, hell, dunkel, Schrift 200 % und ohne Netz
 // prüfen. Die Bilder liegen je Szenario in einem Ordner: ORDNER/SZENARIO/ADRESSE-GROESSE-MODUS.png.
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -72,6 +72,8 @@ const unbekannt = szenarien.find((s) => !ADRESSEN[s]);
 if (unbekannt) { process.stderr.write(`${PROG}: Fehler: unbekanntes Szenario „${unbekannt}“\nMögliche: ${Object.keys(ADRESSEN).join(', ')}\n`); process.exit(2); }
 const renderer = join(a.values.hig, 'beispiele/rendern-mobil.mjs');
 const fehler = (text) => { process.stderr.write(`${PROG}: Fehler: ${text}\nHilfe: node tools/rendern.mjs --help\n`); process.exit(2); };
+// Ein Renderer vor p94-hig 20261121.01 kennt --bereit nicht und lehnte den Aufruf mit Exit 2 ab: das melden wir vorher klar
+if (existsSync(renderer) && !readFileSync(renderer, 'utf8').includes('--bereit')) fehler(`${renderer} kennt --bereit nicht; der Klon von p94-hig muss mindestens Fassung 20261121.01 haben (git pull im Klon)`);
 
 /** Speicher, der für neue Prozesse frei ist (MemAvailable), in MB; null, wenn /proc/meminfo fehlt. */
 function freierSpeicherMB() {

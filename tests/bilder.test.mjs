@@ -1,9 +1,11 @@
 // Die Bildprüfung von tools/rendern.mjs: leere, fehlende und doppelte Bilder sind Befunde, echte Bilder nicht.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { deflateSync, crc32 } from 'node:zlib';
 import { abweichung, lesePng, pruefeBilder } from '../tools/bilder.mjs';
 
@@ -134,4 +136,28 @@ test('Vorschau: der Einstieg jedes Szenarios setzt window.fertig zuletzt, und da
   const rendern = readFileSync(new URL('../tools/rendern.mjs', import.meta.url), 'utf8');
   assert.match(rendern, /`--bereit=\$\{BEREIT\}`/);
   assert.match(rendern, /BEREIT = '[^']*window\.fertig === true/);
+});
+
+test('Vorschau: die Wartezeit auf den Abgleich ist begrenzt, und ein fehlender Knopf in einem Szenario mit einer Adresse bleibt ein Fehler', async () => {
+  const { einstieg } = await import('../tools/vorschau.mjs');
+  const { ADRESSEN, SZENARIEN } = await import('./hilfen/beispieldaten.mjs');
+  const einzeln = Object.keys(ADRESSEN).find((n) => ADRESSEN[n].length === 1);
+  const start = einstieg(einzeln);
+  assert.match(start, /Promise\.race\(\[abgleichFertig, new Promise\(\(ok\) => setTimeout\(\(\) => ok\('frist'\), 5000\)\)\]\)/);
+  assert.match(start, /if \(!knopf\) \{ if \(MEHRERE_ADRESSEN\) continue; throw new Error\('Knopf fehlt: ' \+ wahl\); \}/);
+  assert.match(start, /const MEHRERE_ADRESSEN = false;/);
+  assert.match(einstieg('erfassen-senden'), /const MEHRERE_ADRESSEN = true;/);
+  // Nur Szenarien mit mehreren Adressen dürfen einen Tipp überspringen: jedes Szenario mit klick und einer Adresse hat den Knopf überall
+  for (const [n, sz] of Object.entries(SZENARIEN)) if (sz.klick && (ADRESSEN[n]?.length ?? 1) === 1) assert.match(einstieg(n), /MEHRERE_ADRESSEN = false/, n);
+});
+
+test('Rendern: ein p94-hig-Klon ohne --bereit wird vor dem Start mit Exit 2 und klarem Satz abgelehnt', () => {
+  const hig = mkdtempSync(join(tmpdir(), 'hig-alt-'));
+  try {
+    mkdirSync(join(hig, 'beispiele'));
+    writeFileSync(join(hig, 'beispiele/rendern-mobil.mjs'), '// alter Renderer ohne die Bedingung\n');
+    const r = spawnSync(process.execPath, [fileURLToPath(new URL('../tools/rendern.mjs', import.meta.url)), '--hig', hig, '-o', join(hig, 'b'), 'leer'], { encoding: 'utf8' });
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /kennt --bereit nicht.*20261121\.01/);
+  } finally { rmSync(hig, { recursive: true, force: true }); }
 });
