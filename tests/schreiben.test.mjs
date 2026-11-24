@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { TC } from './hilfen/tc.mjs';
-import { ARTEN_NEU, anlegenDateien, antwortDateien, erledigtDateien, normText, pruefeSendung, render, routeDateien, urteilDateien } from '../js/dateien.js';
+import { ARTEN_NEU, anlegenDateien, antwortDateien, erledigtDateien, normText, pruefeSendung, rangDateien, render, routeDateien, urteilDateien, verwerfenDateien } from '../js/dateien.js';
 import { artVon } from '../js/ansichtstexte.js';
 import { NEUE_ID_RE, abweichungText, neueId, stempel, uhrAbweichung, ulidErzeuger } from '../js/erzeugen.js';
 import { ulidZeit, parseZeit } from '../js/format.js';
@@ -228,4 +228,28 @@ test('normText und render: Zeilenenden \\n, Umbrüche an den Enden weg, Text nac
   assert.equal(normText('\r\n a\r\nb \n\n'), ' a\nb ');
   assert.equal(render({ title: null, fields: [['By', 'x']], body: 'Text' }), '- By: x\n\nText\n');
   assert.equal(render({ title: 'T', fields: [], body: 'Text' }), '# T\n\n\nText\n');
+});
+
+test('Rang ändern schreibt nur die geänderten Felder, Statusdatei ohne Status; ohne Änderung keine Datei', () => {
+  const w = welt(TC.write[0]);
+  const e = w.eintraege.get('k7m2qa');
+  const st = w.buch.zustand(e);
+  const ctx = () => ({ stempel: 'user, handy, 2026-11-14T12:00Z', ulid: ulidErzeuger(), vergeben: new Set() });
+  const r = rangDateien(ctx(), e, st, { rang: 1, dringend: true });
+  assert.equal(r.dateien.length, 1);
+  assert.match(r.dateien[0].pfad, /^entries\/k7\/k7m2qa\/[0-9A-Z]{26}-status\.md$/);
+  assert.equal(r.dateien[0].inhalt, '- By: user, handy, 2026-11-14T12:00Z\n- Priority: 1\n- Urgent: yes\n');
+  assert.equal(rangDateien(ctx(), e, st, { rang: st.priority, dringend: st.urgent }).dateien.length, 0);
+  assert.equal(rangDateien(ctx(), e, st, { dringend: false }).dateien.length, st.urgent ? 1 : 0);
+  assert.throws(() => rangDateien(ctx(), e, st, {}), /braucht/);
+  assert.throws(() => rangDateien(ctx(), e, st, { rang: 4 }), /Priorität ist 1/);
+});
+
+test('Verwerfen schreibt Status dropped mit Reason und Rest als Text; ohne Grund Fehler', () => {
+  const w = welt(TC.write[0]);
+  const e = w.eintraege.get('k7m2qa');
+  const ctx = { stempel: 'user, handy, 2026-11-14T12:00Z', ulid: ulidErzeuger(), vergeben: new Set() };
+  const r = verwerfenDateien(ctx, e, 'Dublette\n\nsiehe anderer Eintrag');
+  assert.equal(r.dateien[0].inhalt, '- By: user, handy, 2026-11-14T12:00Z\n- Status: dropped\n- Reason: Dublette\n\nsiehe anderer Eintrag\n');
+  assert.throws(() => verwerfenDateien(ctx, e, '  '), /Grund fehlt/);
 });

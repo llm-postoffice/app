@@ -92,6 +92,10 @@ export function sendungText(s) {
     case 'urteil': return `Antwort ${s.verdict ?? ''}`.trim();
     case 'erledigt': return 'Erledigt';
     case 'einsortieren': return `Einsortieren ${s.ziel === 'user' ? 'an dich' : `an ${s.ziel}`}`;
+    case 'rang': return 'Priorität ändern';
+    case 'verwerfen': return 'Verwerfen';
+    case 'adressieren': return 'Neu adressieren';
+    case 'nachtrag': return 'Nachtrag';
     case 'anlegen': return 'Neuer Eintrag';
     default: return '';
   }
