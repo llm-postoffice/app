@@ -4,7 +4,7 @@
 // node --test); darum ist dieser Service Worker ein Modul (register mit type: 'module').
 import { PUSH_HINWEIS, gibtFrei, hinweisOptionen, klickPlan, pushZiel, veralteteCaches } from './js/swlogik.js';
 
-const FASSUNG = 'postfach-20261123.01';
+const FASSUNG = 'postfach-20261124.01';
 const DATEIEN = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './js/abgleich.js', './js/ablauf.js', './js/aktualisieren.js', './js/abnahme.js', './js/absenden.js', './js/adressen.js', './js/anmelden.js', './js/anmeldung.js',
