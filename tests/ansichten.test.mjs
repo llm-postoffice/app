@@ -213,7 +213,7 @@ test('Schritt: Aktion, Befehl, Erwartetes und vier Urteile; Ergebnis mit Folgeau
 test('Erfassen: Formular mit Art, Titel, An, Text, Priorität, Dringend; Entwurf bleibt; Prüfung des Titels', async () => {
   const k = await kontext();
   const e = await M.erfassen.erfassenAnsicht(welt(), z(), k);
-  assert.equal(finde(e.inhalt, 'input[name="art"]').length, 4);
+  assert.deepEqual(finde(e.inhalt, 'input[name="art"]').map((i) => i.getAttribute('value')), ['task', 'bug', 'idea', 'note', 'message'], 'die Art Bug steht zur Wahl');
   assert.equal(finde(e.inhalt, 'input[name="rang"]').length, 3);
   assert.equal(finde(e.inhalt, 'select[name="an"]').length, 1);
   assert.equal(finde(e.aktion, 'button')[0].disabled, true);

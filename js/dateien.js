@@ -230,7 +230,7 @@ export function routeDateien(ctx, e, { to, project = null, reason = '' }) {
 
 // ---- Neuer Eintrag
 
-export const ARTEN_NEU = ['task', 'idea', 'plan', 'question', 'approval', 'test', 'message', 'note'];
+export const ARTEN_NEU = ['task', 'bug', 'idea', 'plan', 'question', 'approval', 'test', 'message', 'note'];
 const BRAUCHT_TEXT = ['question', 'approval', 'test', 'message', 'plan'];
 
 /** Die Prüfung vor dem Anlegen (nicht die auf Geheimnisse): Titel und Text wie das Werkzeug sie verlangt. */

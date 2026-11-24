@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261124.02 (2026-11-24)
+
+Beim Anlegen eines Eintrags kannst du jetzt die Art **Bug** wählen.
+
+- **Erfassen**: neben Auftrag, Idee, Notiz und Nachricht steht Bug zur Wahl. Der Eintrag geht wie bei `claude-post new bug` als Art `bug` raus; ein Bug steht beim Sortieren in claude-post vor allen Aufträgen.
+
 ## 20261124.01 (2026-11-24)
 
 Die App merkt jetzt auch im Flugmodus mit eingeschaltetem VPN, dass kein Netz da ist.

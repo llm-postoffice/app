@@ -1,4 +1,4 @@
-// Erfassen: ein Eintrag von Hand (Auftrag, Idee, Notiz, Nachricht). Das Formular merkt sich jede Eingabe als Entwurf auf
+// Erfassen: ein Eintrag von Hand (Auftrag, Bug, Idee, Notiz, Nachricht). Das Formular merkt sich jede Eingabe als Entwurf auf
 // dem Gerät (UEI-6). **Eintrag anlegen** reiht den Eintrag über die Schreibschicht ein (schreiben.js): Titel und Text gehen
 // vorher durch die Prüfung auf Geheimnisse und Personendaten, der Hinweis bietet zehn Sekunden Rückgängig an, danach geht er
 // raus. Fehlt die Schreibschicht (Tests), ist der Knopf gesperrt und ein Satz sagt warum.
@@ -10,7 +10,7 @@ import { kannSenden, SENDEN_FEHLT } from './schreiben.js';
 import { absender } from './absenden.js';
 import { anhangWahl } from './anhangwahl.js';
 
-const ARTEN = ['task', 'idea', 'note', 'message'];
+const ARTEN = ['task', 'bug', 'idea', 'note', 'message'];
 const VORGABE = { art: 'task', titel: '', an: '', text: '', rang: '2', dringend: false };
 
 /** Prüft die Eingaben; Ergebnis { ok } oder { fehler: { feld: Satz } }. Der Titel hat 1 bis 120 Zeichen in einer Zeile, eine Nachricht braucht einen Text. */

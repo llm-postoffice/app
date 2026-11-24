@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { TC } from './hilfen/tc.mjs';
-import { anlegenDateien, antwortDateien, erledigtDateien, normText, pruefeSendung, render, routeDateien, urteilDateien } from '../js/dateien.js';
+import { ARTEN_NEU, anlegenDateien, antwortDateien, erledigtDateien, normText, pruefeSendung, render, routeDateien, urteilDateien } from '../js/dateien.js';
+import { artVon } from '../js/ansichtstexte.js';
 import { NEUE_ID_RE, abweichungText, neueId, stempel, uhrAbweichung, ulidErzeuger } from '../js/erzeugen.js';
 import { ulidZeit, parseZeit } from '../js/format.js';
 import { baueWelt } from '../js/welt.js';
@@ -189,6 +190,16 @@ test('Uhrabweichung: unter zwei Sekunden zählt nichts, sonst die Differenz; Tex
   assert.equal(abweichungText(-5 * 60_000), '5 min vor');
   assert.equal(abweichungText(2 * 3600_000), '2 Stunden nach');
   assert.equal(abweichungText(-30_000), '30 s vor');
+});
+
+test('Neuer Eintrag: die Art bug wird wie im Postwerkzeug angelegt (Kind: bug, Text freiwillig)', () => {
+  const ctx = { stempel: 'user, handy, 2026-11-14T12:00Z', ulid: ulidErzeuger(), vergeben: new Set() };
+  assert.ok(ARTEN_NEU.includes('bug'));
+  const s = anlegenDateien(ctx, { art: 'bug', titel: 'Auswahl fehlt', an: 'alpha', rang: 1 });
+  assert.match(s.dateien[0].inhalt, /^- Kind: bug$/m);
+  assert.match(s.dateien[0].inhalt, /^- To: project:alpha$/m);
+  assert.match(s.dateien[0].inhalt, /^- Priority: 1$/m);
+  assert.equal(artVon('bug').wort, 'Bug');
 });
 
 test('Prüfung: Geheimnis blockiert immer und nennt den Ort, nie den Wert; Personendaten getrennt', () => {

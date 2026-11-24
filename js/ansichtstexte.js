@@ -51,6 +51,7 @@ export const ARTEN = {
   question: { klasse: 'k-frage', wort: 'Frage', symbol: 'help-f' },
   approval: { klasse: 'k-freigabe', wort: 'Freigabe', symbol: 'verified_user-f' },
   test: { klasse: 'k-abnahme', wort: 'Abnahme', symbol: 'checklist-f' },
+  bug: { klasse: 'k-auftrag', wort: 'Bug', symbol: 'assignment-f' },
   task: { klasse: 'k-auftrag', wort: 'Auftrag', symbol: 'assignment-f' },
   plan: { klasse: 'k-auftrag', wort: 'Plan', symbol: 'assignment-f' },
   message: { klasse: 'k-nachricht', wort: 'Nachricht', symbol: 'mail-f' },

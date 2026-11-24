@@ -384,6 +384,6 @@ export function handlungenVon(w, { e, st }) {
   if (kind === 'approval') return [];   // Freigeben geht erst in Phase 4 (E5)
   if (istIdeeAnDich(e)) return [];       // Aktionen der Ideensammlung später (N7)
   if (imEingang(e)) return ['einsortieren'];
-  if (anDich(e) && (kind === 'message' || kind === 'task' || kind === 'note' || kind === 'plan')) return ['antworten', 'erledigt'];
+  if (anDich(e) && (kind === 'message' || kind === 'task' || kind === 'bug' || kind === 'note' || kind === 'plan')) return ['antworten', 'erledigt'];
   return [];
 }
