@@ -166,6 +166,22 @@ test('Meldet das Gerät kein Netz, zeigt die Sendung nie „wird gesendet“ und
   assert.equal(eigene(a.q).length, 1);
 });
 
+test('Die Probe vor der Sendung fängt ein Netz ab, das onLine nicht sieht (VPN im Flugmodus): keine Anfrage, nie „wird gesendet“', async () => {
+  let da = false;
+  const proben = [];
+  const zustaende = [];
+  const a = await aufbau({ schreiber: { amNetz: () => da, pruefeNetz: async () => { proben.push(da); } } });
+  const alt = a.db.schreibe.bind(a.db);
+  a.db.schreibe = async (speicher, wert) => { if (speicher === 'schlange') zustaende.push(wert.zustand); return alt(speicher, wert); };
+  await a.schreiber.erledigen('m7q2ke');
+  const vorher = a.q.protokoll.length;
+  await a.sende();
+  assert.ok(proben.length >= 1, 'die Probe lief vor dem Senden');
+  assert.equal(a.q.protokoll.length, vorher);
+  assert.equal(zustaende.includes('sendet'), false);
+  assert.equal((await schlange(a))[0].warteArt, 'netz');
+});
+
 test('Der Hinweis nach der Antwort nennt eigenen Text und Anhänge', async () => {
   const a = await aufbau();
   const bild = { name: 'a.png', groesse: 4, typ: 'image/png', daten: 'AAAA' };

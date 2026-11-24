@@ -1,5 +1,12 @@
 # Änderungen
 
+## 20261124.01 (2026-11-24)
+
+Die App merkt jetzt auch im Flugmodus mit eingeschaltetem VPN, dass kein Netz da ist.
+
+- Meldet der Browser "online", obwohl nichts durchkommt, prüft die App das selbst, bevor sie abgleicht oder sendet. Ohne Antwort wartet die Sendung, bis wieder Netz da ist, und geht dann raus.
+- Die Grenze aus 20261123.01 (VPN im Flugmodus) gilt damit nicht mehr.
+
 ## 20261123.01 (2026-11-23)
 
 Die App richtet sich nach dem Netzstand des Geräts und zeigt in **Alle** und auf den Karten wieder alles richtig an.

@@ -20,7 +20,7 @@ async function dateien(ordner) {
 }
 
 const CSP = "default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
-  + "connect-src https://api.github.com https://ntfy.sh; base-uri 'none'; form-action 'none'";
+  + "connect-src 'self' https://api.github.com https://ntfy.sh; base-uri 'none'; form-action 'none'";
 const html = await lies('index.html');
 
 test('das Manifest nennt alles, was Chromium zum Installieren verlangt (UPL-2)', async () => {
