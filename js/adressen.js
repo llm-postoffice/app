@@ -10,7 +10,7 @@ const TITEL = {
   wartet: 'Wartet auf dich', alle: 'Alle offenen', abnahmen: 'Abnahmen', erfassen: 'Erfassen', mehr: 'Mehr',
   eingang: 'Eingang', schlange: 'Noch nicht gesendet', eintrag: 'Eintrag', ideen: 'Ideensammlung', suche: 'Suche', anmelden: 'Anmelden', ergebnis: 'Ergebnis',
 };
-const BLATT_TITEL = { einsortieren: 'Einsortieren', geraet: 'Gerätename', antworten: 'Deine Antwort' };
+const BLATT_TITEL = { einsortieren: 'Einsortieren', geraet: 'Gerätename', antworten: 'Deine Antwort', bearbeiten: 'Bearbeiten' };
 /** Die Auswahlen des Blatts in Alle: Adresse `#alle/NAME` und Titel. */
 export const AUSWAHL_TITEL = { status: 'Status', projekt: 'Projekt', art: 'Art', prio: 'Priorität', sortieren: 'Sortieren nach' };
 
@@ -44,6 +44,7 @@ const MUSTER = [
   [/^#mehr\/geraet$/, () => ({ ansicht: 'mehr', blatt: 'geraet' })],
   [new RegExp(`^#eintrag/${ID}$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]) })],
   [new RegExp(`^#eintrag/${ID}/einsortieren$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]), blatt: 'einsortieren' })],
+  [new RegExp(`^#eintrag/${ID}/bearbeiten$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]), blatt: 'bearbeiten' })],
   [new RegExp(`^#eintrag/${ID}/antworten$`), (m) => ({ ansicht: 'eintrag', id: normId(m[1]), blatt: 'antworten' })],
   [new RegExp(`^#eintrag/${ID}/ergebnis$`), (m) => ({ ansicht: 'ergebnis', id: normId(m[1]) })],
   [new RegExp(`^#eintrag/${ID}/schritt/([1-9][0-9]{0,2})$`), (m) => ({ ansicht: 'schritt', id: normId(m[1]), schritt: Number(m[2]) })],

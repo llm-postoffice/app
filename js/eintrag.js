@@ -102,6 +102,7 @@ function sendungBand(welt, e, k, z) {
 const HANDLUNG = {
   antworten: (id) => linkKnopf('Antworten', `#eintrag/${id}/antworten`, { klasse: 'gefuellt' }),
   einsortieren: (id) => linkKnopf('Einsortieren', `#eintrag/${id}/einsortieren`, { klasse: 'gefuellt' }),
+  bearbeiten: (id) => linkKnopf('Bearbeiten', `#eintrag/${id}/bearbeiten`, { klasse: 'text' }),
 };
 
 /** Ein Knopf je Handlung der Art; Senden gesperrt, solange es keine Schreibschicht gibt. Erledigt geht über `erledigen` (absenden.js). */
@@ -111,7 +112,7 @@ function aktionsLeiste(welt, eintrag, k, extra = [], erledigen = null) {
   const knoepfe = [];
   for (const h of liste) {
     let b;
-    if (h === 'antworten' || h === 'einsortieren') b = HANDLUNG[h](id);
+    if (h === 'antworten' || h === 'einsortieren' || h === 'bearbeiten') b = HANDLUNG[h](id);
     else if (h === 'erledigt') b = knopf('Erledigt', { klasse: 'tonal', gesperrt: !kannSenden(k), an: (ev) => erledigen?.los(false, ev.currentTarget) });
     else if (h === 'abnahme') { b = extra[0]; }
     if (b) { b.dataset.handlung = h; knoepfe.push(b); }

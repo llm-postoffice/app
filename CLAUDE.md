@@ -26,8 +26,7 @@ arbeitet offline mit einer Warteschlange.
   Symbol muss im Sprite stehen und jedes im Sprite benutzt sein (`tests/geruest.test.mjs`).
 - Schreiben (Teil E): `js/schreiben.js` ist die Schreibschicht (`k.schreiben`, ein `Schreiber`): `antworten`, `urteilSenden`,
   `erledigen`, `einsortieren`, `anlegen` reihen eine Sendung in die Warteschlange (Speicher `schlange`) und geben
-  `{ ok, id }`, `{ ok: false, fehler }` oder `{ ok: false, pruefung }` zurück; `rangAendern`, `verwerfen` (Eintrag), `neuAdressieren`, `nachtragen` und `erledigen` mit Ergebnis sind schon da, ihre Ansicht (Bearbeiten im Eintrag) wartet auf die Wahl
-  des Nutzers (`docs/entwicklung/ansichten/bearbeiten/`); `senden`, `erneut`, `verwerfen` (Sendung) und
+  `{ ok, id }`, `{ ok: false, fehler }` oder `{ ok: false, pruefung }` zurück; `rangAendern`, `eintragVerwerfen`, `neuAdressieren`, `nachtragen` und `erledigen` mit Ergebnis gehören zum Blatt Bearbeiten (`js/bearbeiten.js`, Adresse `#eintrag/ID/bearbeiten`, Variante A laut Wahl, Entwürfe in `docs/entwicklung/ansichten/bearbeiten/`; `handlungenVon` nennt `bearbeiten` für jeden offenen Eintrag, `welt.hostNamen` liefert die Rechner); `senden`, `erneut`, `verwerfen` (Sendung, nicht `eintragVerwerfen`) und
   `rueckgaengig` sind die Eingriffe des Nutzers. Eine Sendung wartet zehn Sekunden (Hinweis mit **Rückgängig**,
   `hinweis.js`), gleicht dann bedingt ab, prüft auf Konflikte (schon beantwortet, einsortiert, erledigt) und geht als ein
   Commit über die Git-Data-API raus (`senden.js`: Kopf, Blobs, Baum, Commit, Zweig ohne force, mindestens 1 s zwischen

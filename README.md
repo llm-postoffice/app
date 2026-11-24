@@ -27,6 +27,8 @@ Als Web-App (Vanadium oder Chrome auf Android):
 Melde dich beim ersten Start mit einem GitHub-Token an; die App sagt, was es braucht. Die Anmeldung gilt für die
 installierte App, nicht für einen Browsertab: Öffne die App zum Arbeiten vom Startbildschirm.
 
+Einträge ändern, neu adressieren oder verwerfen: [docs/bearbeiten.md](docs/bearbeiten.md).
+
 ## Entwickeln
 
 Die App braucht keinen Build. Für die Prüfkette brauchst du Node ab Version 22, Chromium, gitleaks und einen Klon von

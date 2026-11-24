@@ -48,7 +48,16 @@ export function baueWelt({ pfade, baum = null, entwuerfe = [], schlange = [], je
     jetzt, hatStand: Boolean(pfade), baum, eintraege, buch, liste, kinder, projekte,
     entwuerfe: new Map(entwuerfe.map((d) => [d.schluessel, d])), schlange,
     projektNamen: [...new Set(projekte.values())].map((p) => p.name).sort((a, b) => a.localeCompare(b, 'de')),
+    hostNamen: hostNamenVon(projekte, liste),
   };
+}
+
+/** Rechner, die die App kennt: die Hosts der Projekte und alle `host:NAME` an Einträgen; Bearbeiten bietet sie zum Neu-Adressieren an. */
+function hostNamenVon(projekte, liste) {
+  const namen = new Set();
+  for (const p of projekte.values()) for (const h of p.hosts ?? []) namen.add(h);
+  for (const { e } of liste) for (const h of hostsVon(e)) namen.add(h);
+  return [...namen].sort((a, b) => a.localeCompare(b, 'de'));
 }
 
 const rang = (w, a, b) => vergleiche(w.buch.rangSchluessel(a.e), w.buch.rangSchluessel(b.e));
@@ -377,8 +386,13 @@ export function annahmeVon(e) {
 
 /** Welche Handlungen bietet die Ansicht eines Eintrags? Jede hat einen Knopf (UGE-2, E13). */
 export function handlungenVon(w, { e, st }) {
-  const kind = e.head.get('Kind');
   if (geschlossen(st)) return [];
+  return [...hauptHandlungen(e, st), 'bearbeiten'];
+}
+
+/** Die Handlungen, die zur Art gehören; Bearbeiten (Priorität, Adresse, Nachtrag, Erledigen, Verwerfen) kommt für jeden offenen Eintrag dazu. */
+function hauptHandlungen(e, st) {
+  const kind = e.head.get('Kind');
   if (kind === 'question' && wartetAufDich(e, st)) return ['antworten'];
   if (kind === 'test' && wartetAufDich(e, st)) return ['abnahme'];
   if (kind === 'approval') return [];   // Freigeben geht erst in Phase 4 (E5)

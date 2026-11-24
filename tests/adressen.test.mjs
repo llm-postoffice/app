@@ -21,6 +21,7 @@ const TABELLE = [
   [`#eintrag/${ID}`, 'eintrag', 'wartet', ['#wartet']],
   [`#eintrag/${ID}/schritt/3`, 'schritt', 'wartet', ['#wartet', `#eintrag/${ID}`]],
   [`#eintrag/${ID}/einsortieren`, 'eintrag', 'wartet', ['#wartet', '#eingang', `#eintrag/${ID}`]],
+  [`#eintrag/${ID}/bearbeiten`, 'eintrag', 'wartet', ['#wartet', `#eintrag/${ID}`]],
   ['#ideen', 'ideen', 'mehr', ['#wartet', '#mehr']],
   ['#mehr/geraet', 'mehr', 'mehr', ['#wartet', '#mehr']],
   ['#suche', 'suche', 'wartet', ['#wartet']],
@@ -74,6 +75,7 @@ test('der Pfeil Zurück steht nur unterhalb der obersten Ebene und nie in der An
 
 test('Blätter haben einen Titel, Ansichten ohne Blatt keinen', () => {
   assert.equal(blattTitelVon(parse(`#eintrag/${ID}/einsortieren`)), 'Einsortieren');
+  assert.equal(blattTitelVon(parse(`#eintrag/${ID}/bearbeiten`)), 'Bearbeiten');
   assert.equal(blattTitelVon(parse('#mehr/geraet')), 'Gerätename');
   assert.equal(blattTitelVon(parse('#mehr')), null);
 });
