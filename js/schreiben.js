@@ -26,7 +26,7 @@
 // Pfade mit demselben Inhalt, ist also harmlos, falls der erste ankam und die App vor der Antwort endete.
 import { adressText, sendungText, um } from './ansichtstexte.js';
 import { anhangPfadVon } from './anhaenge.js';
-import { anlegenDateien, antwortDateien, erledigtDateien, kurz, moeglichkeitenRoh, pruefeSendung, routeDateien, urteilDateien } from './dateien.js';
+import { anlegenDateien, antwortDateien, erledigtDateien, kurz, moeglichkeitenRoh, pruefeSendung, rangDateien, routeDateien, urteilDateien, verwerfenDateien } from './dateien.js';
 import { korrigierteZeit, merkeUhr, stempel, ulidErzeuger, zufallsbytes } from './erzeugen.js';
 import { idMitStrich, ulidZeit } from './format.js';
 import { uhrzeit } from './texte.js';
@@ -88,6 +88,10 @@ export function konfliktVon(welt, s) {
     if (s.runde && abnahmeSchritte(e).runde !== s.runde) {
       return { titel: 'Schon beantwortet', grund: `Zu dieser Abnahme gibt es eine neue Runde. Dein Urteil gehörte zu Runde ${s.runde} und wurde nicht gesendet.` };
     }
+  }
+  if (['rang', 'verwerfen', 'adressieren', 'nachtrag'].includes(s.art) && geschlossen(st)) {
+    const g = geschlossenSeit(e, st);
+    return { titel: 'Schon erledigt', grund: `Der Eintrag ist ${seit(g)}${g.wort} worden. Deine Änderung wurde nicht gesendet.` };
   }
   if (s.art === 'erledigt' && geschlossen(st)) {
     const g = geschlossenSeit(e, st);
@@ -205,10 +209,50 @@ export class Schreiber {
     });
   }
 
-  erledigen(id, { entwurf = null } = {}) {
+  erledigen(id, { entwurf = null, ergebnis = undefined } = {}) {
     return this.versuche(async () => {
       const { e, ctx } = await this.vorbereiten(id);
-      return this.einreihen({ eintrag: e.id, art: 'erledigt', von: ctx.geraet }, erledigtDateien(ctx, e), { entwurf, hinweisText: `Eintrag ${idMitStrich(e.id)} als erledigt gespeichert` });
+      return this.einreihen({ eintrag: e.id, art: 'erledigt', von: ctx.geraet }, erledigtDateien(ctx, e, ergebnis), { entwurf, hinweisText: `Eintrag ${idMitStrich(e.id)} als erledigt gespeichert` });
+    });
+  }
+
+  /** Priorität und Dringlichkeit eines Eintrags ändern (`rang` 1 bis 3, `dringend` Ja oder Nein; null lässt es stehen). */
+  rangAendern(id, { rang = null, dringend = null } = {}) {
+    return this.versuche(async () => {
+      const { e, st, ctx } = await this.vorbereiten(id);
+      const sendung = rangDateien(ctx, e, st, { rang, dringend });
+      if (sendung.unveraendert) return { ok: true, id: null, unveraendert: true };
+      return this.einreihen({ eintrag: e.id, art: 'rang', rang, dringend, von: ctx.geraet }, sendung, { hinweisText: `Priorität von ${idMitStrich(e.id)} gespeichert` });
+    });
+  }
+
+  /** Einen Eintrag verwerfen; der Grund ist Pflicht. */
+  verwerfen(id, { grund, entwurf = null, personenErlaubt = false } = {}) {
+    return this.versuche(async () => {
+      const { e, ctx } = await this.vorbereiten(id);
+      return this.einreihen({ eintrag: e.id, art: 'verwerfen', satz: String(grund ?? '').trim(), von: ctx.geraet }, verwerfenDateien(ctx, e, grund),
+        { entwurf, personenErlaubt, hinweisText: `Eintrag ${idMitStrich(e.id)} als verworfen gespeichert` });
+    });
+  }
+
+  /** Neu adressieren an beliebige Adressen (`an`: Liste wie `project:NAME`, `user`, `host:NAME`); der Satz ist optional. */
+  neuAdressieren(id, { an, projekt = null, satz = '', entwurf = null, personenErlaubt = false } = {}) {
+    return this.versuche(async () => {
+      const { e, ctx } = await this.vorbereiten(id);
+      const sendung = routeDateien(ctx, e, { to: an, project: projekt, reason: satz });
+      if (sendung.unveraendert) return { ok: true, id: null, unveraendert: true };
+      return this.einreihen({ eintrag: e.id, art: 'adressieren', an, satz: String(satz ?? '').trim(), von: ctx.geraet },
+        sendung, { entwurf, personenErlaubt, hinweisText: `Eintrag ${idMitStrich(e.id)} neu adressiert` });
+    });
+  }
+
+  /** Ein Nachtrag zu einem beliebigen Eintrag; bei einer Frage ohne Antwort und ohne Status. */
+  nachtragen(id, { text, anhaenge = [], entwurf = null, personenErlaubt = false } = {}) {
+    return this.versuche(async () => {
+      const { e, ctx } = await this.vorbereiten(id);
+      const sendung = antwortDateien(ctx, e, { text, anhaenge, nachtrag: true });
+      return this.einreihen({ eintrag: e.id, art: 'nachtrag', text: String(text ?? '').trim(), anhaenge, von: ctx.geraet },
+        sendung, { entwurf, personenErlaubt, hinweisText: `Nachtrag zu ${idMitStrich(e.id)} gespeichert` });
     });
   }
 

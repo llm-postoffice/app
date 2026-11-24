@@ -113,6 +113,30 @@ export function erledigtDateien(ctx, e, ergebnis = 'Erledigt in der App') {
   return { dateien: [datei(ereignis(e.id, ctx.ulid(), 'status'), status)], nachricht: `post: done ${e.id}`, eingaben: [], pruef: status };
 }
 
+/**
+ * Priorität und Dringlichkeit ändern (`rank ID --priority N [--urgent|--no-urgent]`): eine Statusdatei ohne `Status`, nur mit
+ * den Feldern, die sich ändern. `st` ist der Zustand des Eintrags; ändert sich nichts, gibt es keine Datei.
+ */
+export function rangDateien(ctx, e, st, { rang = null, dringend = null } = {}) {
+  if (rang === null && dringend === null) throw new Fehler('rank braucht eine Priorität oder die Dringlichkeit', 2);
+  if (rang !== null && ![1, 2, 3].includes(Number(rang))) throw new Fehler('Die Priorität ist 1 (Hoch), 2 (Normal) oder 3 (Niedrig)', 2);
+  const felder = [['By', ctx.stempel]];
+  if (rang !== null && Number(rang) !== st.priority) felder.push(['Priority', String(Number(rang))]);
+  if (dringend !== null && Boolean(dringend) !== st.urgent) felder.push(['Urgent', dringend ? 'yes' : 'no']);
+  const d = doc(felder);
+  if (felder.length === 1) return { dateien: [], nachricht: `post: rank ${e.id}`, eingaben: [], pruef: d, unveraendert: true };
+  return { dateien: [datei(ereignis(e.id, ctx.ulid(), 'status'), d)], nachricht: `post: rank ${e.id}`, eingaben: [], pruef: d };
+}
+
+/** Verwerfen (`drop ID GRUND`): die Statusdatei `dropped` mit Grund (erste Zeile) und dem Rest als Text. Ohne Grund Fehler. */
+export function verwerfenDateien(ctx, e, grund) {
+  const t = normText(grund).trim();
+  if (!t) throw new Fehler('Der Grund fehlt', 2);
+  const [erste, ...rest] = t.split('\n');
+  const d = doc([['By', ctx.stempel], ['Status', 'dropped'], ['Reason', erste.trim()]], rest.join('\n').replace(/^\n+|\n+$/g, ''));
+  return { dateien: [datei(ereignis(e.id, ctx.ulid(), 'status'), d)], nachricht: `post: drop ${e.id}`, eingaben: [{ wo: 'Grund', text: t }], pruef: d };
+}
+
 // ---- Abnahme
 
 function antwortKoerper(a, runde) {
@@ -270,7 +294,7 @@ export function anlegenDateien(ctx, { art, titel, an = null, text = '', rang = 2
 // ---- Prüfung auf Geheimnisse und Personendaten
 
 /** Welche Teile der Datei sind Eingaben des Nutzers? Der Hinweis nennt „im Titel“ statt einer Zeile der Datei. */
-const WO = (wo) => (wo === 'Titel' ? 'im Titel' : wo === 'Text' ? 'im Text' : wo === 'Satz' ? 'in deinem Satz' : wo === 'Anmerkung' ? 'in der Anmerkung'
+const WO = (wo) => (wo === 'Titel' ? 'im Titel' : wo === 'Text' ? 'im Text' : wo === 'Satz' ? 'in deinem Satz' : wo === 'Anmerkung' ? 'in der Anmerkung' : wo === 'Grund' ? 'im Grund'
   : wo === 'Name des Anhangs' ? 'im Namen eines Anhangs' : wo.startsWith('Anhang ') ? `im ${wo}` : `in ${wo}`);
 
 /**
