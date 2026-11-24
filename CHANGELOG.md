@@ -1,5 +1,11 @@
 # Änderungen
 
+## 20261124.03 (2026-11-24)
+
+Einträge lassen sich jetzt direkt in der App bearbeiten.
+
+- **Bearbeiten**: Im Eintrag öffnet „Bearbeiten“ ein Blatt von unten. Dort änderst du Priorität und Dringend, adressierst neu, schreibst einen Nachtrag, erledigst mit Ergebnis oder verwirfst mit Grund. Das ist Variante A, die du gewählt hast.
+
 ## 20261124.02 (2026-11-24)
 
 Beim Anlegen eines Eintrags kannst du jetzt die Art **Bug** wählen.
