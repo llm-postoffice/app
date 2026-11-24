@@ -96,7 +96,7 @@ export async function bearbeitenBlatt(welt, k, o, schliessen) {
     el('fieldset', { class: 'feld' }, el('legend', {}, 'Priorität'), rang),
     el('label', { class: 'haken' }, dringend, 'Dringend: meldet auch zwischen 22 und 7 Uhr'),
     el('h3', {}, 'Wohin geht der Eintrag?'), ...gruppen,
-    feld({ beschriftung: 'Satz zum Neu-Adressieren (freiwillig)', steuerung: satz }),
+    feld({ beschriftung: 'Satz zur neuen Adresse (freiwillig)', steuerung: satz }),
     rangPlatz.platz, adressPlatz.platz, hinweis,
     aktionsAbschnitt(k, { titel: 'Nachtrag', beschriftung: 'Dein Nachtrag', knopfText: 'Nachtrag senden', gesperrt, pflicht: true,
       senden: (text, opt) => k.schreiben.nachtragen(e.id, { text, ...opt }), danach: () => schliessen() }),
