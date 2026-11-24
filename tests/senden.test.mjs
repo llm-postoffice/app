@@ -391,3 +391,44 @@ test('Ohne Netz fragt der Schreiber erst nach zehn Sekunden wieder (kein Zeitgeb
   await a.schreiber.weckeNetz();
   assert.equal(eigene(a.q).length, 1, 'Netz weckt die Sendung, auch vor der Frist');
 });
+
+test('Bearbeiten: Priorität, Neu adressieren, Nachtrag und Verwerfen gehen als je ein Commit raus, wie das Postwerkzeug', async () => {
+  const a = await aufbau();
+  const vorher = pfade(a.q);
+  assert.equal((await a.schreiber.rangAendern('m7q2ke', { rang: 1, dringend: true })).ok, true);
+  assert.equal(a.hinweise.at(-1).text, 'Priorität von m7q-2ke gespeichert');
+  assert.equal((await a.schreiber.neuAdressieren('m7q2ke', { an: ['project:beta'], satz: 'Gehört zu beta.' })).ok, true);
+  assert.equal((await a.schreiber.nachtragen('r2d4vn', { text: 'Noch ein Gedanke.' })).ok, true);
+  assert.equal((await a.schreiber.eintragVerwerfen('b3cyxm', { grund: 'Dublette' })).ok, true);
+  assert.equal((await a.schreiber.eintragVerwerfen('b3cyxm', { grund: '  ' })).ok, false, 'ohne Grund gibt es nichts zu senden');
+  await a.sende();
+  await a.sende(1);
+  await a.sende(1);
+  await a.sende(1);
+  assert.deepEqual(eigene(a.q).map((c) => c.message), ['post: rank m7q2ke', 'post: route m7q2ke', 'post: addendum r2d4vn', 'post: drop b3cyxm']);
+  const neu = neuePfade(a.q, vorher).map((p) => [p, a.q.dateien.get(p)]);
+  assert.match(neu.find(([p]) => p.startsWith('entries/m7/m7q2ke/') && p.endsWith('-status.md'))[1], /^- By: user, handy-a, [^\n]+\n- Priority: 1\n- Urgent: yes\n$/);
+  assert.match(neu.find(([p]) => p.startsWith('entries/b3/b3cyxm/'))[1], /^- By: user, handy-a, [^\n]+\n- Status: dropped\n- Reason: Dublette\n$/);
+});
+
+test('Bearbeiten: ohne Änderung keine Sendung; ist der Eintrag schon erledigt, bleibt die Sendung als Konflikt „Schon erledigt“ liegen', async () => {
+  const a = await aufbau();
+  const r = await a.schreiber.rangAendern('m7q2ke', { rang: 2, dringend: false });
+  assert.deepEqual(r, { ok: true, id: null, unveraendert: true });
+  assert.deepEqual(await schlange(a), []);
+  assert.equal((await a.schreiber.rangAendern('m7q2ke', { rang: 1 })).ok, true);
+  a.q.dateien.set('entries/m7/m7q2ke/01M7CQZS800000000000000009-status.md', '- By: user, handy-b, 2026-11-14T13:10Z\n- Status: done\n- Result: erledigt\n');
+  await a.sende();
+  const [s] = await schlange(a);
+  assert.equal(s.zustand, 'konflikt');
+  assert.equal(s.titel, 'Schon erledigt');
+  assert.match(s.grund, /Deine Änderung wurde nicht gesendet\./);
+  assert.equal(eigene(a.q).length, 0);
+});
+
+test('Eingriff Verwerfen einer Sendung bleibt von Eintrag verwerfen getrennt', async () => {
+  const a = await aufbau();
+  const r = await a.schreiber.rangAendern('m7q2ke', { rang: 1 });
+  assert.equal(await a.schreiber.verwerfen(r.id), true, 'nimmt die Sendung aus der Schlange');
+  assert.deepEqual(await schlange(a), []);
+});

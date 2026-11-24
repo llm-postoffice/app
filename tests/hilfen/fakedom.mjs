@@ -17,8 +17,10 @@ export class Knoten {
   get id() { return this.attr.get('id') ?? ''; }
   get hidden() { return this.attr.has('hidden'); }
   set hidden(v) { if (v) this.attr.set('hidden', ''); else this.attr.delete('hidden'); }
-  get value() { return this.wert; }
+  get value() { return this.wert !== '' ? this.wert : (this.attr.get('value') ?? ''); }
   set value(v) { this.wert = String(v); }
+  get checked() { return this.gesetzt ?? this.attr.has('checked'); }
+  set checked(v) { this.gesetzt = Boolean(v); }
   get disabled() { return this.attr.has('disabled'); }
   set disabled(v) { if (v) this.attr.set('disabled', ''); else this.attr.delete('disabled'); }
   // Wie der Browser: ein Knoten bleibt Knoten, alles andere wird Text (ein Array also „a,b“, ein Element „[object HTMLSpanElement]“).

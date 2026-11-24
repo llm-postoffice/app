@@ -11,7 +11,7 @@ let M;
 before(async () => {
   aufraeumen = installiereFakeDom();
   M = {
-    welt: await import('../js/welt.js'), eintrag: await import('../js/eintrag.js'), ablauf: await import('../js/ablauf.js'),
+    welt: await import('../js/welt.js'), eintrag: await import('../js/eintrag.js'), bearbeiten: await import('../js/bearbeiten.js'), ablauf: await import('../js/ablauf.js'),
     erfassen: await import('../js/erfassen.js'), hinweis: await import('../js/hinweis.js'), speicher: await import('../js/speicher.js'),
     steuerung: await import('../js/steuerung.js'), absenden: await import('../js/absenden.js'), entwuerfe: await import('../js/entwuerfe.js'),
   };
@@ -27,7 +27,8 @@ function attrappe(antwort = { ok: true, id: 's1' }) {
   const aufrufe = [];
   const f = (name) => async (...a) => { aufrufe.push([name, ...a]); return typeof antwort === 'function' ? antwort(name, ...a) : antwort; };
   return { aufrufe, antworten: f('antworten'), urteilSenden: f('urteilSenden'), erledigen: f('erledigen'), einsortieren: f('einsortieren'), anlegen: f('anlegen'),
-    senden: f('senden'), erneut: f('erneut'), verwerfen: f('verwerfen') };
+    senden: f('senden'), erneut: f('erneut'), verwerfen: f('verwerfen'),
+    rangAendern: f('rangAendern'), neuAdressieren: f('neuAdressieren'), nachtragen: f('nachtragen'), eintragVerwerfen: f('eintragVerwerfen') };
 }
 async function kontext(schreiben) {
   const db = M.speicher.speicherDatenbank();
@@ -420,4 +421,78 @@ test('Prüfung der Ablehnung: Sätze nennen Ort und Art, nie den Wert, und zähl
   const p = M.absenden.pruefungSatz({ geheimnisse: [], personen: [{ wo: 'im Text', zeile: 3, art: 'IBAN' }] });
   assert.equal(p.titel, 'Persönliche Angaben gefunden');
   assert.doesNotMatch(`${g.satz}${p.satz}`, /!/);
+});
+
+const waehleInput = (wurzel, name, wert) => {
+  const alle = finde(wurzel, `input[name="${name}"]`);
+  for (const i of alle) i.checked = i.getAttribute('value') === wert;
+  const i = alle.find((x) => x.getAttribute('value') === wert);
+  let c = i.eltern;
+  while (c && !c.horcher.change) c = c.eltern;
+  for (const f of c.horcher.change) f({ target: i });
+};
+
+test('Bearbeiten: Speichern bleibt gesperrt, bis sich Priorität oder Adresse ändert; dann geht je eine Sendung mit nur dem Geänderten raus', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.bearbeiten.bearbeitenBlatt(welt(), k, { id: 'm7q2ke' }, schliessen);
+  const speichern = knopfMit(r.knoepfe, 'Speichern');
+  assert.equal(speichern.disabled, true, 'ohne Änderung nichts zu speichern');
+  assert.deepEqual(finde(r.koerper, 'legend').map(t), ['Priorität', 'Du', 'Projekte', 'Rechner']);
+  assert.equal(finde(r.koerper, 'input[name="rang"]').filter((i) => i.checked).length, 1, 'die aktuelle Priorität ist gewählt');
+  waehleInput(r.koerper, 'rang', '1');
+  assert.equal(speichern.disabled, false);
+  await speichern.klick();
+  assert.deepEqual(s.aufrufe.map((a) => [a[0], a[1], a[2].rang, a[2].dringend]), [['rangAendern', 'm7q2ke', 1, false]], 'keine Adressänderung ohne Wahl');
+  assert.equal(schliessen.n, 1);
+});
+
+test('Bearbeiten: eine andere Adresse und der Satz gehen an neuAdressieren; eine abgelehnte Eingabe zeigt ein Band und schließt nichts', async () => {
+  const s = attrappe((name) => (name === 'neuAdressieren' ? { ok: false, fehler: 'Das Werkzeug nähme die Eingabe nicht an.' } : { ok: true, id: 's1' }));
+  const k = await kontext(s);
+  schliessen.n = 0;
+  const r = await M.bearbeiten.bearbeitenBlatt(welt(), k, { id: 'm7q2ke' }, schliessen);
+  waehleInput(r.koerper, 'an', 'host:rechner-a');
+  finde(r.koerper, 'textarea[name="satz"]')[0].value = 'Gehört auf diesen Rechner.';
+  await knopfMit(r.knoepfe, 'Speichern').klick();
+  assert.deepEqual(s.aufrufe.map((a) => [a[0], a[2].an, a[2].satz]), [['neuAdressieren', ['host:rechner-a'], 'Gehört auf diesen Rechner.']]);
+  assert.equal(schliessen.n, 0, 'abgelehnt: das Blatt bleibt');
+  assert.match(t(r.koerper), /Nicht gespeichert/);
+});
+
+test('Bearbeiten: Nachtrag, Erledigen mit Ergebnis und Verwerfen mit Grund; Verwerfen und Nachtrag brauchen Text', async () => {
+  const s = attrappe();
+  const k = await kontext(s);
+  const r = await M.bearbeiten.bearbeitenBlatt(welt(), k, { id: 'm7q2ke' }, schliessen);
+  const abschnitt = (titel) => finde(r.koerper, 'details').find((d) => t(finde(d, 'summary')[0]) === titel);
+  const nachtrag = abschnitt('Nachtrag'); const erledigen = abschnitt('Erledigen'); const verwerfen = abschnitt('Verwerfen');
+  assert.equal(knopfMit(nachtrag, 'Nachtrag senden').disabled, true);
+  assert.equal(knopfMit(verwerfen, 'Verwerfen senden').disabled, true);
+  assert.equal(knopfMit(erledigen, 'Erledigt senden').disabled, false, 'das Ergebnis ist freiwillig');
+  const tippe = (a, text) => { const f = finde(a, 'textarea')[0]; f.value = text; for (const h of f.horcher.input ?? []) h({}); };
+  tippe(nachtrag, 'Noch ein Gedanke.'); await knopfMit(nachtrag, 'Nachtrag senden').klick();
+  tippe(erledigen, 'Behoben in der Fassung.'); await knopfMit(erledigen, 'Erledigt senden').klick();
+  tippe(verwerfen, 'Dublette'); await knopfMit(verwerfen, 'Verwerfen senden').klick();
+  assert.deepEqual(s.aufrufe.map((a) => [a[0], a[2].text ?? a[2].ergebnis ?? a[2].grund]),
+    [['nachtragen', 'Noch ein Gedanke.'], ['erledigen', 'Behoben in der Fassung.'], ['eintragVerwerfen', 'Dublette']]);
+  assert.deepEqual(k.wege.filter(([, a]) => a === '#wartet').length, 2, 'nach Erledigen und Verwerfen geht es nach Wartet');
+});
+
+test('Bearbeiten: ohne Schreibschicht sind alle Knöpfe gesperrt und ein Satz sagt warum; ein abgeschlossener Eintrag lässt sich nicht ändern', async () => {
+  const k = await kontext(null);
+  const r = await M.bearbeiten.bearbeitenBlatt(welt(), k, { id: 'm7q2ke' }, schliessen);
+  assert.match(t(r.koerper), /Senden ist hier nicht eingerichtet/);
+  assert.ok(finde(r, 'button').every((b) => b.disabled || t(b) === 'Abbrechen'));
+  const zu = await M.bearbeiten.bearbeitenBlatt(welt(), await kontext(attrappe()), { id: 'd5n8vk' }, schliessen);
+  assert.match(t(zu.koerper), /schon abgeschlossen/);
+  assert.equal(finde(zu.koerper, 'input').length, 0);
+});
+
+test('Bearbeiten: die Adressen kommen aus Projekten und Rechnern der Welt und enthalten die aktuelle Adresse', async () => {
+  const g = M.bearbeiten.adressGruppen(welt(), ['host:rechner-z', 'project:alpha']);
+  assert.deepEqual(g.map((x) => x.titel), ['Du', 'Projekte', 'Rechner']);
+  assert.ok(g[1].optionen.some((o) => o.wert === 'project:alpha'));
+  assert.ok(g[2].optionen.some((o) => o.wert === 'host:rechner-z'), 'eine fremde aktuelle Adresse bleibt wählbar');
+  assert.ok(g[2].optionen.some((o) => o.wert === 'host:rechner-a'));
 });

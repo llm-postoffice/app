@@ -94,12 +94,12 @@ test('ortVon sagt, woher ein Eintrag kommt; stapelUnter baut danach den Stapel (
 test('Handlungen je Art: jede hat einen Knopf in der Ansicht (UGE-2, E13)', () => {
   const w = welt();
   const h = (id) => handlungenVon(w, { e: w.eintraege.get(id), st: w.buch.zustand(w.eintraege.get(id)) });
-  assert.deepEqual(h('r2d4vn'), ['antworten']);
-  assert.deepEqual(h('8k3m1x'), ['abnahme']);
-  assert.deepEqual(h('q7w2de'), [], 'Freigaben haben keine Handlung bis Phase 4 (E5)');
-  assert.deepEqual(h('m7q2ke'), ['antworten', 'erledigt']);
-  assert.deepEqual(h('k7m2qa'), ['einsortieren']);
-  assert.deepEqual(h('b3cyxm'), []);
+  assert.deepEqual(h('r2d4vn'), ['antworten', 'bearbeiten']);
+  assert.deepEqual(h('8k3m1x'), ['abnahme', 'bearbeiten']);
+  assert.deepEqual(h('q7w2de'), ['bearbeiten'], 'Freigaben haben bis Phase 4 nur Bearbeiten (E5)');
+  assert.deepEqual(h('m7q2ke'), ['antworten', 'erledigt', 'bearbeiten']);
+  assert.deepEqual(h('k7m2qa'), ['einsortieren', 'bearbeiten']);
+  assert.deepEqual(h('b3cyxm'), ['bearbeiten'], 'jeder offene Eintrag lässt sich bearbeiten');
   assert.deepEqual(h('d5n8vk'), [], 'Erledigtes hat keine');
 });
 

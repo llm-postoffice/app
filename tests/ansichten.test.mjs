@@ -110,9 +110,9 @@ test('Ohne Schreibschicht sind Erledigt und Senden gesperrt und ein Satz sagt wa
   assert.doesNotMatch(t(mit.r.aktion), /nicht eingerichtet/);
 });
 
-test('Freigabe: keine Knöpfe, aber der Satz, dass Freigeben erst in Phase 4 geht (E5)', async () => {
-  const { r } = await aktion('q7w2de');
-  assert.equal(r.aktion ?? null, null);
+test('Freigabe: nur Bearbeiten als Knopf, dazu der Satz, dass Freigeben erst in Phase 4 geht (E5)', async () => {
+  const { r, knoepfe } = await aktion('q7w2de');
+  assert.deepEqual(knoepfe.map((b) => b.dataset.handlung), ['bearbeiten']);
   assert.match(t(r.inhalt), /Freigeben und Ablehnen gehen erst in Phase 4/);
   assert.equal(finde(r.inhalt, 'button').length, 0);
 });
@@ -132,7 +132,7 @@ test('Eintrag: Kopfkarte mit Art, ID, Projekt; Frage mit Möglichkeiten, Annahme
 test('Eintrag im Eingang sagt, dass er kein Ziel hat und bietet Einsortieren an', async () => {
   const { r, knoepfe } = await aktion('k7m2qa');
   assert.match(t(r.inhalt), /Der Eintrag hat kein Ziel\. Er bleibt im Eingang, bis du ihn einsortierst\./);
-  assert.deepEqual(knoepfe.map((b) => b.getAttribute('href')), ['#eintrag/k7m2qa/einsortieren']);
+  assert.deepEqual(knoepfe.map((b) => b.getAttribute('href')), ['#eintrag/k7m2qa/einsortieren', '#eintrag/k7m2qa/bearbeiten']);
 });
 
 test('Unbekannter Eintrag und fehlender Stand haben einen Zustand statt eines leeren Bildschirms', async () => {

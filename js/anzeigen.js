@@ -4,6 +4,7 @@
 import { BEREICHE, blattTitelVon, hatZurueck, titelVon } from './adressen.js';
 import { el, ico } from './dom.js';
 import { abnahmen, eingang, ideen, sucheAnsicht, wartet } from './ansichten.js';
+import { bearbeitenBlatt } from './bearbeiten.js';
 import { antwortBlatt, einsortierenBlatt, eintragAnsicht } from './eintrag.js';
 import { ergebnisAnsicht, satzBlatt, schrittAnsicht } from './ablauf.js';
 import { erfassenAnsicht } from './erfassen.js';
@@ -76,6 +77,7 @@ async function blatt(o, welt) {
   let r;
   if (o.blatt === 'antworten') r = await antwortBlatt(welt, k, o, schliessen);
   else if (o.blatt === 'einsortieren') r = await einsortierenBlatt(welt, k, o, schliessen);
+  else if (o.blatt === 'bearbeiten') r = await bearbeitenBlatt(welt, k, o, schliessen);
   else if (o.blatt === 'satz') r = await satzBlatt(welt, k, o, schliessen);
   else if (o.blatt === 'auswahl') r = auswahlBlatt(welt, k, o, schliessen);
   else r = await geraetBlatt(k, schliessen);

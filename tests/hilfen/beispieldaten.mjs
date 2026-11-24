@@ -228,6 +228,8 @@ export const SZENARIEN = {
   // Teil E: Schreiben. Die Vorschau sendet nie von allein; `klick` tippt nach dem Start auf einen Knopf wie ein Nutzer. In `antworten` ist A gewählt.
   antworten: { daten: dateien(), seed: true, live: 'ok', klick: '#blatt [data-wahl="A"]' },
   erledigen: { daten: dateien(), seed: true, live: 'ok', klick: '#aktion [data-handlung=erledigt]' },
+  bearbeiten: { daten: dateien(), seed: true, live: 'ok' },
+  'bearbeiten-geaendert': { daten: dateien(), seed: true, live: 'ok', klick: ['#blatt input[name=rang][value="1"]', '#blatt input[name=an][value="project:beta"]'] },
   'eingang-senden': { daten: dateien(), seed: true, live: 'ok', schlange: [schlange()[2], schlangeZustaende().sendet] },
   einsortiert: { daten: dateien(), seed: true, live: 'ok', schlange: [schlangeZustaende().gesendet] },
   'einsortieren-gewaehlt': { daten: dateien(), seed: true, live: 'ok', entwuerfe: [{ schluessel: 'einsortieren/k7m2qa', ziel: 'alpha', satz: 'Zu den Hinweisen.', zeit: JETZT }] },
@@ -337,6 +339,7 @@ export const ADRESSEN = {
   'eingang-senden': ['eingang', 'eintrag/k7m2qa'],
   einsortiert: ['eintrag/k7m2qa'],
   'einsortieren-gewaehlt': ['eintrag/k7m2qa/einsortieren'],
+  bearbeiten: ['eintrag/m7q2ke/bearbeiten'], 'bearbeiten-geaendert': ['eintrag/m7q2ke/bearbeiten'],
   'einsortieren-pruefung': ['eintrag/k7m2qa/einsortieren'],
   'erfassen-entwurf': ['erfassen'],
   'erfassen-pruefung': ['erfassen'],

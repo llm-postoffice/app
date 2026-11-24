@@ -7,3 +7,5 @@ Eintrag veyqh0, Entscheidung hjz-mcg: Maske im Eintrag mit allen Feldern wie die
 - Nicht: den Titel oder Text ändern (die claude-post-gui kann es auch nicht), Übernehmen und Zurückgeben (gehören Sitzungen).
 - Varianten: `variante-a.png` ein Blatt Bearbeiten mit allen Feldern (wie Antworten und Einsortieren); `variante-b.png` die Maske liegt im Eintrag selbst unter der Kopfkarte, Speichern in der Leiste; `variante-c.png` eine Liste von Zeilen, jede öffnet ein kleines Blatt und speichert sofort.
 - Schreibschicht (`js/schreiben.js`: `rangAendern`, `verwerfen`, `neuAdressieren`, `nachtragen`, `erledigen` mit Ergebnis) steht schon und hängt nicht von der Wahl ab.
+
+- Gewählt: Variante A (Blatt Bearbeiten), Antwort auf s1mb45 am 2026-11-24. Gebaut in `js/bearbeiten.js`; Szenarien `bearbeiten` und `bearbeiten-geaendert`. Cold Read steht noch aus.

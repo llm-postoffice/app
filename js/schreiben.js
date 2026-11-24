@@ -226,8 +226,8 @@ export class Schreiber {
     });
   }
 
-  /** Einen Eintrag verwerfen; der Grund ist Pflicht. */
-  verwerfen(id, { grund, entwurf = null, personenErlaubt = false } = {}) {
+  /** Einen Eintrag verwerfen; der Grund ist Pflicht. (Nicht `verwerfen`: so heißt der Eingriff, der eine Sendung zurücknimmt.) */
+  eintragVerwerfen(id, { grund, entwurf = null, personenErlaubt = false } = {}) {
     return this.versuche(async () => {
       const { e, ctx } = await this.vorbereiten(id);
       return this.einreihen({ eintrag: e.id, art: 'verwerfen', satz: String(grund ?? '').trim(), von: ctx.geraet }, verwerfenDateien(ctx, e, grund),
