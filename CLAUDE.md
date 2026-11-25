@@ -65,7 +65,7 @@ arbeitet offline mit einer Warteschlange.
 - Der Renderer meldet in der Größe 448 × 923 (Ränder 0) „Ränder“ für jeden Text, der über den unteren Rand des Fensters
   hinausreicht, also für jede Seite, die scrollt (die Prüfung zählt dort einen Streifen der Höhe 0, den keine Leiste
   verdecken kann). Das ist ein Fehler des Renderers, nicht der App; die Meldung wird nicht umgedeutet.
-- Android-Hülle: stillgelegt und aus dem Baum entfernt (2026-11-25, Auftrag dxcy2d, Antwort C aus rvp-xm6: `android/`, Brücke `js/huelle.js`, Systemfarben `js/farben.js`, Teilen-Weg, `huelle.yml`, Makefile-Ziele `apk*`). Die Web-App ist der einzige Weg zum Handy (`docs/installieren.md`); der Verlauf in Git hält den Stand davor (letzte Fassung mit Hülle: 20261124.03). Der Signierschlüssel unter `$XDG_DATA_HOME/llm-post/signatur/` und die Secrets `SIGNATUR_P12`, `SIGNATUR_PASSWORT` bleiben, bis der Nutzer entscheidet.
+- Android-Hülle: stillgelegt und aus dem Baum entfernt (2026-11-25, Auftrag dxcy2d, Antwort C aus rvp-xm6: `android/`, Brücke `js/huelle.js`, Systemfarben `js/farben.js`, Teilen-Weg, `huelle.yml`, Makefile-Ziele `apk*`). Die Web-App ist der einzige Weg zum Handy (`docs/installieren.md`); der Verlauf in Git hält den Stand davor (letzte Fassung mit Hülle: 20261124.03). Signierschlüssel und Secrets der Hülle sind gelöscht (2026-11-25, js32bt).
 - Das Symbol der App hat eine Quelle, `tools/symbol.svg`; `make symbole` erzeugt `symbole/*.png`, nach einer Änderung an der Quelle beides committen (`tests/symbol.test.mjs`).
 - Gates: `make check` (Tests, Prüfung auf Fremdhosts, gitleaks, Rendern aller Zustände mit `rendern-mobil.mjs` aus dem
   p94-hig-Klon, Wegetest). Pfad des Klons: `make check HIG=PFAD`. Die Stufen laufen gleichzeitig, das Rendern mit mehreren

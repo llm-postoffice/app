@@ -189,7 +189,8 @@ export function wirdUmkodiert(name, typ, groesse) {
  * Ein Foto kodiert `verkleinere(blob, name)` (verkleinern.js) immer neu, ein PNG über ANHANG_MAX auch; bleibt das Ergebnis nicht
  * kleiner als das Original, gilt das Original. Ein Bild über ANHANG_MAX, das sich nicht verkleinern lässt, wird abgelehnt; ein
  * kleineres bleibt, wie es ist. Alles andere über ANHANG_MAX wird abgelehnt, ohne es zu lesen. Fehlt `verkleinere`, bleibt alles,
- * wie es ist. * Ergebnis: { ok: true, name, typ, groesse, daten (Base64), vorher (nur nach dem Neukodieren) } oder { ok: false, fehler }.
+ * wie es ist.
+ * Ergebnis: { ok: true, name, typ, groesse, daten (Base64), vorher (nur nach dem Neukodieren) } oder { ok: false, fehler }.
  */
 export async function bereiteVor(datei, verkleinere = null) {
   const { name, typ } = datei;
