@@ -1,9 +1,10 @@
 # Änderungen
 
-## Unveröffentlicht
+## 20261125.01 (2026-11-25)
 
-Hinweise kommen nur noch über Web-Push; die App kennt ntfy nicht mehr.
+Hinweise kommen nur noch über Web-Push; die App kennt ntfy nicht mehr. Die Android-Hülle gibt es nicht mehr, die Web-App ist der einzige Weg zum Handy.
 
+- **Installieren**: Die Anleitung `docs/installieren.md` führt über Vanadium zur Web-App mit Mitteilungen. Wer die Hülle noch hat, deinstalliert sie.
 - **Mehr**: Der Abschnitt **Mitteilungen** erklärt nur noch Web-Push und trägt nicht mehr den Zusatz „Probe“. Die Anleitung für ntfy (Abo, **ID kopieren**) ist weg.
 - **Wartet** und **Suche**: Die Sätze nennen ntfy nicht mehr. Wartet verweist auf die Mitteilungen in Mehr.
 - Die App verbindet sich nur noch mit `api.github.com`; `ntfy.sh` steht nicht mehr in der Sicherheitsrichtlinie der Seite.
