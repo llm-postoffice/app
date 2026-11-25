@@ -1,6 +1,8 @@
 # Änderungen
 
-## Unveröffentlicht
+## 20261125.02 (2026-11-25)
+
+Die App prüft und rechnet bei zwei Regeln wieder wie claude-post.
 
 - **Erfassen**: `name@1.service` und andere systemd-Einheiten gelten nicht mehr als E-Mail-Adresse.
 - **Wartet**: Ein Eintrag, der auf eine Freigabe oder einen Test wartet, zählt nach der Antwort nicht mehr als wartend.
