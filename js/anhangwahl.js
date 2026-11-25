@@ -47,7 +47,7 @@ export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null,
     for (const f of gewaehlt) {
       if (f.size <= BILD_QUELLE_MAX && wirdUmkodiert(f.name, f.type, f.size)) { meldung.textContent = `${f.name} wird verkleinert …`; meldung.setAttribute('class', 'neben'); }
       let b;
-      try { b = await bereiteVor({ name: f.name, typ: f.type, groesse: f.size, blob: f }, verkleinere, 'wähle'); } catch { fehler_.push(`${f.name} lässt sich nicht lesen. Wähle sie noch einmal.`); continue; }
+      try { b = await bereiteVor({ name: f.name, typ: f.type, groesse: f.size, blob: f }, verkleinere); } catch { fehler_.push(`${f.name} lässt sich nicht lesen. Wähle sie noch einmal.`); continue; }
       if (!b.ok) { fehler_.push(b.fehler); continue; }
       const r = nimmAuf(liste, { name: b.name, groesse: b.groesse, typ: b.typ, daten: b.daten, vorher: b.vorher });
       if (r.ok) { liste = r.liste; if (r.hinweis) hinweise_.push(r.hinweis); } else fehler_.push(r.fehler);

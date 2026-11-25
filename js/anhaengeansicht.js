@@ -14,7 +14,7 @@ export const TEXT_ANZEIGE_MAX = 100_000;
 // Geöffnete Zeilen (nach Pfad) bleiben offen, wenn die Ansicht neu gezeichnet wird, etwa nach einem Abgleich
 const offene = new Set();
 
-/** Speichert die Datei als Download. Ergebnis 'ok', 'abgebrochen' oder 'fehler'. */
+/** Speichert die Datei als Download. Ergebnis 'ok' oder 'fehler'. */
 export async function speichereAnhang(k, a, daten) {
   try {
     const adresse = URL.createObjectURL(new Blob([basisZuBytes(daten)], { type: a.typ }));
@@ -27,7 +27,7 @@ export async function speichereAnhang(k, a, daten) {
   } catch { return 'fehler'; }
 }
 
-const GESPEICHERT = { ok: () => 'Heruntergeladen.', abgebrochen: () => 'Nicht gespeichert.', fehler: () => 'Speichern ging nicht. Versuche es noch einmal.' };
+const GESPEICHERT = { ok: () => 'Heruntergeladen.', fehler: () => 'Speichern ging nicht. Versuche es noch einmal.' };
 
 function fehlerBand(a, e, nochmal) {
   const erneut = knopf('Erneut versuchen', { an: nochmal });

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 export const ERLAUBT_APP = ['api.github.com', 'ntfy.sh'];
 export const ERLAUBT_WERKZEUG = [...ERLAUBT_APP, '127.0.0.1', 'localhost'];
 const ENDUNGEN = new Set(['.html', '.css', '.js', '.mjs', '.webmanifest', '.json']);
-const AUSLASSEN = new Set(['.git', 'node_modules', 'bilder', 'LICENSES', 'build', '.gradle', '.kotlin']);
+const AUSLASSEN = new Set(['.git', 'node_modules', 'bilder', 'LICENSES']);
 const MUSTER = [
   /\b(?:https?|wss?|ftp):\/\/(\[[0-9a-f:]+\]|[A-Za-z0-9._-]+)/gi,
   /(?:\b(?:src|href|action|poster|srcset)\s*=\s*["']?|url\(\s*["']?|@import\s+["'])\/\/([A-Za-z0-9._-]+)/gi,

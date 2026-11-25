@@ -69,7 +69,7 @@ export function speicherAnzeige(speicher, art, schlange = []) {
     return { zeile: 'nur im Arbeitsspeicher', warnung: 'Dieser Browser erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.' };
   }
   const dauerhaft = speicher?.dauerhaft;
-    const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? 'vom Browser verwaltet' : 'nicht geprüft';
+  const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? 'vom Browser verwaltet' : 'nicht geprüft';
   const warnung = dauerhaft !== true && wartet
     ? `Der Browser kann den Speicher räumen. Noch nicht gesendet: ${wartet}. Das könnte verloren gehen.` : null;
   return { zeile, warnung };

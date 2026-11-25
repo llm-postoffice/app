@@ -1130,6 +1130,33 @@ try {
       'Antworten mit Datei: Nachtrag mit Feld Attachments und die Datei unter attachments/ULID/', JSON.stringify(nachtrag));
     const m2 = [...((await p.werte('window.__melde')) ?? [])];
     melde(m2.length === 0, 'Dateiauswahl, Senden und Antworten lösen keine Verstöße gegen die CSP aus', m2.join('; '));
+    // Ein Foto über 1 MiB über Datei anhängen: die Seite verkleinert es (Chromium: createImageBitmap, OffscreenCanvas); ein kleines PNG bleibt, wie es ist
+    p = await seite(t('#erfassen'));
+    await p.warte(`!!document.querySelector('input[type=file]')`);
+    const fotoB64 = await p.werte(`(async () => {
+      const c = new OffscreenCanvas(4000, 3000); const z = c.getContext('2d');
+      const g = z.createLinearGradient(0, 0, 4000, 3000); g.addColorStop(0, '#1b3a5c'); g.addColorStop(0.5, '#d9a441'); g.addColorStop(1, '#3d7a4a');
+      z.fillStyle = g; z.fillRect(0, 0, 4000, 3000);
+      const bild = z.getImageData(0, 0, 4000, 3000); let x = 12345;
+      for (let i = 0; i < bild.data.length; i += 4) { x = (x * 1103515245 + 12345) & 0x7fffffff; const r = ((x >> 16) % 31) - 15; bild.data[i] += r; bild.data[i + 1] += r; bild.data[i + 2] += r; }
+      z.putImageData(bild, 0, 0);
+      const blob = await c.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+      return await new Promise((ok) => { const f = new FileReader(); f.onload = () => ok(f.result.split(',')[1]); f.readAsDataURL(blob); }); })()`);
+    const fotoDatei = join(hochladen, 'IMG_20261117_101530.jpg');
+    await writeFile(fotoDatei, Buffer.from(fotoB64, 'base64'));
+    await p.datei('input[type=file]', [fotoDatei, skizze]);
+    const verkleinert = await p.warte(`[...document.querySelectorAll('.gewaehlt li')].some((l) => l.textContent.includes('verkleinert von'))`, 20000);
+    const fotoEintrag = await p.werte(`(async () => { const { oeffneDatenbank } = await import('/js/speicher.js'); const db = await oeffneDatenbank(); const e = await db.lies('entwuerfe', 'anhaenge/erfassen'); db.schliesse();
+      const a = e?.anhaenge?.find((x) => x.name.startsWith('IMG_20261117_101530')); const s = e?.anhaenge?.find((x) => x.name === 'skizze.png'); if (!a || !s) return null;
+      const bytes = Uint8Array.from(atob(a.daten), (ch) => ch.charCodeAt(0)); const bild = await createImageBitmap(new Blob([bytes], { type: a.typ }));
+      return { name: a.name, typ: a.typ, groesse: a.groesse, vorher: a.vorher, echt: bytes.length, kante: Math.max(bild.width, bild.height), skizzeVorher: s.vorher ?? null,
+        zeile: [...document.querySelectorAll('.gewaehlt li')].map((l) => l.textContent).join('|') }; })()`);
+    melde(verkleinert && fotoEintrag && Buffer.byteLength(fotoB64, 'base64') > 1048576 && fotoEintrag.echt <= 1048576 && fotoEintrag.echt === fotoEintrag.groesse
+      && fotoEintrag.vorher === Buffer.byteLength(fotoB64, 'base64') && fotoEintrag.kante < 4000 && /\.(jpg|webp)$/.test(fotoEintrag.name) && /^image\/(jpeg|webp)$/.test(fotoEintrag.typ)
+      && fotoEintrag.skizzeVorher === null && fotoEintrag.zeile.includes('verkleinert von'),
+      'ein Foto über 1 MiB wird beim Anhängen auf höchstens 1 MiB verkleinert (Typ, Endung, Zeile verkleinert von … auf …), ein kleines PNG bleibt unverändert', JSON.stringify(fotoEintrag));
+    const m3 = [...((await p.werte('window.__melde')) ?? [])];
+    melde(m3.length === 0, 'Verkleinern beim Anhängen löst keine Verstöße gegen die CSP und keine Skriptfehler aus', m3.join('; '));
     await p.schliesse();
     abgefangen = fange(standardQuelle());
   }

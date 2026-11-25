@@ -39,7 +39,7 @@ make check HIG=PFAD
 ```
 
 `PFAD` ist der Ordner des p94-hig-Klons. Einzelne Stufen, Vorschau mit erfundenen Daten und Prüfung gegen echte Daten:
-[docs/entwicklung/pruefen.md](docs/entwicklung/pruefen.md). Eine Android-App gibt es nicht mehr.
+[docs/entwicklung/pruefen.md](docs/entwicklung/pruefen.md).
 
 ## Fehler und Lizenz
 

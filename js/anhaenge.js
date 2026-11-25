@@ -189,10 +189,9 @@ export function wirdUmkodiert(name, typ, groesse) {
  * Ein Foto kodiert `verkleinere(blob, name)` (verkleinern.js) immer neu, ein PNG über ANHANG_MAX auch; bleibt das Ergebnis nicht
  * kleiner als das Original, gilt das Original. Ein Bild über ANHANG_MAX, das sich nicht verkleinern lässt, wird abgelehnt; ein
  * kleineres bleibt, wie es ist. Alles andere über ANHANG_MAX wird abgelehnt, ohne es zu lesen. Fehlt `verkleinere`, bleibt alles,
- * wie es ist. `verb` ist „wähle“ oder „teile“ im Satz.
- * Ergebnis: { ok: true, name, typ, groesse, daten (Base64), vorher (nur nach dem Neukodieren) } oder { ok: false, fehler }.
+ * wie es ist. * Ergebnis: { ok: true, name, typ, groesse, daten (Base64), vorher (nur nach dem Neukodieren) } oder { ok: false, fehler }.
  */
-export async function bereiteVor(datei, verkleinere = null, verb = 'wähle') {
+export async function bereiteVor(datei, verkleinere = null) {
   const { name, typ } = datei;
   const gross = groessenWort(datei.groesse);
   const satz = (s) => `${name} ist ${gross} groß${s}`;
@@ -200,17 +199,17 @@ export async function bereiteVor(datei, verkleinere = null, verb = 'wähle') {
   const lesen = async () => bytesZuBasis(datei.bytes ?? new Uint8Array(await datei.blob.arrayBuffer()));
   if (ueber && (!verkleinerbar(name, typ) || !verkleinere)) {
     const r = nimmAuf([], { name, groesse: datei.groesse, typ, daten: '' });
-    return { ok: false, fehler: r.fehler.replace('wähle sie noch einmal', `${verb} sie noch einmal`) };
+    return { ok: false, fehler: r.fehler };
   }
-  if (ueber && datei.groesse > BILD_QUELLE_MAX) return { ok: false, fehler: satz(`; Bilder verkleinert die App bis ${groessenWort(BILD_QUELLE_MAX)}. Verkleinere das Bild und ${verb} es noch einmal.`) };
+  if (ueber && datei.groesse > BILD_QUELLE_MAX) return { ok: false, fehler: satz(`; Bilder verkleinert die App bis ${groessenWort(BILD_QUELLE_MAX)}. Verkleinere das Bild und wähle es noch einmal.`) };
   if (!verkleinere || !wirdUmkodiert(name, typ, datei.groesse) || datei.groesse > BILD_QUELLE_MAX) return { ok: true, name, typ, groesse: datei.groesse, daten: await lesen() };
   let v;
   try { v = await verkleinere(datei.blob ?? new Blob([datei.bytes], { type: typ || typVon(name) }), name); } catch { v = { ok: false, grund: 'nicht-lesbar' }; }
   if (!v.ok) {
     // Ein Foto bis 1 MiB, das sich nicht neu kodieren lässt (etwa HEIC ohne Decoder), geht so, wie es ist
     if (!ueber) return { ok: true, name, typ, groesse: datei.groesse, daten: await lesen() };
-    return { ok: false, fehler: satz(v.grund === 'zu-gross' ? `, lässt sich aber nicht auf ${groessenWort(ANHANG_MAX)} verkleinern. ${verb === 'teile' ? 'Teile' : 'Wähle'} eine kleinere Fassung.`
-      : `, und die App kann es nicht verkleinern. Erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere das Bild und ${verb} es noch einmal.`) };
+    return { ok: false, fehler: satz(v.grund === 'zu-gross' ? `, lässt sich aber nicht auf ${groessenWort(ANHANG_MAX)} verkleinern. Wähle eine kleinere Fassung.`
+      : `, und die App kann es nicht verkleinern. Erlaubt sind höchstens ${groessenWort(ANHANG_MAX)}. Verkleinere das Bild und wähle es noch einmal.`) };
   }
   if (!ueber && v.blob.size >= datei.groesse) return { ok: true, name, typ, groesse: datei.groesse, daten: await lesen() };
   const bytes = new Uint8Array(await v.blob.arrayBuffer());

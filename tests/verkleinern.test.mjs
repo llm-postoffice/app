@@ -101,21 +101,21 @@ test('bereiteVor: bis 1 MiB bleibt alles, wie es ist', async () => {
 test('bereiteVor: ein Bild über 1 MiB geht an verkleinere, das Ergebnis trägt die frühere Größe', async () => {
   const gesehen = [];
   const r = await bereiteVor({ name: 'IMG_1.heic', typ: 'image/heic', groesse: 4 * ANHANG_MAX, bytes: new Uint8Array(3) },
-    async (blob, name) => { gesehen.push([blob.size, blob.type, name]); return { ok: true, blob: new Blob([Uint8Array.from([1, 2, 3])]), typ: 'image/jpeg', name: 'IMG_1.jpg' }; }, 'teile');
+    async (blob, name) => { gesehen.push([blob.size, blob.type, name]); return { ok: true, blob: new Blob([Uint8Array.from([1, 2, 3])]), typ: 'image/jpeg', name: 'IMG_1.jpg' }; });
   assert.deepEqual(gesehen, [[3, 'image/heic', 'IMG_1.heic']]);
   assert.deepEqual(r, { ok: true, name: 'IMG_1.jpg', typ: 'image/jpeg', groesse: 3, daten: 'AQID', vorher: 4 * ANHANG_MAX });
 });
 
 test('bereiteVor: abgelehnt wird mit Satz, ohne die Datei zu lesen', async () => {
   const nie = { arrayBuffer: async () => { throw new Error('gelesen'); }, size: 0 };
-  const pdf = await bereiteVor({ name: 'b.pdf', typ: 'application/pdf', groesse: 2 * ANHANG_MAX, blob: nie }, async () => ({ ok: true }), 'teile');
-  assert.match(pdf.fehler, /^b\.pdf ist 2,0 MiB groß; erlaubt sind höchstens 1,0 MiB\. Verkleinere die Datei und teile sie noch einmal\.$/);
+  const pdf = await bereiteVor({ name: 'b.pdf', typ: 'application/pdf', groesse: 2 * ANHANG_MAX, blob: nie }, async () => ({ ok: true }));
+  assert.match(pdf.fehler, /^b\.pdf ist 2,0 MiB groß; erlaubt sind höchstens 1,0 MiB\. Verkleinere die Datei und wähle sie noch einmal\.$/);
   const riesig = await bereiteVor({ name: 'r.jpg', typ: 'image/jpeg', groesse: BILD_QUELLE_MAX + 1, blob: nie }, async () => ({ ok: true }), 'wähle');
   assert.match(riesig.fehler, /^r\.jpg ist 20,0 MiB groß; Bilder verkleinert die App bis 20,0 MiB\. Verkleinere das Bild und wähle es noch einmal\.$/);
-  const lesbar = await bereiteVor({ name: 'x.heic', typ: 'image/heic', groesse: 2 * ANHANG_MAX, blob: nie }, async () => ({ ok: false, grund: 'nicht-lesbar' }), 'teile');
-  assert.match(lesbar.fehler, /^x\.heic ist 2,0 MiB groß, und die App kann es nicht verkleinern\. Erlaubt sind höchstens 1,0 MiB\. Verkleinere das Bild und teile es noch einmal\.$/);
-  const gross = await bereiteVor({ name: 'y.png', typ: 'image/png', groesse: 9 * ANHANG_MAX, blob: nie }, async () => ({ ok: false, grund: 'zu-gross' }), 'teile');
-  assert.match(gross.fehler, /^y\.png ist 9,0 MiB groß, lässt sich aber nicht auf 1,0 MiB verkleinern\. Teile eine kleinere Fassung\.$/);
+  const lesbar = await bereiteVor({ name: 'x.heic', typ: 'image/heic', groesse: 2 * ANHANG_MAX, blob: nie }, async () => ({ ok: false, grund: 'nicht-lesbar' }));
+  assert.match(lesbar.fehler, /^x\.heic ist 2,0 MiB groß, und die App kann es nicht verkleinern\. Erlaubt sind höchstens 1,0 MiB\. Verkleinere das Bild und wähle es noch einmal\.$/);
+  const gross = await bereiteVor({ name: 'y.png', typ: 'image/png', groesse: 9 * ANHANG_MAX, blob: nie }, async () => ({ ok: false, grund: 'zu-gross' }));
+  assert.match(gross.fehler, /^y\.png ist 9,0 MiB groß, lässt sich aber nicht auf 1,0 MiB verkleinern\. Wähle eine kleinere Fassung\.$/);
   const ohne = await bereiteVor({ name: 'z.png', typ: 'image/png', groesse: 2 * ANHANG_MAX, blob: nie }, null);
   assert.match(ohne.fehler, /z\.png ist 2,0 MiB groß; erlaubt sind höchstens 1,0 MiB/);
 });
