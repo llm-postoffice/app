@@ -1,8 +1,8 @@
 {
   "datei": "cases.json",
-  "quelle": "testdata/cases.json des Postsystems (privates Repo des Betreibers), noch unveröffentlichter Stand nach 20261117.02",
-  "fassung": "20261117.02",
-  "commit": "e3e4e76",
+  "quelle": "tests/post/testdata/cases.json des Postwerkzeugs (Paket claude-tools, Ordner post/ und tests/post/), geprüft gegen den Stand 9f89eb3",
+  "fassung": "20261125.02",
+  "commit": "9f89eb3",
   "format": 1,
-  "hinweis": "Wörtliche Kopie; die Quelle führt neutrale Rechner- und Projektnamen. Neu übernehmen mit: cp QUELLE/testdata/cases.json tests/testfaelle/cases.json; danach hier Fassung und Commit nachtragen. tests/testfaelle.test.mjs vergleicht die Kopie mit der Quelle, wenn POST_QUELLE auf deren Ordner zeigt."
+  "hinweis": "Wörtliche Kopie; die Quelle führt neutrale Rechner- und Projektnamen. Die Datei war bei der Umstellung auf claude-tools 20261125.02 byte-gleich zur bisherigen Kopie. Neu übernehmen mit: cp QUELLE/testdata/cases.json tests/testfaelle/cases.json, QUELLE ist tests/post im Klon von claude-tools; danach hier Fassung und Commit nachtragen. tests/testfaelle.test.mjs vergleicht die Kopie mit der Quelle, wenn POST_QUELLE auf deren Ordner zeigt."
 }

@@ -35,3 +35,8 @@ test('IBAN: Prüfsumme nach Modulo 97', () => {
   assert.equal(ibanGueltig('DE89 3704 0044 0532 0130 01'), false);
   assert.equal(ibanGueltig('DE89'), false);
 });
+
+test('E-Mail: eine systemd-Instanz (NAME@INSTANZ.service) ist keine Adresse, eine echte Domain bleibt ein Treffer', () => {
+  assert.deepEqual(personenTreffer('dienst@rechner-a.service und getty@tty1.timer'), []);
+  assert.deepEqual(personenTreffer('a.b@c.de'), [[1, 'E-Mail']]);
+});

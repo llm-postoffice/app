@@ -1,10 +1,10 @@
 // Prüfung gegen den echten Datenbestand und das Postwerkzeug selbst. Beides liegt auf dem Rechner des Betreibers und
 // nicht im Repo; die Tests laufen nur, wenn die Umgebung sie benennt, sonst überspringen sie:
 //   POST_DATEN      Ordner des Datenklons (wird nur gelesen)
-//   POST_BEFEHL     Befehlszeile, die alle Einträge als JSON druckt (`--all --json --status all` des Werkzeugs, mit
+//   POST_BEFEHL     Befehlszeile, die alle Einträge als JSON druckt (`env CLAUDE_POST_DIR=DATEN python3 -I PFAD/post/claude_post_main.py --all --json --status all`, mit
 //                   gesetztem Datenordner und ohne Abgleich); {JETZT} steht für die Zeit JJJJ-MM-TTTHH:MMZ, auf die
 //                   das Werkzeug die Zustände rechnet
-//   POST_WERKZEUG   Pfad der Python-Datei des Werkzeugs, für den Vergleich der Prüfmuster
+//   POST_WERKZEUG   Pfad der Python-Datei des Werkzeugs (post/claude_post_main.py in claude-tools), für den Vergleich der Prüfmuster
 // Der Datenklon ist eine Mock-Quelle: der Abgleich läuft gegen ihn wie gegen GitHub, die Zustände rechnet die App aus dem
 // Ergebnis und vergleicht sie Feld für Feld mit dem Werkzeug.
 import assert from 'node:assert/strict';
@@ -96,7 +96,7 @@ bausteine = ['token', 'TOKEN=', 'password: ', 'secret', 'api_key', 'x_token_y', 
   'abcdefghij', '12345678', 'ghp_', 'github_pat_', 'sk-', 'sk-ant-', 'AKIA', 'glpat-', 'xoxb-', 'ht' + 'tp://u:pw123456789@h', 'ä', 'ß', 'ſ', 'K',
   'İ', 'ı', '٣', '١٢٣', '²', '③', '½', '\\u00a0', '\\u2028', '\\x1c', '+49 170 1234567', '0170 1234567', 'DE89 3704 0044 0532 0130 00',
   'geb. 12.03.1980', 'Geburtsdatum 1980-03-12', 'Personalnummer: 12345', 'pers.-nr. 123', 'Aktenzeichen: AB 123/45', 'az. 12 3',
-  'a.b@c.de', 'noreply@x.org', 'x@example.com', 'y@users.noreply.github.com', 'Ab3d', 'xyz', '12', '1', '+', '00', '-', '/', '.', 'a', 'Z', '_']
+  'a.b@c.de', 'noreply@x.org', 'x@example.com', 'y@users.noreply.github.com', 'unit@inst.service', 'a@b.timer', 'Ab3d', 'xyz', '12', '1', '+', '00', '-', '/', '.', 'a', 'Z', '_']
 sonst = [chr(c) for c in list(range(0x80, 0x300)) + list(range(0x2000, 0x2070)) + list(range(0x2460, 0x2500)) + list(range(0xff00, 0xff60))]
 for _ in range(8000):
     texte.append(''.join(random.choice(bausteine) if random.random() < 0.75 else random.choice(sonst) for _ in range(random.randint(1, 9))))

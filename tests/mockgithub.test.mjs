@@ -4,7 +4,7 @@
 // auf dieser Sandbox endet mit Exit 0. Der Datenklon wird nur gelesen; es geht nichts ins Netz und nichts nach GitHub.
 // Der Test läuft nur, wenn die Umgebung beides benennt, sonst überspringt er sich mit SKIP:
 //   POST_DATEN        Ordner des Datenklons (wird nur gelesen)
-//   POST_PRUEFBEFEHL  Befehlszeile der Prüfung des Datenordners; {DATEN} steht für die Sandbox, z. B. `env DATENORDNER={DATEN} werkzeug check`
+//   POST_PRUEFBEFEHL  Befehlszeile der Prüfung des Datenordners; {DATEN} steht für die Sandbox, z. B. `env CLAUDE_POST_DIR={DATEN} python3 -I PFAD/post/claude_post_main.py check`
 //                     (die Umgebungsvariable, die das Werkzeug für den Datenordner liest, setzt der Befehl selbst)
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

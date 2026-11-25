@@ -11,6 +11,8 @@ import { LEERRAUM, strip, teilen } from './pytext.js';
 export const STATUS = ['open', 'in_progress', 'waiting', 'done', 'dropped'];
 /** Eine Übernahme gilt 12 Stunden, jede Datei des Halters verlängert sie. */
 const UEBERNAHME_MS = 12 * 3600 * 1000;
+// Arten, auf die answered:ID wartet (wie ANSWERABLE_KINDS im Postwerkzeug)
+const ANTWORTBARE_ARTEN = ['question', 'approval', 'test'];
 const PROJEKT_NAME = '[A-Za-z0-9][A-Za-z0-9._-]*';
 const PUBLISHED_RE = new RegExp(`^${PROJEKT_NAME}@[^${LEERRAUM}]+$`, 'u');
 
@@ -262,7 +264,7 @@ export class Hauptbuch {
     if (c.kind === 'done' || c.kind === 'answered') {
       const ziel = finde(this.eintraege, c.arg);
       if (!ziel) return false;
-      if (c.kind === 'answered' && ziel.head.get('Kind') !== 'question') return false;
+      if (c.kind === 'answered' && !ANTWORTBARE_ARTEN.includes(ziel.head.get('Kind'))) return false;
       return this.wirksamerStatus(ziel).status === 'done';
     }
     if (c.kind === 'date') return isoDatum(c.arg) <= lokalesDatum(this.at);
