@@ -57,3 +57,18 @@ test('anDich folgt dem wirksamen Kopf, nicht dem Kopf der Datei', () => {
     }
   }
 });
+
+test('answered:ID wartet auf Fragen, Abnahmen und Tests (ANSWERABLE_KINDS des Werkzeugs), nicht auf Aufgaben', () => {
+  const kopf = (art) => `# Ziel\n\n- Kind: ${art}\n- To: project:demo\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText.\n`;
+  const fertig = '- By: session:bbbb1111, rechner-b, 2026-11-14T11:00Z\n- Status: done\n';
+  const wartend = '# Wartet\n\n- Kind: task\n- To: project:demo\n- Condition: answered:ZIEL\n- From: session:aaaa0000, rechner-a, 2026-11-14T08:00Z\n\nText.\n';
+  for (const [art, erfuellt] of [['question', true], ['approval', true], ['test', true], ['task', false], ['idea', false]]) {
+    const eintraege = ladeEintraege({
+      k7m2qk: { '0-entry.md': wartend.replace('ZIEL', 'k7m2qm') },
+      k7m2qm: { '0-entry.md': kopf(art), '01M7CVDMW00000000000000001-status.md': fertig },
+    });
+    const buch = new Hauptbuch(eintraege, parseZeit('2026-11-14T12:00Z'));
+    const bedingungen = eintragJson(eintraege.get('k7m2qk'), buch.zustand(eintraege.get('k7m2qk'))).conditions;
+    assert.equal(bedingungen[0].met, erfuellt, art);
+  }
+});

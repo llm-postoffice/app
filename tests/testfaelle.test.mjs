@@ -1,5 +1,5 @@
 // Die Kopie der gemeinsamen Testfälle: Herkunft in QUELLE.json, und bei vorhandener Quelle (POST_QUELLE zeigt auf den
-// Ordner des Postsystems) ist die Kopie gleich der Quelle. Ohne Quelle überspringt der Vergleich.
+// Ordner tests/post des Postwerkzeugs, Paket claude-tools) ist die Kopie gleich der Quelle. Ohne Quelle überspringt der Vergleich.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';

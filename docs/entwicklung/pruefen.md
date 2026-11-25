@@ -62,11 +62,23 @@ Drei Tests überspringen sich ohne diese Variablen:
 
 | Variable | Inhalt |
 | --- | --- |
-| `POST_QUELLE` | Ordner des Postsystems (Vergleich der Testfälle) |
-| `POST_DATEN` | Ordner des Datenklons, nur gelesen |
+| `POST_QUELLE` | Ordner `tests/post` im Klon von claude-tools (dort liegt `testdata/cases.json`; Vergleich der Testfälle) |
+| `POST_DATEN` | Wegwerf-Kopie des Datenordners (nur gelesen, siehe unten) |
 | `POST_BEFEHL` | Befehlszeile, die alle Einträge als JSON druckt; `{JETZT}` steht für die Rechenzeit |
-| `POST_WERKZEUG` | Python-Datei des Werkzeugs (Vergleich der Prüfmuster) |
+| `POST_WERKZEUG` | `post/claude_post_main.py` im Klon von claude-tools (Vergleich der Prüfmuster) |
 | `POST_PRUEFBEFEHL` | Befehlszeile der Prüfung des Werkzeugs; `{DATEN}` steht für einen Datenordner |
+
+Das Werkzeug liegt seit claude-tools 20261125.02 in `post/claude_post_main.py`, die Daten in einem eigenen Repo. Es läuft
+mit `python3 -I` und liest den Datenordner aus `CLAUDE_POST_DIR`. Nimm eine Kopie ohne Fernrepo, nie den echten Ordner:
+
+```bash
+CT=PFAD/claude-tools
+D=$(mktemp -d) && cp -a PFAD/DATENORDNER/. "$D" && git -C "$D" remote | xargs -r -n1 git -C "$D" remote remove
+export POST_QUELLE=$CT/tests/post POST_DATEN=$D POST_WERKZEUG=$CT/post/claude_post_main.py
+export POST_BEFEHL="env CLAUDE_POST_DIR=$D python3 -I $CT/post/claude_post_main.py --all --json --status all"
+export POST_PRUEFBEFEHL="env CLAUDE_POST_DIR={DATEN} python3 -I $CT/post/claude_post_main.py check"
+node --test tests/testfaelle.test.mjs tests/datenklon.test.mjs tests/mockgithub.test.mjs
+```
 
 `tests/mockgithub.test.mjs` schickt alle Sendungen an eine Mock-Quelle und verlangt, dass `POST_PRUEFBEFEHL` auf den
 angenommenen Dateien mit Exit 0 endet, auch für einen Eintrag und eine Antwort mit Anhängen (Bytes, `attachments/NAME`, `attachments/ULID/NAME`, Feld `Attachments`). Kein Test schreibt nach GitHub.

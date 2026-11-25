@@ -78,7 +78,8 @@ arbeitet offline mit einer Warteschlange.
 - Zustand, Urteile und Prüfmuster sind ein Nachbau des Postwerkzeugs in Python (`zustand.js` und die Dateien daneben).
   Gleich bleiben sie durch die gemeinsamen Testfälle (`tests/testfaelle/cases.json`, wörtliche Kopie, Herkunft in
   `QUELLE.json`) und den Vergleich mit dem Werkzeug über `POST_QUELLE`, `POST_DATEN`, `POST_BEFEHL` und
-  `POST_WERKZEUG` (siehe `docs/entwicklung/pruefen.md`). Weicht ein Regex-Muster von Python ab, steht die Abweichung mit Grund im Kopf von
+  `POST_WERKZEUG` (Werkzeug und Testfälle liegen in claude-tools: `post/claude_post_main.py`, `tests/post`; Aufruf mit
+  `python3 -I` und `CLAUDE_POST_DIR` auf einer Wegwerf-Kopie der Daten, siehe `docs/entwicklung/pruefen.md`). Weicht ein Regex-Muster von Python ab, steht die Abweichung mit Grund im Kopf von
   `js/pruefen.js`.
 - Der Wegetest fängt `api.github.com` in Chromium ab (CDP `Fetch`) und antwortet aus einer Mock-Quelle; mit einem Testtoken
   geht nie eine Anfrage ins Netz. Der Browser-Test fand Fehler, die node nicht findet (Zeitgeber ohne Empfänger,

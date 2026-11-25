@@ -1,5 +1,10 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Erfassen**: `name@1.service` und andere systemd-Einheiten gelten nicht mehr als E-Mail-Adresse.
+- **Wartet**: Ein Eintrag, der auf eine Freigabe oder einen Test wartet, zählt nach der Antwort nicht mehr als wartend.
+
 ## 20261125.01 (2026-11-25)
 
 Hinweise kommen nur noch über Web-Push; die App kennt ntfy nicht mehr. Die Android-Hülle gibt es nicht mehr, die Web-App ist der einzige Weg zum Handy.
