@@ -5,7 +5,7 @@
 | Befehl | Prüft |
 | --- | --- |
 | `make test` | alle Tests mit `node --test`, auch Senden gegen eine nachgebaute GitHub-API |
-| `make fremdhost` | dass im Code nur `api.github.com` und `ntfy.sh` vorkommen |
+| `make fremdhost` | dass im Code nur `api.github.com` vorkommen |
 | `make secrets` | dass keine Geheimnisse im Arbeitsbaum stehen (gitleaks) |
 | `make render` | jede Ansicht in jedem Zustand, hell, dunkel, Schrift 200 % und ohne Netz |
 | `make wege` | alle Wege der App in Chromium, auch Start ohne Netz und Update |

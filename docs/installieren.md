@@ -9,7 +9,7 @@ Rechner, auf dem `claude-post` läuft: Er schickt die Hinweise.
 4. Öffne die Einstellungen von Android, **Apps**, **Vanadium**, **App battery usage**, und wähle **Unrestricted**.
 5. Mach dasselbe bei **Google Play services**: Web-Push läuft über sie.
 6. Führe auf dem Rechner `claude-post webpush setup` aus und kopiere den Schlüssel, den es zeigt.
-7. Öffne in LLM-Post **Mehr**, **Web-Push (Probe)**, füge den Schlüssel ein, tippe **Einschalten** und erlaube Mitteilungen.
+7. Öffne in LLM-Post **Mehr**, **Mitteilungen**, füge den Schlüssel ein, tippe **Einschalten** und erlaube Mitteilungen.
 8. Tippe **Abo kopieren**, führe `claude-post webpush setup` noch einmal aus und füge das Abo ein.
 9. Prüfe es mit `claude-post webpush test`: Auf dem Handy erscheint „Neue Einträge für dich“.
 
@@ -22,5 +22,5 @@ Die Namen in den Menüs sind die englischen. Bei deutscher Oberfläche heißen s
 | Wenn | Dann |
 | --- | --- |
 | Der Menüeintrag fehlt | Lade die Seite neu; die App muss einmal vollständig geladen sein |
-| Hinweise kommen verspätet oder gar nicht | Prüfe Schritt 4 und 5, dann den Abschnitt **Web-Push (Probe)** in **Mehr** |
+| Hinweise kommen verspätet oder gar nicht | Prüfe Schritt 4 und 5, dann den Abschnitt **Mitteilungen** in **Mehr** |
 | Du hattest die frühere Android-App | Sende, was dort noch wartet, deinstalliere sie und melde dich in der Web-App neu an |

@@ -167,30 +167,14 @@ export function installationAnzeige(installiert) {
   };
 }
 
-/** Der Abschnitt Mitteilungen. Abweichung von UMI-3: Ein Tipp öffnet nicht die Ansicht des Eintrags, sondern die App ntfy,
- *  weil das Format des Postwerkzeugs keinen Click-Kopf kennt. Abweichung von UMI-4: Die App verspricht kein Öffnen der App;
- *  Vanadium öffnet Links aus anderen Apps in einem Tab ohne Anmeldung (Befund 2026-11-14). */
-export const MITTEILUNGEN = {
-  absaetze: [
-    'Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet ntfy, nicht diese App.',
-    '**ID kopieren** im Hinweis legt die ID des Eintrags in die Zwischenablage und schließt den Hinweis. Füge die ID in der Suche dieser App ein.',
-  ],
-  abo: { titel: 'Abo in ntfy anlegen', schritte: [
-    'Öffne die App ntfy.', 'Tippe auf **+**, nicht auf einen Link.',
-    'Gib das Thema ein, das das Postsystem auf deinem Rechner verwendet. Das Thema steht in keiner Datei dieser App.',
-    'Bestätige das Abo in ntfy.',
-  ] },
-  neben: ['Ein Abo über einen Link empfängt nichts. Fehlt der Knopf **ID kopieren** im Hinweis, ist ntfy älter als Fassung 1.23.0; die ID steht dann im Text des Hinweises.'],
-};
-
-// ---- Web-Push als Probe ---------------------------------------------------------------------------------------------------
+// ---- Mitteilungen über Web-Push ---------------------------------------------------------------------------------------------------
 // Nur im Browser mit Service Worker. Text mit **fett** markiert Beschriftungen und Befehle; Sätze in
 // Bändern sind reiner Text.
 
 export const WEBPUSH = {
-  titel: 'Web-Push (Probe)',
+  titel: 'Mitteilungen',
   absaetze: [
-    'Eine Probe: Hinweise ohne ntfy, über den Push-Dienst von Google. Das geht im Browser, wenn die Google Play Services auf diesem Gerät laufen. ntfy bleibt der Standard.',
+    'Hinweise kommen über Web-Push, den Push-Dienst von Google. Das geht im Browser, wenn die Google Play Services auf diesem Gerät laufen.',
   ],
   schritte: { titel: 'So schaltest du es ein', liste: [
     'Führe auf dem Rechner **claude-post webpush setup** aus und kopiere den Schlüssel, den es zeigt.',
@@ -203,7 +187,7 @@ export const WEBPUSH = {
   stand: {
     aus: 'Web-Push ist aus.',
     an: (host) => `Web-Push ist an. Push-Dienst: ${host}.`,
-    nichtUnterstuetzt: 'Dieser Browser kann kein Web-Push. Hinweise kommen über ntfy.',
+    nichtUnterstuetzt: 'Dieser Browser kann kein Web-Push. Hinweise kommen so nicht an.',
     gesperrt: 'Mitteilungen sind für diese Seite gesperrt. Erlaube sie in den Einstellungen des Browsers.',
   },
   feld: { beschriftung: 'Öffentlicher Schlüssel', hinweis: 'Aus dem Befehl claude-post webpush setup auf dem Rechner, 87 Zeichen.' },
@@ -212,7 +196,7 @@ export const WEBPUSH = {
   kopiert: { titel: 'Abo kopiert', satz: 'Füge es am Rechner bei claude-post webpush setup ein. Es enthält die Adresse zum Zustellen: gib es nicht weiter.' },
   beendet: {
     titel: 'Abo beendet', keins: 'Es gab kein Abo',
-    satz: 'Der Rechner sendet weiter, bis du claude-post webpush off ausführst. ntfy ist unverändert.',
+    satz: 'Der Rechner sendet weiter, bis du claude-post webpush off ausführst.',
   },
   fehler: {
     schluesselTitel: 'Schlüssel nicht brauchbar',

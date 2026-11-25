@@ -11,7 +11,7 @@ arbeitet offline mit einer Warteschlange.
   `python3 -I PFAD/beispiele/abnahme.py .` im p94-hig-Klon.
 - Stack ohne Build: HTML, CSS, ES-Module, Tests mit `node --test` (Node ab 22). Keine npm-Pakete, keine Bibliothek,
   keine Fremdskripte. Die CSP steht als `<meta http-equiv>`, weil Pages keine Kopfzeilen setzt; darum kein Inline-Skript,
-  kein Inline-Stil und kein Host außer `api.github.com` und `ntfy.sh`. Zu `default-src 'none'` gehört `manifest-src
+  kein Inline-Stil und kein Host außer `api.github.com`. Zu `default-src 'none'` gehört `manifest-src
   'self'`: ohne es blockt Chromium das Manifest, und die App ließe sich nicht installieren. Der Renderer merkt das
   nicht, `tools/wege.mjs` schon (Verstöße gegen die CSP werden aufgezeichnet).
 - Aufbau: `index.html` und `app.css` (Hülle, Farben, Maße), `js/` (Module), `sw.js` (Hülle nach Fassung, neue Dateien
@@ -49,14 +49,13 @@ arbeitet offline mit einer Warteschlange.
   selbst und nie, weil eine andere Seite wechselte (der Knopf heißt **Neu starten**, nicht **Neu laden**, weil die App wirklich neu
   startet). Geprüft wird beim Öffnen und bei jeder Rückkehr in den
   Vordergrund, ohne Netz still. Wortlaut von Installation und Mitteilungen steht in `texte.js` (`installationAnzeige`,
-  `MITTEILUNGEN`, mit **fett** für Beschriftungen); „Install and create shortcut“ ist der Eintrag in Vanadium (Probe),
-  der deutsche Wortlaut ist nicht geprüft und steht so da. Bei Mitteilungen öffnet ein Tipp ntfy und die App verspricht
-  kein Öffnen der App, Grund im Kopf der Texte. Die Vorschau setzt `aktualisierung` und `installiert`
+  `WEBPUSH`, mit **fett** für Beschriftungen); „Install and create shortcut“ ist der Eintrag in Vanadium (Probe),
+  der deutsche Wortlaut ist nicht geprüft und steht so da. Die Vorschau setzt `aktualisierung` und `installiert`
   für die Szenarien `neue-fassung`, `installiert` ein, die ein Renderer nicht herstellen kann; Szenarien mit `scroll`
   (Bilder von unteren Abschnitten in Mehr) laufen nicht im Standardlauf von `tools/rendern.mjs`, weil der Renderer beim
   Scrollen „unter der Statusleiste“ meldet. Der Wegetest ändert den Cache-Namen des Service Workers über den Server und
   belegt Start ohne Netz und Update-Weg in Chromium.
-- Web-Push als Probe (Fassung 20261118.02, wieder eingebaut nach dem Ausbau in 20261117.02; Auftrag und Entscheidung stehen im Postsystem): `js/webpush.js` (`WebPushProbe`, Browser und Speicher des Schlüssels sind Parameter), der Abschnitt „Web-Push (Probe)“ in `js/mehr.js` (nach Mitteilungen) und die Handler `push` und `notificationclick` in `sw.js`; ihre Entscheidungen (fester Hinweis, Ziel des Tipps, welches Fenster) stehen rein in `js/swlogik.js` (`pushZiel`, `klickPlan`). Nur im Browser mit Service Worker und `PushManager`: ohne `PushManager` steht ein Satz. Das Postwerkzeug sendet den Push ohne Nutzlast (`claude-post webpush`, nur VAPID-Kopfzeile): der Hinweis ist fest („Neue Einträge für dich“); eine Nutzlast `{"ziel":"#eintrag/ID"}` bestimmt den Eintrag, jedes andere Ziel fällt auf Wartet. Ein Tipp öffnet nie sofort: der Service Worker holt ein offenes Fenster nach vorn und schickt ihm die Nachricht `push-klick`, oder er öffnet die App mit `?push`; die App gleicht dann ab (`js/pushklick.js`, `folgeTipp`) und öffnet danach das Ziel über `geheUeberWartet` (Zurück führt nach Wartet). Ohne Nutzlast ist das Ziel der neueste Eintrag an dich, den der Stand vor dem Abgleich nicht kannte, sonst Wartet. Fehlt der Eintrag auch dann, sagt `fehltEintrag` in `eintrag.js` warum und führt mit **Zu Wartet** zurück. Die Berechtigung für Mitteilungen fragt nur der Tipp auf **Einschalten**; die Push-Anmeldung braucht keinen weiteren Host in der CSP (der Browser spricht mit seinem Push-Dienst). Szenarien `mehr-webpush`, `-an`, `-fehler`, `-ohne` (nachgebauter Browser in `tools/vorschau.mjs`; ohne Feld `webpush` hat die Vorschau keine Probe). Der Wegetest prüft den Abschnitt im Browser; das Abo selbst braucht den Push-Dienst von Google und bleibt dem Test auf dem Handy. Entfernen: diese Stellen, die Zeilen in `app.js`, `DATEIEN` in `sw.js` und die Szenarien.
+- Web-Push, der einzige Weg für Mitteilungen (der frühere Hinweisdienst ist entfernt, siehe CHANGELOG): `js/webpush.js` (`WebPushProbe`, Browser und Speicher des Schlüssels sind Parameter), der Abschnitt „Mitteilungen“ in `js/mehr.js` und die Handler `push` und `notificationclick` in `sw.js`; ihre Entscheidungen (fester Hinweis, Ziel des Tipps, welches Fenster) stehen rein in `js/swlogik.js` (`pushZiel`, `klickPlan`). Nur im Browser mit Service Worker und `PushManager`: ohne `PushManager` steht ein Satz. Das Postwerkzeug sendet den Push ohne Nutzlast (`claude-post webpush`, nur VAPID-Kopfzeile): der Hinweis ist fest („Neue Einträge für dich“); eine Nutzlast `{"ziel":"#eintrag/ID"}` bestimmt den Eintrag, jedes andere Ziel fällt auf Wartet. Ein Tipp öffnet nie sofort: der Service Worker holt ein offenes Fenster nach vorn und schickt ihm die Nachricht `push-klick`, oder er öffnet die App mit `?push`; die App gleicht dann ab (`js/pushklick.js`, `folgeTipp`) und öffnet danach das Ziel über `geheUeberWartet` (Zurück führt nach Wartet). Ohne Nutzlast ist das Ziel der neueste Eintrag an dich, den der Stand vor dem Abgleich nicht kannte, sonst Wartet. Fehlt der Eintrag auch dann, sagt `fehltEintrag` in `eintrag.js` warum und führt mit **Zu Wartet** zurück. Die Berechtigung für Mitteilungen fragt nur der Tipp auf **Einschalten**; die Push-Anmeldung braucht keinen weiteren Host in der CSP (der Browser spricht mit seinem Push-Dienst). Szenarien `mehr-webpush`, `-an`, `-fehler`, `-ohne` (nachgebauter Browser in `tools/vorschau.mjs`; ohne Feld `webpush` hat die Vorschau kein Web-Push). Der Wegetest prüft den Abschnitt im Browser; das Abo selbst braucht den Push-Dienst von Google und bleibt dem Test auf dem Handy. Entfernen: diese Stellen, die Zeilen in `app.js`, `DATEIEN` in `sw.js` und die Szenarien.
 - Der Schreibtest `tests/mockgithub.test.mjs` braucht `POST_DATEN` und `POST_PRUEFBEFEHL` (siehe `docs/entwicklung/pruefen.md`) und überspringt
   sich ohne sie; mit ihnen endet die Prüfung des Postwerkzeugs auf der Sandbox mit Exit 0.
 - Vorschau und Render: `tools/vorschau.mjs` liefert die App unter `/SZENARIO/` mit erfundenen Daten
@@ -75,7 +74,7 @@ arbeitet offline mit einer Warteschlange.
   dem PR. Einzelheiten: `docs/entwicklung/pruefen.md`.
 - Lizenz GPL-3.0-or-later. Version `YYYYMMDD.NN` steht gleich in `js/version.js`, `sw.js` und der obersten
   CHANGELOG-Überschrift und ist in der Ansicht Mehr sichtbar.
-- Nie Tokens, PATs oder ntfy-Topics in Dateien, Logs oder Ausgaben; Testgeheimnisse nur zur Laufzeit verkettet.
+- Nie Tokens, PATs oder Schlüssel in Dateien, Logs oder Ausgaben; Testgeheimnisse nur zur Laufzeit verkettet.
 - Zustand, Urteile und Prüfmuster sind ein Nachbau des Postwerkzeugs in Python (`zustand.js` und die Dateien daneben).
   Gleich bleiben sie durch die gemeinsamen Testfälle (`tests/testfaelle/cases.json`, wörtliche Kopie, Herkunft in
   `QUELLE.json`) und den Vergleich mit dem Werkzeug über `POST_QUELLE`, `POST_DATEN`, `POST_BEFEHL` und

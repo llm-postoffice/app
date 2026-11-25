@@ -1,4 +1,4 @@
-// Mehr: die ruhigen Ziele (Eingang, Ideensammlung, Suche), die Anmeldung, die Mitteilungen über ntfy, im Browser die Probe mit Web-Push, die Installation und
+// Mehr: die ruhigen Ziele (Eingang, Ideensammlung, Suche), die Anmeldung, die Mitteilungen über Web-Push, die Installation und
 // der Abschnitt Dieses Gerät mit Name, Speicher, Fassung und Stand des Abgleichs. Die Ansicht ist eine Funktion von Welt
 // und Zustand des Abgleichs; anzeigen.js zeichnet sie neu, wenn sich etwas ändert. Alle Texte kommen aus texte.js oder
 // stehen hier; Daten gehen nur über el() in den Baum (USI-1).
@@ -6,7 +6,7 @@ import { el } from './dom.js';
 import { TAKTE } from './steuerung.js';
 import { einstellung, setzeEinstellung } from './speicher.js';
 import { UHR_WARNUNG_MS, abweichungText } from './erzeugen.js';
-import { MITTEILUNGEN, NEUE_FASSUNG, NEU_STARTET, WEBPUSH, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
+import { NEUE_FASSUNG, NEU_STARTET, WEBPUSH, WEITER_BEIM_OEFFNEN, abgleichZeile, fehlerAnzeige, fortschrittAnzeige, installationAnzeige, speicherAnzeige } from './texte.js';
 import { VERSION } from './version.js';
 import { band, feld, knopf, linkKnopf, ruhigeKarte } from './karten.js';
 import { zaehler } from './welt.js';
@@ -47,7 +47,7 @@ const mitFett = (text) => text.split('**').map((teil, i) => (i % 2 ? el('strong'
 
 const ERGEBNIS_BAND = { ok: { ton: 'ok', symbol: 'check_circle' }, info: { ton: 'info', symbol: 'info-f' }, fehler: { ton: 'fehler', symbol: 'error-f' } };
 
-/** Der Abschnitt Web-Push (Probe): Schlüssel eingeben, einschalten, Abo kopieren, beenden. Der genaue Fehlertext des Browsers steht
+/** Der Abschnitt Mitteilungen (Web-Push): Schlüssel eingeben, einschalten, Abo kopieren, beenden. Der genaue Fehlertext des Browsers steht
  *  sichtbar unter dem Band, denn die Probe soll zeigen, woran es scheitert. Ohne `k.webpush` fehlt der Abschnitt. */
 function webpushAbschnitt(w, k) {
   const stand = !w.unterstuetzt ? WEBPUSH.stand.nichtUnterstuetzt : w.berechtigung === 'denied' ? WEBPUSH.stand.gesperrt : w.host ? WEBPUSH.stand.an(w.host) : WEBPUSH.stand.aus;
@@ -102,7 +102,6 @@ export async function mehrAnsicht(welt, z, k) {
   const webpush = k.webpush ? webpushAbschnitt(await k.webpush.zustand(), k) : [];
   const installiert = k.installiert ?? globalThis.matchMedia?.('(display-mode: standalone)').matches ?? false;
   const inst = installationAnzeige(installiert);
-  const mit = MITTEILUNGEN;
   // Wartet eine neue Fassung, steht das Band bei Fassung; es lädt nie von selbst neu (UOF-5)
   const neu = k.aktualisierung?.wartet
     ? band({ ton: 'info', symbol: 'info-f', titel: NEUE_FASSUNG.mehr.titel, satz: k.aktualisierung.startet ? NEU_STARTET : NEUE_FASSUNG.mehr.satz,
@@ -122,10 +121,6 @@ export async function mehrAnsicht(welt, z, k) {
       ruhigeKarte({ symbol: 'lightbulb', titel: 'Ideensammlung', weich: true, zeile: `${c.ideen ? ideenText(c.ideen) : 'keine Ideen'}, sie warten nicht auf dich`, href: '#ideen' }),
       ruhigeKarte({ symbol: 'search', titel: 'Suche und Archiv', zeile: 'auch erledigte und verworfene Einträge', href: '#suche' })),
     ...abschnitt('Anmeldung', ...anmeldung),
-    ...abschnitt('Mitteilungen',
-      ...mit.absaetze.map((a) => el('p', {}, mitFett(a))),
-      el('details', {}, el('summary', {}, mit.abo.titel), el('ol', { class: 'ablauf-schritte' }, mit.abo.schritte.map((t) => el('li', {}, mitFett(t))))),
-      ...mit.neben.map((a) => el('p', { class: 'neben' }, mitFett(a)))),
     ...webpush,
     ...abschnitt('App installieren',
       el('p', {}, inst.satz),

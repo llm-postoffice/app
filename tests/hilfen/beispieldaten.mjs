@@ -255,12 +255,11 @@ export const SZENARIEN = {
   'mehr-installiert': { daten: dateien(), seed: true, live: 'ok', installiert: true, scroll: 'App installieren' },
   'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
   'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
-  'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
-  // Web-Push als Probe: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden.
-  'mehr-webpush': { daten: dateien(), seed: true, live: 'ok', webpush: 'aus', schluessel: SCHLUESSEL, scroll: 'Web-Push (Probe)' },
-  'mehr-webpush-an': { daten: dateien(), seed: true, live: 'ok', webpush: 'an', scroll: 'Web-Push (Probe)' },
-  'mehr-webpush-fehler': { daten: dateien(), seed: true, live: 'ok', webpush: 'fehler', schluessel: SCHLUESSEL, klick: '#webpush-an', scroll: 'Web-Push (Probe)' },
-  'mehr-webpush-ohne': { daten: dateien(), seed: true, live: 'ok', webpush: 'ohne', scroll: 'Web-Push (Probe)' },
+  // Web-Push: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden.
+  'mehr-webpush': { daten: dateien(), seed: true, live: 'ok', webpush: 'aus', schluessel: SCHLUESSEL, scroll: 'Mitteilungen' },
+  'mehr-webpush-an': { daten: dateien(), seed: true, live: 'ok', webpush: 'an', scroll: 'Mitteilungen' },
+  'mehr-webpush-fehler': { daten: dateien(), seed: true, live: 'ok', webpush: 'fehler', schluessel: SCHLUESSEL, klick: '#webpush-an', scroll: 'Mitteilungen' },
+  'mehr-webpush-ohne': { daten: dateien(), seed: true, live: 'ok', webpush: 'ohne', scroll: 'Mitteilungen' },
   // Anhänge (js/anhaengeansicht.js): ein kurzer Eintrag n5tz8d, dessen Abschnitt auf dem ersten Bildschirm steht; die erste Zeile
   // wird aufgeklappt, wo der Zustand es verlangt. `anhaenge-nachtrag` zeigt r2d4vn mit einem Anhang am Nachtrag und scrollt dorthin.
   anhaenge: { daten: kurzerEintrag(dateien()), seed: true, live: 'ok' },
@@ -340,7 +339,6 @@ export const ADRESSEN = {
   'mehr-installiert': ['mehr'],
   'mehr-fassung': ['mehr'],
   'mehr-installieren': ['mehr'],
-  'mehr-mitteilungen': ['mehr'],
   'mehr-webpush': ['mehr'],
   'mehr-webpush-an': ['mehr'],
   'mehr-webpush-fehler': ['mehr'],

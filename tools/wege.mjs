@@ -923,17 +923,14 @@ try {
     `der erste Besuch legt alle ${hueller.length} Dateien der Hülle in den Cache`, `${await p.werte(`(async () => (await (await caches.open(${JSON.stringify(`postfach-${VERSION}`)})).keys()).length)()`)} Dateien`);
   melde(await p.werte('document.getElementById("neu").hidden') === true, 'ohne neue Fassung fehlt das Band „Neue Fassung geladen“', 'Band da');
   await p.bild('mehr-installation', 'App installieren');
-  await p.bild('mehr-mitteilungen', 'Mitteilungen');
-  // Mehr in der Hülle: die Installation als nummerierte Liste mit dem Wortlaut der Probe, die Mitteilungen in Worten
+  // Mehr in der Hülle: die Installation als nummerierte Liste mit dem Wortlaut der Probe, die Mitteilungen
   melde(await p.werte(`(() => { const l = [...document.querySelectorAll('main ol')].find((o) => /Install and create shortcut/.test(o.textContent)); return !!l && l.querySelectorAll('li').length === 5 && l.querySelector('strong').textContent === 'Install and create shortcut'; })()`),
     'Mehr nennt die Installation in nummerierten Schritten mit „Install and create shortcut“ fett', 'Liste fehlt');
   melde(await p.werte(`/läuft im Browser/.test(document.querySelector('main').innerText) && !/läuft als installierte App/.test(document.querySelector('main').innerText)`), 'im Browser sagt Mehr „läuft im Browser“', 'anderer Satz');
-  melde(await p.werte(`/ID kopieren im Hinweis legt die ID des Eintrags in die Zwischenablage/.test(document.querySelector('main').innerText) && /Tipp auf den Hinweis öffnet ntfy, nicht diese App/.test(document.querySelector('main').innerText)`),
-    'Mehr sagt, was ID kopieren tut und dass ein Tipp ntfy öffnet', 'Satz fehlt');
-  // Web-Push als Probe: im Browser mit Service Worker und PushManager zeigt Mehr den Abschnitt mit Feld und Einschalten (das Abo selbst
+  // Mitteilungen über Web-Push: im Browser mit Service Worker und PushManager zeigt Mehr den Abschnitt mit Feld und Einschalten (das Abo selbst
   // braucht den Push-Dienst von Google und bleibt dem Test auf dem Handy)
-  melde(await p.werte(`(() => { const h = [...document.querySelectorAll('main h2')].find((e) => e.textContent === 'Web-Push (Probe)'); return !!h && 'PushManager' in window && !!document.querySelector('main input[name=webpush-schluessel]') && [...document.querySelectorAll('main button')].some((b) => b.textContent === 'Einschalten') && document.getElementById('webpush-stand').textContent === 'Web-Push ist aus.'; })()`),
-    'Mehr zeigt im Browser den Abschnitt Web-Push (Probe) mit Feld und Einschalten', await p.stand());
+  melde(await p.werte(`(() => { const h = [...document.querySelectorAll('main h2')].find((e) => e.textContent === 'Mitteilungen'); return !!h && 'PushManager' in window && !!document.querySelector('main input[name=webpush-schluessel]') && [...document.querySelectorAll('main button')].some((b) => b.textContent === 'Einschalten') && document.getElementById('webpush-stand').textContent === 'Web-Push ist aus.'; })()`),
+    'Mehr zeigt im Browser den Abschnitt Mitteilungen mit Feld und Einschalten', await p.stand());
   await p.schliesse();
 
   // 7c. Tipp auf eine Web-Push-Mitteilung (js/pushklick.js): die App gleicht zuerst ab und öffnet dann den neuen Eintrag, Zurück führt

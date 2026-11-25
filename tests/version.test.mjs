@@ -23,7 +23,8 @@ test('die Fassung steht gleich in sw.js', async () => {
 
 test('die Fassung steht gleich in der obersten CHANGELOG-Überschrift', async () => {
   const changelog = await lies('CHANGELOG.md');
-  const erste = changelog.split('\n').find((z) => z.startsWith('## '));
+  // Ein Abschnitt „Unveröffentlicht“ darf davor stehen; die Fassung erhöht erst die Veröffentlichung.
+  const erste = changelog.split('\n').find((z) => z.startsWith('## ') && z !== '## Unveröffentlicht');
   assert.ok(erste?.startsWith(`## ${VERSION} (`), `oberste Überschrift: ${erste}`);
   assert.match(erste, /\(\d{4}-\d{2}-\d{2}\)$/, 'ISO-Datum in der Überschrift (DCH-1)');
 });

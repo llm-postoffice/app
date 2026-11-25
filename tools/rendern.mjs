@@ -42,7 +42,7 @@ Danach prüft das Werkzeug jedes Bild: ein leeres Bild, ein fehlendes oder dasse
 
 Jedes Szenario läuft in beiden Handy-Größen, hell, dunkel, mit Schrift 200 % und ohne Netz. Die Bilder liegen
 unter ORDNER/SZENARIO/, das Protokoll in ORDNER/lauf.txt. Ohne SZENARIO rendert es alle außer diesen:
-mehr-fassung, mehr-installieren, mehr-installiert und mehr-mitteilungen scrollen Mehr zu einem Abschnitt, und der
+mehr-fassung, mehr-installieren und mehr-installiert scrollen Mehr zu einem Abschnitt, und der
 Renderer meldet beim Scrollen Text unter der Statusleiste als Fehler des Randes.
 Nenne sie mit Namen, um ihre Bilder zu sehen.
 

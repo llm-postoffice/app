@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Prüft, dass im Code kein Fremdhost steht (UPL-3): Die App darf nur api.github.com und ntfy.sh nennen; die
+// Prüft, dass im Code kein Fremdhost steht (UPL-3): Die App darf nur api.github.com nennen; die
 // Werkzeuge und Tests dürfen zusätzlich den eigenen Rechner (127.0.0.1, localhost) nennen. Gesucht wird in
 // HTML, CSS, JavaScript, Manifest und JSON; Markdown und Lizenztexte sind kein Code.
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const ERLAUBT_APP = ['api.github.com', 'ntfy.sh'];
+export const ERLAUBT_APP = ['api.github.com'];
 export const ERLAUBT_WERKZEUG = [...ERLAUBT_APP, '127.0.0.1', 'localhost'];
 const ENDUNGEN = new Set(['.html', '.css', '.js', '.mjs', '.webmanifest', '.json']);
 const AUSLASSEN = new Set(['.git', 'node_modules', 'bilder', 'LICENSES']);

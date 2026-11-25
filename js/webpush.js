@@ -1,5 +1,5 @@
-// Web-Push als Probe neben ntfy: Chromium stellt Web-Push über den Push-Dienst von Google zu, und mit den Google Play Services in
-// der Sandbox von GrapheneOS soll das in Vanadium gehen (nicht geprüft). Dieses Modul schaltet das Abo ein und aus; das
+// Web-Push: Chromium stellt Web-Push über den Push-Dienst von Google zu, und mit den Google Play Services in
+// der Sandbox von GrapheneOS geht das in Vanadium (das Abo selbst bleibt dem Test auf dem Handy). Dieses Modul schaltet das Abo ein und aus; das
 // Postwerkzeug schickt die Pushes (claude-post webpush). Der Push trägt keinen Text, der Service Worker zeigt einen festen Satz
 // (js/swlogik.js). Die Teile des Browsers (Service-Worker-Container, Benachrichtigung, Zwischenablage) und der Speicher des
 // Schlüssels sind Parameter; die Prüfung des Schlüssels und die Texte sind rein und laufen unter node --test. Entfernen: diese Datei, der Abschnitt in

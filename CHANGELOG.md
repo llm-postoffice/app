@@ -1,5 +1,13 @@
 # Änderungen
 
+## Unveröffentlicht
+
+Hinweise kommen nur noch über Web-Push; die App kennt ntfy nicht mehr.
+
+- **Mehr**: Der Abschnitt **Mitteilungen** erklärt nur noch Web-Push und trägt nicht mehr den Zusatz „Probe“. Die Anleitung für ntfy (Abo, **ID kopieren**) ist weg.
+- **Wartet** und **Suche**: Die Sätze nennen ntfy nicht mehr. Wartet verweist auf die Mitteilungen in Mehr.
+- Die App verbindet sich nur noch mit `api.github.com`; `ntfy.sh` steht nicht mehr in der Sicherheitsrichtlinie der Seite.
+
 ## 20261124.03 (2026-11-24)
 
 Einträge lassen sich jetzt direkt in der App bearbeiten.

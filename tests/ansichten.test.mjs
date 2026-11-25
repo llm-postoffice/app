@@ -240,7 +240,6 @@ test('Mehr: Ziele, Anmeldung, Mitteilungen und Dieses Gerät; Fehler des Abgleic
   assert.match(text, /Suche und Archiv/);
   assert.match(text, /Angemeldet mit einem Token für org\/daten\. Es läuft am 2027-10-30 ab, in 350 Tagen\./);
   assert.doesNotMatch(text, /GEHEIMNIS/, 'das Token steht nie in der Anzeige');
-  assert.match(text, /Hinweise kommen über die App ntfy/);
   assert.match(text, /Gerät\s*handy/);
   assert.equal(finde(knoten, 'a').filter((a) => a.getAttribute('href') === '#anmelden').length, 1);
   const fehler = await M.mehr.mehrAnsicht(welt(), z({ phase: 'fehler', fehler: new AbgleichFehler('token', 'x', { status: 401 }) }), k);
@@ -280,13 +279,6 @@ test('Mehr: App installieren als nummerierte Liste im Browser, ein Satz in der i
   assert.match(app, /LLM-Post läuft als installierte App\./);
   assert.doesNotMatch(app, /Install and create shortcut/);
   assert.match(app, /Anmeldung der App, nicht die eines Browsertabs/);
-});
-
-test('Mehr: Mitteilungen sagen in Worten, was ID kopieren tut und was ein Tipp öffnet', async () => {
-  const text = t(await M.mehr.mehrAnsicht(welt(), z(), await kontext()));
-  assert.match(text, /ID kopieren im Hinweis legt die ID des Eintrags in die Zwischenablage und schließt den Hinweis/);
-  assert.match(text, /Ein Tipp auf den Hinweis öffnet ntfy, nicht diese App/);
-  assert.match(text, /Tippe auf \+, nicht auf einen Link/);
 });
 
 test('Der Code ruft nie innerHTML auf (USI-1)', async () => {
