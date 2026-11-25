@@ -6,8 +6,7 @@
 //   Rückkehr in den Vordergrund, nach einem gescheiterten Abgleich und vor jedem Abgleich und jeder Sendung, wenn die
 //   letzte gelungene Probe älter als FRISCH_MS ist;
 // - offline und sichtbar: neue Probe mit wachsendem Abstand (5 s bis 60 s); gelingt sie, meldet `bei(true)`.
-// Die Probe läuft am Service Worker vorbei: der fängt nur GET ab, ein HEAD geht ans Netz. In der Android-Hülle liegt der Ursprung
-// im APK und antwortet immer; dort gibt es keine Adresse und nur onLine zählt. Alles Äußere ist Parameter (node --test).
+// Die Probe läuft am Service Worker vorbei: der fängt nur GET ab, ein HEAD geht ans Netz. Alles Äußere ist Parameter (node --test).
 
 export const PROBE_ZEIT_MS = 3000;
 export const FRISCH_MS = 10_000;

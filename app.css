@@ -1,8 +1,7 @@
 /* Postfach: Werte nach dem Entwurf der App (Material 3, p94-hig mobile). Schrift in rem, damit sie mit
    <meta name="text-scale" content="scale"> der Schriftgröße des Systems folgt (USC-1); Ziele in px (UZI-1).
    Alle Farben stehen hier einmal als Werte für Hell und Dunkel; Text auf Fläche erreicht mindestens 4,5:1,
-   Symbole und Kanten mindestens 3:1 (nachgerechnet im Entwurf). In der Android-Hülle setzt js/farben.js die Rollen akzent bis
-   hinweis-knopf aus den Systemfarben (Material You) auf :root; Arten, Zustände und Kennung bleiben fest. */
+   Symbole und Kanten mindestens 3:1 (nachgerechnet im Entwurf). Arten, Zustände und Kennung bleiben fest. */
 :root {
   color-scheme: light dark;
   --rand: 16px;

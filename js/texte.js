@@ -61,18 +61,17 @@ export function wartendText(sendungen) {
 
 /**
  * Zeile Speicher in Mehr und eine Warnung, wenn Sendungen in der Schlange liegen und der Speicher nicht gesichert ist.
- * `schlange` sind die Sendungen, die noch nicht gesendet sind; `huelle` ist wahr in der Android-App (dort gibt es keinen Browser).
+ * `schlange` sind die Sendungen, die noch nicht gesendet sind.
  */
-export function speicherAnzeige(speicher, art, schlange = [], huelle = false) {
+export function speicherAnzeige(speicher, art, schlange = []) {
   const wartet = wartendText(schlange);
   if (art === 'arbeitsspeicher') {
-    return { zeile: 'nur im Arbeitsspeicher', warnung: `${huelle ? 'Die App' : 'Dieser Browser'} erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.` };
+    return { zeile: 'nur im Arbeitsspeicher', warnung: 'Dieser Browser erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.' };
   }
   const dauerhaft = speicher?.dauerhaft;
-  const verwaltet = huelle ? 'von der App verwaltet' : 'vom Browser verwaltet';
-  const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? verwaltet : 'nicht geprüft';
+  const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? 'vom Browser verwaltet' : 'nicht geprüft';
   const warnung = dauerhaft !== true && wartet
-    ? `${huelle ? 'Der Speicher der App ist nicht gesichert.' : 'Der Browser kann den Speicher räumen.'} Noch nicht gesendet: ${wartet}. Das könnte verloren gehen.` : null;
+    ? `Der Browser kann den Speicher räumen. Noch nicht gesendet: ${wartet}. Das könnte verloren gehen.` : null;
   return { zeile, warnung };
 }
 
@@ -168,37 +167,14 @@ export function installationAnzeige(installiert) {
   };
 }
 
-/** Der Abschnitt Mitteilungen. Abweichung von UMI-3: Ein Tipp öffnet nicht die Ansicht des Eintrags, sondern die App ntfy,
- *  weil das Format des Postwerkzeugs keinen Click-Kopf kennt. Abweichung von UMI-4: Die App verspricht kein Öffnen der App;
- *  Vanadium öffnet Links aus anderen Apps in einem Tab ohne Anmeldung (Befund 2026-11-14). */
-export const MITTEILUNGEN = {
-  absaetze: [
-    'Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet ntfy, nicht diese App.',
-    '**ID kopieren** im Hinweis legt die ID des Eintrags in die Zwischenablage und schließt den Hinweis. Füge die ID in der Suche dieser App ein.',
-  ],
-  abo: { titel: 'Abo in ntfy anlegen', schritte: [
-    'Öffne die App ntfy.', 'Tippe auf **+**, nicht auf einen Link.',
-    'Gib das Thema ein, das das Postsystem auf deinem Rechner verwendet. Das Thema steht in keiner Datei dieser App.',
-    'Bestätige das Abo in ntfy.',
-  ] },
-  neben: ['Ein Abo über einen Link empfängt nichts. Fehlt der Knopf **ID kopieren** im Hinweis, ist ntfy älter als Fassung 1.23.0; die ID steht dann im Text des Hinweises.'],
-};
-
-/** Der Abschnitt Mitteilungen in der Android-Hülle: Ein Tipp öffnet den Eintrag, wenn das Postsystem die Adresse mitschickt. */
-export const MITTEILUNGEN_HUELLE = {
-  ...MITTEILUNGEN,
-  absaetze: ['Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet den Eintrag in dieser App, wenn das Postsystem die Adresse dazu mitschickt; sonst öffnet er ntfy.', MITTEILUNGEN.absaetze[1]],
-};
-
-// ---- Web-Push als Probe ---------------------------------------------------------------------------------------------------
-// Nur im Browser mit Service Worker; in der Android-Hülle fehlt der Abschnitt (kein Service Worker, kein Push), dort sagt
-// MITTEILUNGEN_HUELLE, dass die Hinweise über ntfy kommen. Text mit **fett** markiert Beschriftungen und Befehle; Sätze in
+// ---- Mitteilungen über Web-Push ---------------------------------------------------------------------------------------------------
+// Nur im Browser mit Service Worker. Text mit **fett** markiert Beschriftungen und Befehle; Sätze in
 // Bändern sind reiner Text.
 
 export const WEBPUSH = {
-  titel: 'Web-Push (Probe)',
+  titel: 'Mitteilungen',
   absaetze: [
-    'Eine Probe: Hinweise ohne ntfy, über den Push-Dienst von Google. Das geht im Browser, wenn die Google Play Services auf diesem Gerät laufen. ntfy bleibt der Standard.',
+    'Hinweise kommen über Web-Push, den Push-Dienst von Google. Das geht im Browser, wenn die Google Play Services auf diesem Gerät laufen.',
   ],
   schritte: { titel: 'So schaltest du es ein', liste: [
     'Führe auf dem Rechner **claude-post webpush setup** aus und kopiere den Schlüssel, den es zeigt.',
@@ -211,7 +187,7 @@ export const WEBPUSH = {
   stand: {
     aus: 'Web-Push ist aus.',
     an: (host) => `Web-Push ist an. Push-Dienst: ${host}.`,
-    nichtUnterstuetzt: 'Dieser Browser kann kein Web-Push. Hinweise kommen über ntfy.',
+    nichtUnterstuetzt: 'Dieser Browser kann kein Web-Push. Hinweise kommen so nicht an.',
     gesperrt: 'Mitteilungen sind für diese Seite gesperrt. Erlaube sie in den Einstellungen des Browsers.',
   },
   feld: { beschriftung: 'Öffentlicher Schlüssel', hinweis: 'Aus dem Befehl claude-post webpush setup auf dem Rechner, 87 Zeichen.' },
@@ -220,7 +196,7 @@ export const WEBPUSH = {
   kopiert: { titel: 'Abo kopiert', satz: 'Füge es am Rechner bei claude-post webpush setup ein. Es enthält die Adresse zum Zustellen: gib es nicht weiter.' },
   beendet: {
     titel: 'Abo beendet', keins: 'Es gab kein Abo',
-    satz: 'Der Rechner sendet weiter, bis du claude-post webpush off ausführst. ntfy ist unverändert.',
+    satz: 'Der Rechner sendet weiter, bis du claude-post webpush off ausführst.',
   },
   fehler: {
     schluesselTitel: 'Schlüssel nicht brauchbar',

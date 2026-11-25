@@ -19,7 +19,7 @@ test('hostsIn übersieht relative Adressen, Fragmente und Kommentare mit Doppels
   assert.deepEqual(hostsIn('<a href="#wartet"></a> <script src="js/start.js"></script> // Kommentar mit a/b'), []);
 });
 
-test('die App darf nur api.github.com und ntfy.sh nennen, die Werkzeuge zusätzlich den eigenen Rechner', () => {
-  assert.deepEqual(ERLAUBT_APP, ['api.github.com', 'ntfy.sh']);
+test('die App darf nur api.github.com nennen, die Werkzeuge zusätzlich den eigenen Rechner', () => {
+  assert.deepEqual(ERLAUBT_APP, ['api.github.com']);
   assert.deepEqual(ERLAUBT_WERKZEUG, [...ERLAUBT_APP, '127.0.0.1', 'localhost']);
 });

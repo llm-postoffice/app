@@ -20,7 +20,7 @@ async function dateien(ordner) {
 }
 
 const CSP = "default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
-  + "connect-src 'self' https://api.github.com https://ntfy.sh; base-uri 'none'; form-action 'none'";
+  + "connect-src 'self' https://api.github.com; base-uri 'none'; form-action 'none'";
 const html = await lies('index.html');
 
 test('das Manifest nennt alles, was Chromium zum Installieren verlangt (UPL-2)', async () => {
@@ -107,4 +107,10 @@ test('das Stylesheet setzt keine feste Schrift und keine Höhe in vh (USC-1, UAN
   assert.doesNotMatch(css, /(^|\})\s*(html|:root)\s*\{[^}]*font-size/);
   assert.doesNotMatch(css, /100vh/);
   assert.doesNotMatch(css, /@import|url\(/);
+});
+
+test('die App kennt den entfernten Hinweisdienst nicht mehr: kein Treffer in index.html, sw.js und js/', async () => {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const dateien = ['../index.html', '../sw.js', ...(await readdir(new URL('../js/', import.meta.url))).map((f) => `../js/${f}`)];
+  for (const f of dateien) assert.doesNotMatch(await readFile(new URL(f, import.meta.url), 'utf8'), new RegExp('nt' + 'fy', 'i'), f);
 });

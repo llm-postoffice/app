@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Erzeugt aus tools/symbol.svg die Bilder des Symbols: symbole/symbol-192.png, symbol-512.png und maskierbar-512.png
-// für die Web-App und res/drawable-nodpi/symbol_vorne.png (Vordergrund und einfarbige Ebene) für die Android-App.
+// für die Web-App.
 // Braucht rsvg-convert aus librsvg. Aufruf: make symbole. Exit 0 bei Erfolg, 1 bei Fehler.
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -16,7 +16,6 @@ const ZIELE = [
   { datei: 'symbole/symbol-192.png', n: 192, aendern: (s) => s.replace(VOLL, 'viewBox="14 14 80 80"') },
   { datei: 'symbole/symbol-512.png', n: 512, aendern: (s) => s.replace(VOLL, 'viewBox="14 14 80 80"') },
   { datei: 'symbole/maskierbar-512.png', n: 512, aendern: (s) => s.replace(VOLL, 'viewBox="9.5 9.5 89 89"') },
-  { datei: 'android/app/src/main/res/drawable-nodpi/symbol_vorne.png', n: 432, aendern: (s) => s.replace(BLAU, '') },
 ];
 
 const anzahl = (s, teil) => s.split(teil).length - 1;

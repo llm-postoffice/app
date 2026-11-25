@@ -1,5 +1,5 @@
 // Der Abschnitt Anhänge am Eintrag in einem winzigen DOM (hilfen/fakedom.mjs): Überschrift mit Zahl, Zeilen zum Aufklappen,
-// Bild, Text, Datei, die Zustände (lädt, ohne Netz, zu groß, Token) und Herunterladen über die Hülle; fremder Text bleibt Text.
+// Bild, Text, Datei, die Zustände (lädt, ohne Netz, zu groß, Token) und Herunterladen; fremder Text bleibt Text.
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { installiereFakeDom, suche as finde, textVon } from './hilfen/fakedom.mjs';
@@ -132,25 +132,5 @@ test('Erneut versuchen lädt noch einmal und zeigt dann den Inhalt', async () =>
   await kopf(z).klick();
   await finde(z, 'button').find((b) => t(b) === 'Erneut versuchen').klick();
   assert.equal(finde(z, 'pre.anhang-text').length, 1);
-  await kopf(z).klick();
-});
-
-test('Herunterladen in der Hülle: Nachricht speichern mit Name, Typ und Base64; ok, abgebrochen und Fehler bekommen je ein Wort', async () => {
-  const gesendet = [];
-  const antworten = [{ art: 'ok' }, { art: 'abgebrochen' }, { art: 'fehler' }];
-  const huelle = { frage: async (art, d, warte) => { gesendet.push({ art, d, warte }); return antworten.shift(); } };
-  const z = zeilen(await abschnitt(kontext({ huelle })))[0];
-  await kopf(z).klick();
-  const laden = finde(z, 'button').find((b) => t(b) === 'Herunterladen');
-  await laden.klick();
-  assert.deepEqual(gesendet[0].d, { name: 'bericht.pdf', typ: 'application/pdf', daten: daten['c'.repeat(40)] });
-  assert.equal(gesendet[0].art, 'speichern');
-  assert.ok(gesendet[0].warte >= 60_000, 'der Dialog wartet auf den Nutzer');
-  assert.match(t(z), /Gespeichert\./);
-  await laden.klick();
-  assert.match(t(z), /Nicht gespeichert\./);
-  await laden.klick();
-  assert.match(t(z), /Speichern ging nicht\. Versuche es noch einmal\./);
-  assert.equal(laden.disabled, false, 'der Knopf ist danach wieder frei');
   await kopf(z).klick();
 });

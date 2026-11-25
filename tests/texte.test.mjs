@@ -48,14 +48,6 @@ test('Speicher: drei Zustände, Arbeitsspeicher und die Warnung nur mit wartende
   assert.ok(a.warnung, 'im Arbeitsspeicher gibt es immer eine Warnung');
 });
 
-test('Die Warnung nennt die Art der wartenden Sendung und in der Android-App keinen Browser', () => {
-  const h = speicherAnzeige({ dauerhaft: false }, 'indexeddb', [{ art: 'anlegen' }], true);
-  assert.equal(h.warnung, 'Der Speicher der App ist nicht gesichert. Noch nicht gesendet: ein neuer Eintrag. Das könnte verloren gehen.');
-  assert.equal(h.zeile, 'von der App verwaltet');
-  assert.equal(speicherAnzeige({ dauerhaft: false }, 'arbeitsspeicher', [], true).warnung.includes('Browser'), false);
-  assert.equal(wartendText([{ art: 'antwort' }, { art: 'anlegen' }, { art: 'anlegen' }, { art: 'einsortieren' }]), 'eine Antwort, 2 neue Einträge und eine Einsortierung');
-});
-
 test('die Zeile ohne Netz nennt den Stand, wenn es einen gibt (UOF-4)', () => {
   assert.equal(ohneNetzZeile(ort(2026, 11, 14, 14, 2)), 'Ohne Netz: Stand von 14:02. Neues kommt, sobald wieder Netz da ist.');
   assert.equal(ohneNetzZeile(null), 'Ohne Netz: Neues kommt, sobald wieder Netz da ist.');
@@ -100,12 +92,11 @@ test('kein Text der App hat Ausrufezeichen, Gedankenstrich, Sie-Anrede oder Fül
 });
 
 // ---- Teil F ----
-import { MITTEILUNGEN, MITTEILUNGEN_HUELLE, NEUE_FASSUNG, NEU_STARTET, installationAnzeige } from '../js/texte.js';
+import { NEUE_FASSUNG, NEU_STARTET, installationAnzeige } from '../js/texte.js';
 
 const teilF = () => [
   NEUE_FASSUNG.satz, NEUE_FASSUNG.knopf, NEUE_FASSUNG.mehr.titel, NEUE_FASSUNG.mehr.satz, NEU_STARTET,
   ...[true, false].flatMap((i) => { const a = installationAnzeige(i); return [a.satz, ...a.schritte, ...a.hinweise]; }),
-  ...MITTEILUNGEN.absaetze, MITTEILUNGEN.abo.titel, ...MITTEILUNGEN.abo.schritte, ...MITTEILUNGEN.neben,
 ];
 
 test('die Texte von Teil F halten die Regeln: Du, kein Ausrufezeichen, kein Gedankenstrich, keine Füllwörter (TXT-3, TXT-8, TXT-9)', () => {
@@ -133,21 +124,4 @@ test('die installierte App sagt das und erklärt die Anmeldung der App gegenübe
   assert.deepEqual(app.schritte, []);
   assert.match(app.hinweise.join(' '), /Anmeldung der App, nicht die eines Browsertabs/);
   assert.match(installationAnzeige(false).hinweise.join(' '), /Anmeldung der App, nicht die eines Browsertabs/);
-});
-
-test('Mitteilungen: ID kopieren, Tipp öffnet ntfy, Abo über +, kein Versprechen, die App zu öffnen (UMI-4)', () => {
-  const alles = [...MITTEILUNGEN.absaetze, ...MITTEILUNGEN.abo.schritte, ...MITTEILUNGEN.neben].join(' ');
-  assert.match(alles, /\*\*ID kopieren\*\* im Hinweis legt die ID .* in die Zwischenablage/);
-  assert.match(alles, /Tipp auf den Hinweis öffnet ntfy, nicht diese App/);
-  assert.match(alles, /Tippe auf \*\*\+\*\*, nicht auf einen Link/);
-  assert.doesNotMatch(alles, /öffnet (die|diese) App(?!\.)|öffnet dieses Fenster/);
-});
-
-test('Mitteilungen in der Android-Hülle: ein Tipp öffnet den Eintrag, wenn das Postsystem die Adresse mitschickt', () => {
-  const [erster, zweiter] = MITTEILUNGEN_HUELLE.absaetze;
-  assert.match(erster, /öffnet den Eintrag in dieser App, wenn das Postsystem die Adresse dazu mitschickt; sonst öffnet er ntfy\./);
-  assert.equal(zweiter, MITTEILUNGEN.absaetze[1]);
-  assert.equal(MITTEILUNGEN_HUELLE.abo, MITTEILUNGEN.abo);
-  assert.equal(MITTEILUNGEN_HUELLE.neben, MITTEILUNGEN.neben);
-  assert.doesNotMatch(erster, /!|—| – /);
 });

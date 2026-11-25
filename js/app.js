@@ -17,22 +17,15 @@ import { folgeTipp as tippFolgen, idsVon, kamDurchTipp } from './pushklick.js';
 import { gueltigesZiel, zielAusNachricht } from './swlogik.js';
 import { browserProbe } from './webpush.js';
 import { ladeWelt, ortVon } from './welt.js';
-import { adresseAusHuelle, mitGeteiltem, mitGeteiltenDateien } from './huelle.js';
-import { verkleinereBild } from './verkleinern.js';
-import { systemfarbenVon } from './farben.js';
-import { liesEntwurf, schluessel, speichereEntwurf } from './entwuerfe.js';
-import { anhangSchluessel } from './anhangwahl.js';
 
 const $ = (id) => document.getElementById(id);
 
 /**
  * `aktualisierung` und `installiert` sind für die Vorschau da: sie zeigt die Zustände „neue Fassung wartet“ und „läuft als
- * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser. `huelle` ist die Brücke zur
- * Android-Hülle oder `null` im Browser. `webpush` ersetzt die Probe mit Web-Push (js/webpush.js), etwa in der Vorschau; ohne sie baut
- * die App die Probe im Browser und lässt sie in der Hülle weg (dort gibt es keinen Service Worker und kein Push); `null` lässt den
- * Abschnitt in Mehr weg.
+ * installierte App“, die ein Renderer nicht herstellen kann. Ohne sie fragt die App den Browser. `webpush` ersetzt die Probe mit Web-Push (js/webpush.js), etwa in der Vorschau; ohne sie baut
+ * die App die Probe im Browser; `null` lässt den Abschnitt in Mehr weg.
  */
-export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined, huelle = null, webpush = undefined }) {
+export async function starteApp({ db, steuerung, fetch = null, schreiben = null, jetzt = () => Date.now(), zeitgeber = undefined, aktualisierung = undefined, installiert = undefined, webpush = undefined }) {
   statusleiste();
   $('zurueck').addEventListener('click', zurueck);
 
@@ -51,18 +44,17 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
     schreiben = new Schreiber({ db, fetch, jetzt, abgleich, anmeldung: () => steuerung.anmeldung(), amNetz: () => steuerung.amNetz(), pruefeNetz: () => steuerung.pruefeNetz(), hinweis: hinweis.zeige, meldung: hinweis.meldung, zeitgeber, beiAenderung: () => k.neuZeichnen() });
   }
   // Neue Fassung (UOF-5): ein ruhiges Band unten und in Mehr; die App lädt nie von selbst neu
-  // In der Hülle kein Service Worker: die Dateien liegen im APK, Updates kommen als APK
-  const dienst = !huelle && 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+  const dienst = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
   const eigene = aktualisierung === undefined;
   aktualisierung ??= dienst ? new Aktualisierung({ container: dienst }) : null;
   if (webpush === undefined) {   // `null` ist gewollt (Vorschau, Test): kein Abschnitt
-    webpush = huelle ? null : browserProbe({
+    webpush = browserProbe({
       lies: async () => (await einstellung(db, 'webpush'))?.schluessel ?? '',
       schreibe: (schluessel) => setzeEinstellung(db, 'webpush', { schluessel }),
     });
   }
   const k = {
-    db, steuerung, schreiben, jetzt, meldung: hinweis.meldung, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, huelle, webpush, gehe, ersetze, schliesseUndGehe,
+    db, steuerung, schreiben, jetzt, meldung: hinweis.meldung, aktualisierung, anhaenge: fetch ? new Anhangholer({ db, fetch, anmeldung: () => steuerung.anmeldung(), jetzt }) : null, installiert, webpush, gehe, ersetze, schliesseUndGehe,
     neuZeichnen: () => anzeigen(ortJetzt(), { automatisch: true }),
     // Ein neues Token: was am alten scheiterte, geht jetzt los
     nachAnmeldung: () => { schreiben?.erneutAlle(); return (history.state?.tiefe ?? 0) > 0 ? zurueck() : ersetze('#wartet'); },
@@ -96,33 +88,6 @@ export async function starteApp({ db, steuerung, fetch = null, schreiben = null,
   if (!(await steuerung.anmeldung())) history.replaceState({ tiefe: 0 }, '', '#anmelden');
   let neuBand = { ansicht() {} };
   starten((o) => { neuBand.ansicht(o.ansicht); return anzeigen(o); }, { woher: (id) => ortVon(welt0, id) });
-
-  // Android-Hülle: Links llmpost://… und Text aus anderen Apps kommen über die Brücke (huelle.js).
-  // Die Systemfarben (Material You) setzen die Rollen von app.css auf :root (farben.js); ein weiterer Wert der Hülle bekommt hier
-  // einen weiteren Empfänger.
-  if (huelle) {
-    let teilenKette = Promise.resolve();
-    const farben = systemfarbenVon();
-    huelle.verbinde({
-      farben: (m) => { farben?.uebernimm(m); },
-      oeffnen: (m) => { if (navigationOrt().ansicht !== 'anmelden') gehe(adresseAusHuelle(m.adresse)); },
-      // Ein Teilen kommt als mehrere Nachrichten (huelle.js); sie laufen nacheinander, und jede ist erst mit `weiter` quittiert, wenn sie im Entwurf liegt
-      teilen: (m) => {
-        teilenKette = teilenKette.then(async () => {
-          try {
-            const alt = (await liesEntwurf(db, schluessel.erfassen)) ?? {};
-            const dateien = await mitGeteiltenDateien(await liesEntwurf(db, anhangSchluessel(schluessel.erfassen)), m, verkleinereBild);
-            if (!dateien || m.titel || m.text) await speichereEntwurf(db, schluessel.erfassen, mitGeteiltem(alt, { titel: m.titel, text: m.text }), false, jetzt());
-            if (dateien) await speichereEntwurf(db, anhangSchluessel(schluessel.erfassen), dateien, false, jetzt());
-            const hier = navigationOrt().ansicht;
-            if (hier === 'erfassen') k.neuZeichnen(); else if (hier !== 'anmelden') gehe('#erfassen');
-          } catch { /* die Hülle wartet auf weiter, auch wenn diese Nachricht scheiterte */ }
-          huelle.weiter();
-        });
-      },
-    });
-    huelle.bereit();
-  }
 
   // Der Abgleich ändert den Stand: neu zeichnen, sobald sich Phase, Fehler, Netz oder Stand ändern; Fortschritt gedrosselt
   const stand = (z) => JSON.stringify([z.phase, z.fehler?.art, z.ohneNetz, z.letzter?.geprueft, z.naechster]);

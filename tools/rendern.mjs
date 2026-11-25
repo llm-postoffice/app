@@ -42,9 +42,8 @@ Danach prüft das Werkzeug jedes Bild: ein leeres Bild, ein fehlendes oder dasse
 
 Jedes Szenario läuft in beiden Handy-Größen, hell, dunkel, mit Schrift 200 % und ohne Netz. Die Bilder liegen
 unter ORDNER/SZENARIO/, das Protokoll in ORDNER/lauf.txt. Ohne SZENARIO rendert es alle außer diesen:
-mehr-fassung, mehr-installieren, mehr-installiert und mehr-mitteilungen scrollen Mehr zu einem Abschnitt, und der
-Renderer meldet beim Scrollen Text unter der Statusleiste als Fehler des Randes; huelle und mehr-huelle zeigen die
-Android-Hülle, dort registriert die App keinen Service Worker, und der Renderer meldet den Start ohne Netz als Fehler.
+mehr-fassung, mehr-installieren und mehr-installiert scrollen Mehr zu einem Abschnitt, und der
+Renderer meldet beim Scrollen Text unter der Statusleiste als Fehler des Randes.
 Nenne sie mit Namen, um ihre Bilder zu sehen.
 
 Jobs: Jedes Szenario läuft in einem eigenen Renderer mit eigenem Chromium, Profil und Temp-Ordner; ein Job braucht
@@ -67,7 +66,7 @@ if (a.values.liste) {
   for (const [n, liste] of Object.entries(ADRESSEN)) process.stdout.write(`${n}: ${liste.join(' ')}\n`);
   process.exit(0);
 }
-const szenarien = a.positionals.length ? a.positionals : Object.keys(ADRESSEN).filter((n) => !SZENARIEN[n]?.scroll && !SZENARIEN[n]?.huelle);
+const szenarien = a.positionals.length ? a.positionals : Object.keys(ADRESSEN).filter((n) => !SZENARIEN[n]?.scroll);
 const unbekannt = szenarien.find((s) => !ADRESSEN[s]);
 if (unbekannt) { process.stderr.write(`${PROG}: Fehler: unbekanntes Szenario „${unbekannt}“\nMögliche: ${Object.keys(ADRESSEN).join(', ')}\n`); process.exit(2); }
 const renderer = join(a.values.hig, 'beispiele/rendern-mobil.mjs');

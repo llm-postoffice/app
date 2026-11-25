@@ -87,7 +87,7 @@ export function wartet(welt, z, k) {
   if (!liste.length) {
     return [...oben, platz({
       bild: 'ok', titel: 'Nichts für dich',
-      saetze: ['Neue Fragen, Freigaben und Abnahmen erscheinen hier. Die App ntfy meldet sie dir, sobald sie ankommen.'],
+      saetze: ['Neue Fragen, Freigaben und Abnahmen erscheinen hier. Schalte in Mehr die Mitteilungen ein, dann meldet sie dir der Browser, sobald sie ankommen.'],
       knoepfe: [linkKnopf('Etwas erfassen', '#erfassen')], neben: stand,
     }), ...unten];
   }
@@ -167,7 +167,7 @@ export function sucheAnsicht(welt, z, k, eingabe) {
   if (!q) {
     return [platz({
       bild: 'blau', symbol: 'search', titel: 'Suchen',
-      saetze: ['Suche nach Titel oder ID, auch in erledigten und verworfenen Einträgen. Füge die ID aus dem Hinweis von ntfy ein, mit oder ohne Strich.'],
+      saetze: ['Suche nach Titel oder ID, auch in erledigten und verworfenen Einträgen. Die ID gilt mit oder ohne Strich.'],
     })];
   }
   const r = suche(welt, q);

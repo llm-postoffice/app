@@ -294,7 +294,7 @@ test('Mehr: aus, mit Feld, gemerktem Schlüssel und Einschalten; ein Tipp ruft e
   const k = await kontext(b.probe);
   const knoten = await mehr(k);
   const text = t(knoten);
-  assert.match(text, /Web-Push \(Probe\)/);
+  assert.match(text, /Mitteilungen/);
   assert.match(text, /Web-Push ist aus\./);
   assert.match(text, /Öffentlicher Schlüssel/);
   assert.equal(finde(knoten, 'input[name="webpush-schluessel"]')[0].value, SCHLUESSEL, 'das Feld zeigt den gemerkten Schlüssel');
@@ -345,19 +345,10 @@ test('Mehr: ohne Unterstützung sagt ein Satz warum, ohne Feld und Knopf; gesper
   assert.match(t(await mehr(await kontext(gesperrt.probe))), /Mitteilungen sind für diese Seite gesperrt\. Erlaube sie in den Einstellungen des Browsers\./);
 });
 
-test('Mehr in der Android-Hülle: kein Abschnitt Web-Push, auch wenn eine Probe da wäre; dort stehen die Hinweise über ntfy', async () => {
-  const b = browser({ erlaubnis: 'granted' });
-  const k = await kontext(b.probe);
-  k.huelle = { verbinde() {}, bereit() {} };
-  const text = t(await mehr(k));
-  assert.doesNotMatch(text, /Web-Push/);
-  assert.match(text, /Hinweise kommen über die App ntfy/);
-});
-
-test('Mehr: ohne PushManager steht ein Satz, der auf ntfy verweist, ohne Anleitung und ohne Knopf', async () => {
+test('Mehr: ohne PushManager steht ein Satz, der das sagt, ohne Anleitung und ohne Knopf', async () => {
   const leer = new WebPushProbe({ dienst: {}, benachrichtigung: {}, zwischenablage: null, hatPush: false, schluessel: { lies: async () => '', schreibe: async () => {} } });
   const knoten = await mehr(await kontext(leer));
-  assert.match(t(knoten), /Dieser Browser kann kein Web-Push\. Hinweise kommen über ntfy\./);
+  assert.match(t(knoten), /Dieser Browser kann kein Web-Push\. Hinweise kommen so nicht an\./);
   assert.equal(finde(knoten, 'input[name="webpush-schluessel"]').length, 0);
   assert.equal(finde(knoten, 'details').filter((d) => /So schaltest du es ein/.test(t(d))).length, 0, 'keine Anleitung für etwas, das nicht geht');
 });

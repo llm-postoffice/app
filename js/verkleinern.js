@@ -1,5 +1,5 @@
 // Bilder verkleinern: ein Foto vom Handy ist fast immer größer als ANHANG_MAX. Die App malt es kleiner und kodiert es neu, bis
-// es hineinpasst (Datei anhängen und Teilen aus anderen Apps, über anhaenge.js: bereiteVor). Fotos (JPEG, WebP, HEIC) kodiert
+// es hineinpasst (Datei anhängen, über anhaenge.js: bereiteVor). Fotos (JPEG, WebP, HEIC) kodiert
 // bereiteVor immer neu, ein PNG nur über ANHANG_MAX; ein PNG bis ANHANG_MAX bleibt, damit Bildschirmfotos mit Text scharf bleiben. Browser-Teile (createImageBitmap, OffscreenCanvas) sind
 // Parameter, damit der Ablauf unter node --test mit Attrappen läuft; echte Bilder prüft der Wegetest in Chromium.
 import { ANHANG_MAX } from './anhaenge.js';

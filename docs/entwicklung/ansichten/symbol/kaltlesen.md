@@ -3,7 +3,7 @@
 - Datum: 2026-11-17
 - Variante: 1, Umschlag mit LLM (gewählt in der Frage hpqve5)
 - Bilder: `variante-1.png` (Bogen), `symbole/symbol-192.png`, `symbole/maskierbar-512.png`
-- Aufgaben: LLM-Post auf dem Startbildschirm, in Obtainium und im Browser-Tab schnell finden und von ntfy und
+- Aufgaben: LLM-Post auf dem Startbildschirm, im Browser-Tab schnell finden und von
   anderen Apps unterscheiden; es klein (48 px) und als einfarbiges Themen-Symbol wiedererkennen.
 
 ## Bericht
@@ -16,7 +16,7 @@ Bremst:
   bleibt ein Umschlag wie bei jeder Mail-App. Vorschlag: Buchstaben höher und fetter, Klappe dünner und flacher.
 - Bogen, Themen-Symbol: „LLM“ und Klappe sind Aussparungen; bei 48 px nicht gezeigt, die Lesbarkeit dort ist
   ungeprüft. Gleicher Vorschlag.
-- Abgrenzung zu ntfy: Blau trennt, kein Befund.
+- Abgrenzung zu anderen Apps: Blau trennt, kein Befund.
 
 Sieht falsch aus:
 

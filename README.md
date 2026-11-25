@@ -1,28 +1,28 @@
 # LLM-Post
 
-LLM-Post ist eine Web-App und Android-App für das Handy: Sie zeigt, was auf dich wartet, und sendet deine Antworten,
+LLM-Post ist eine Web-App für das Handy: Sie zeigt, was auf dich wartet, und sendet deine Antworten,
 Urteile und neuen Einträge an ein Postsystem auf GitHub.
 
 Du siehst, was auf dich wartet, beantwortest Fragen, beurteilst Abnahmen Schritt für Schritt, erledigst Einträge,
 sortierst den Eingang ein und erfasst neue Einträge. Anhänge siehst du am Eintrag, speicherst du als Datei und hängst du beim Erfassen
 und Antworten an (bis 1 MiB je Datei, Fotos verkleinert die App selbst, Bildschirmfotos bleiben). Jede Eingabe wartet zehn Sekunden auf **Rückgängig** und geht dann
 als ein Commit raus; ohne Netz bleibt sie auf dem Gerät in der Warteschlange, ein Band oben in Wartet zeigt, was noch nicht gesendet ist.
-Hinweise auf Neues kommen über ntfy; im Browser kann **Mehr** sie als Probe auch über Web-Push zustellen.
+Hinweise auf Neues kommen per Web-Push.
 
 ## Installation
 
-Als Android-App mit Obtainium (Schritte: [docs/obtainium.md](docs/obtainium.md)). Trag diese Quell-URL ein:
+LLM-Post läuft als Web-App in Vanadium oder Chrome auf Android:
 
-```text
-https://github.com/llm-postoffice/app
-```
+1. Öffne diese Adresse im Browser:
 
-Als Web-App (Vanadium oder Chrome auf Android):
-
-1. Öffne https://llm-postoffice.github.io/app/ im Browser.
+   ```text
+   https://llm-postoffice.github.io/app/
+   ```
 2. Öffne das Menü ⋮ und tippe auf **Install and create shortcut**. Bei deutscher Oberfläche heißt der Eintrag
    vermutlich **App installieren** (nicht geprüft).
 3. Bestätige die Frage und öffne LLM-Post vom Startbildschirm.
+
+Mit Hinweisen auf Neues (Web-Push) und den Einstellungen für den Akku: [docs/installieren.md](docs/installieren.md).
 
 Melde dich beim ersten Start mit einem GitHub-Token an; die App sagt, was es braucht. Die Anmeldung gilt für die
 installierte App, nicht für einen Browsertab: Öffne die App zum Arbeiten vom Startbildschirm.
@@ -39,12 +39,10 @@ make check HIG=PFAD
 ```
 
 `PFAD` ist der Ordner des p94-hig-Klons. Einzelne Stufen, Vorschau mit erfundenen Daten und Prüfung gegen echte Daten:
-[docs/entwicklung/pruefen.md](docs/entwicklung/pruefen.md). Bau der Android-Hülle und Release:
-[docs/entwicklung/huelle.md](docs/entwicklung/huelle.md).
+[docs/entwicklung/pruefen.md](docs/entwicklung/pruefen.md).
 
 ## Fehler und Lizenz
 
 Fehler meldest du unter https://github.com/llm-postoffice/app/issues. Lizenz: GPL-3.0-or-later, siehe
 [LICENSE](LICENSE). Die Symbole in `index.html` sind Material Symbols Rounded von Google (Apache-2.0, Text in
-[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt), Quelle https://github.com/google/material-design-icons). Das
-Android-APK enthält Apache-2.0-Bibliotheken; Liste und Lizenztext liegen darin unter `lizenzen/`.
+[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt), Quelle https://github.com/google/material-design-icons).

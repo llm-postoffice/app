@@ -5,7 +5,7 @@
 | Befehl | Prüft |
 | --- | --- |
 | `make test` | alle Tests mit `node --test`, auch Senden gegen eine nachgebaute GitHub-API |
-| `make fremdhost` | dass im Code nur `api.github.com` und `ntfy.sh` vorkommen |
+| `make fremdhost` | dass im Code nur `api.github.com` vorkommen |
 | `make secrets` | dass keine Geheimnisse im Arbeitsbaum stehen (gitleaks) |
 | `make render` | jede Ansicht in jedem Zustand, hell, dunkel, Schrift 200 % und ohne Netz |
 | `make wege` | alle Wege der App in Chromium, auch Start ohne Netz und Update |
@@ -47,8 +47,6 @@ Das Rendern wartet nicht auf eine feste Pause, sondern auf die Seite: der Einsti
 zu Ende ist und die Ansicht gezeichnet steht (Szenarien mit `live: 'haengt'` warten nicht auf den Abgleich, er endet dort nie), und `tools/rendern.mjs` gibt dem Renderer
 das als `--bereit` mit. `--warte` (Vorgabe 10 s) ist nur die Obergrenze; auf einem ausgelasteten Rechner dauert das Zeichnen länger, die Prüfung
 folgt ihm. Die Vorschau begrenzt das Warten auf den Abgleich auf 5 s (`data-fertig` am Wurzelelement nennt `abgleich`, `haengt` oder `frist`; gemessen am 2026-11-23: alle Szenarien enden mit `abgleich`, `laedt` mit `haengt`, am längsten nach 1,1 s). Ein Tipp (`klick`) ohne Knopf ist nur in Szenarien mit mehreren Adressen erlaubt, sonst ein Fehler. Das braucht einen p94-hig-Klon ab Fassung 20261121.01 (`--bereit` im Renderer); `tools/rendern.mjs` lehnt einen älteren mit Exit 2 ab.
-
-`make apk` und `make apk-test` geben Gradle `--max-workers` nach `claude-jobs --mem 2 --max 8` (ohne das Werkzeug: Zahl der Kerne).
 
 `make render` prüft nach dem Renderer jedes Bild (`tools/bilder.mjs`): ein leeres oder fehlendes Bild und dasselbe Bild für zwei Adressen
 eines Szenarios sind ein FAIL in `lauf.txt` mit Adresse und Variante. Der Renderer selbst meldet PASS, wenn der Start der Seite abbricht

@@ -1,5 +1,5 @@
-// Das Symbol von App und Hülle hat eine Quelle, tools/symbol.svg: Buchstaben sind Striche, keine Schrift; die Bilder
-// aus make symbole haben die Größe, die das Manifest nennt; die Farbe der Quelle ist die Hintergrundfarbe der Hülle.
+// Das Symbol der App hat eine Quelle, tools/symbol.svg: Buchstaben sind Striche, keine Schrift; die Bilder
+// aus make symbole haben die Größe, die das Manifest nennt.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -25,10 +25,4 @@ test('die Bilder des Manifests haben die Größe aus sizes', async () => {
   const { icons } = JSON.parse(await lies('manifest.webmanifest'));
   assert.equal(icons.length, 3);
   for (const s of icons) assert.equal(await groesse(s.src), s.sizes, s.src);
-});
-
-test('die Farbe der Quelle ist die Farbe symbol der Hülle', async () => {
-  const blau = (await lies('tools/symbol.svg')).match(/<rect width="108" height="108" fill="(#[0-9A-Fa-f]{6})"\/>/)?.[1];
-  assert.ok(blau);
-  assert.match(await lies('android/app/src/main/res/values/farben.xml'), new RegExp(`<color name="symbol">${blau}</color>`, 'i'));
 });

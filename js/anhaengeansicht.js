@@ -1,8 +1,7 @@
 // Der Abschnitt „Anhänge“ am Ende eines Eintrags: je Anhang eine Zeile mit Symbol, Name, Größe, Art und Herkunft; ein Tipp
 // klappt die Zeile auf. Bilder (Rasterformate) und Text zeigt die App selbst, alles andere liegt zum Herunterladen bereit.
 // Den Inhalt lädt `k.anhaenge` (anhangholer.js) erst beim Aufklappen und hält ihn danach auf dem Gerät. Gebaut nur mit el()
-// und ico(); Namen und Text stehen als Text im Baum, nie als HTML. Herunterladen: im Browser ein Link auf einen Blob, in der
-// Android-Hülle die Nachricht `speichern` (Protokoll im Kopf von js/huelle.js).
+// und ico(); Namen und Text stehen als Text im Baum, nie als HTML. Herunterladen: ein Link auf einen Blob.
 import { el, ico } from './dom.js';
 import { anhaengeVon, artWort, basisZuBytes, dataAdresse, groessenWort, textVon, ANHANG_MAX } from './anhaenge.js';
 import { zeitpunkt } from './ansichtstexte.js';
@@ -11,20 +10,12 @@ import { band, knopf, linkKnopf } from './karten.js';
 const symbolVon = (art) => (art === 'bild' ? ico('image-f') : art === 'text' ? ico('description-f') : ico('draft-f'));
 /** So viele Zeichen eines Textes zeigt die App; den Rest gibt es mit Herunterladen. */
 export const TEXT_ANZEIGE_MAX = 100_000;
-/** So lange wartet die Seite auf den Speichern-Dialog der Hülle. */
-export const SPEICHERN_WARTEZEIT_MS = 10 * 60 * 1000;
 
 // Geöffnete Zeilen (nach Pfad) bleiben offen, wenn die Ansicht neu gezeichnet wird, etwa nach einem Abgleich
 const offene = new Set();
 
-/** Speichert die Datei: Hülle oder Browser. Ergebnis 'ok', 'abgebrochen' oder 'fehler'. */
+/** Speichert die Datei als Download. Ergebnis 'ok' oder 'fehler'. */
 export async function speichereAnhang(k, a, daten) {
-  if (k.huelle) {
-    try {
-      const r = await k.huelle.frage('speichern', { name: a.name, typ: a.typ, daten }, SPEICHERN_WARTEZEIT_MS);
-      return r?.art === 'ok' ? 'ok' : r?.art === 'abgebrochen' ? 'abgebrochen' : 'fehler';
-    } catch { return 'fehler'; }
-  }
   try {
     const adresse = URL.createObjectURL(new Blob([basisZuBytes(daten)], { type: a.typ }));
     const link = el('a', { href: adresse, download: a.name });
@@ -36,7 +27,7 @@ export async function speichereAnhang(k, a, daten) {
   } catch { return 'fehler'; }
 }
 
-const GESPEICHERT = { ok: (k) => (k.huelle ? 'Gespeichert.' : 'Heruntergeladen.'), abgebrochen: () => 'Nicht gespeichert.', fehler: () => 'Speichern ging nicht. Versuche es noch einmal.' };
+const GESPEICHERT = { ok: () => 'Heruntergeladen.', fehler: () => 'Speichern ging nicht. Versuche es noch einmal.' };
 
 function fehlerBand(a, e, nochmal) {
   const erneut = knopf('Erneut versuchen', { an: nochmal });
