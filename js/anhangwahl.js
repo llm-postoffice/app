@@ -1,13 +1,11 @@
-// Dateien anhängen: der Knopf „Datei anhängen“ öffnet die Dateiauswahl des Systems (in der Android-Hülle über deren
-// Dateiauswahl), darunter steht die Liste der gewählten Dateien mit Größe und Entfernen. Die Dateien liegen als Base64 im
+// Dateien anhängen: der Knopf „Datei anhängen“ öffnet die Dateiauswahl des Systems, darunter steht die Liste der gewählten Dateien mit Größe und Entfernen. Die Dateien liegen als Base64 im
 // Entwurf `anhaenge/SCHLÜSSEL` auf dem Gerät, damit Zurück, Neuladen und das Beenden der App sie nicht kosten. Prüfen und
 // Annehmen macht anhaenge.js (nimmAuf): zu groß, doppelter Name, Hinweis über 300 KiB; ein Foto kodiert
-// verkleinern.js (bereiteVor) immer neu, ein PNG über 1 MiB auch. Was beim Teilen aus einer anderen App abgelehnt wurde, steht im Entwurf (`fehler`, `hinweise`)
-// und oben in der Ansicht als Band, bis der Nutzer es mit Verstanden schließt; ein neues Zeichnen der Ansicht ändert daran nichts.
+// verkleinern.js (bereiteVor) immer neu, ein PNG über 1 MiB auch.
 import { el } from './dom.js';
 import { ANHANG_MAX, BILD_QUELLE_MAX, bereiteVor, groessenWort, nimmAuf, wirdUmkodiert } from './anhaenge.js';
 import { verkleinereBild } from './verkleinern.js';
-import { band, knopf } from './karten.js';
+import { knopf } from './karten.js';
 import { liesEntwurf, speichereEntwurf } from './entwuerfe.js';
 
 /** Der Schlüssel des Entwurfs der Anhänge zu einem Entwurf. */
@@ -15,30 +13,18 @@ export const anhangSchluessel = (schluesselDesEntwurfs) => `anhaenge/${schluesse
 
 /**
  * Baut den Anhangsteil eines Formulars. `schluessel` ist der Schlüssel des Texteentwurfs der Ansicht; `gesperrt` sperrt den
- * Knopf (keine Schreibschicht); `verkleinere` verkleinert zu große Bilder. Ergebnis: `platz` (in die Ansicht setzen), `band` (das
- * Band zum Teilen, gehört an den Anfang der Ansicht und ist leer, wenn es nichts zu sagen gibt), `liste()` (die Anhänge für die
+ * Knopf (keine Schreibschicht); `verkleinere` verkleinert zu große Bilder. Ergebnis: `platz` (in die Ansicht setzen), `liste()` (die Anhänge für die
  * Schreibschicht), `leer()`.
  */
 export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null, verkleinere = verkleinereBild } = {}) {
   const key = anhangSchluessel(schluessel);
   const gemerkt = await liesEntwurf(k.db, key);
   let liste = gemerkt?.anhaenge ?? [];
-  const saetze = (x) => (Array.isArray(x) ? x.filter((t) => typeof t === 'string' && t !== '') : []);
-  let fehler = saetze(gemerkt?.fehler);
-  let hinweise = saetze(gemerkt?.hinweise);
   const standard = `Bis ${groessenWort(ANHANG_MAX)} je Datei; Fotos verkleinert die App.`;
   const meldung = el('p', { class: 'neben', role: 'status' }, standard);
-  const teilenBand = el('div', { class: 'teilen-hinweis' });
   const zeilen = el('ul', { class: 'gewaehlt' });
   const eingabe = el('input', { type: 'file', multiple: true, hidden: true, tabindex: '-1', 'aria-hidden': 'true' });
-  const sichern = () => speichereEntwurf(k.db, key, { anhaenge: liste, fehler, hinweise }, liste.length === 0 && fehler.length === 0 && hinweise.length === 0, k.jetzt());
-
-  const zeichneBand = () => {
-    if (fehler.length === 0 && hinweise.length === 0) { teilenBand.replaceChildren(); return; }
-    const verstanden = knopf('Verstanden', { klasse: 'text', an: () => { fehler = []; hinweise = []; zeichneBand(); sichern(); } });
-    teilenBand.replaceChildren(band({ ton: fehler.length ? 'fehler' : 'info', symbol: fehler.length ? 'error-f' : 'info-f',
-      titel: fehler.length ? 'Beim Teilen nicht übernommen' : 'Zu den geteilten Dateien', satz: [...fehler, ...hinweise], knoepfe: [verstanden] }));
-  };
+  const sichern = () => speichereEntwurf(k.db, key, { anhaenge: liste }, liste.length === 0, k.jetzt());
 
   const zeichne = () => {
     zeilen.replaceChildren(...liste.map((a) => {
@@ -76,6 +62,5 @@ export async function anhangWahl(k, schluessel, { gesperrt = false, nach = null,
   const waehlen = knopf('Datei anhängen', { klasse: 'tonal', symbol: 'attach_file', gesperrt, an: () => eingabe.click() });
   const platz = el('div', { class: 'anhangwahl' }, waehlen, eingabe, zeilen, meldung);
   zeichne();
-  zeichneBand();
-  return { band: teilenBand, platz, liste: () => liste, leer: () => { liste = []; fehler = []; hinweise = []; zeichneBand(); zeichne(); return sichern(); } };
+  return { platz, liste: () => liste, leer: () => { liste = []; zeichne(); return sichern(); } };
 }

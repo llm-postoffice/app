@@ -256,17 +256,11 @@ export const SZENARIEN = {
   'mehr-fassung': { daten: dateien(), seed: true, live: 'ok', neu: true, scroll: 'fassung' },
   'mehr-installieren': { daten: dateien(), seed: true, live: 'ok', scroll: 'App installieren' },
   'mehr-mitteilungen': { daten: dateien(), seed: true, live: 'ok', scroll: 'Mitteilungen' },
-  // Web-Push als Probe: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden. In der Hülle fehlt der Abschnitt.
+  // Web-Push als Probe: ein nachgebauter Browser (tools/vorschau.mjs); der Schlüssel ist erfunden.
   'mehr-webpush': { daten: dateien(), seed: true, live: 'ok', webpush: 'aus', schluessel: SCHLUESSEL, scroll: 'Web-Push (Probe)' },
   'mehr-webpush-an': { daten: dateien(), seed: true, live: 'ok', webpush: 'an', scroll: 'Web-Push (Probe)' },
   'mehr-webpush-fehler': { daten: dateien(), seed: true, live: 'ok', webpush: 'fehler', schluessel: SCHLUESSEL, klick: '#webpush-an', scroll: 'Web-Push (Probe)' },
   'mehr-webpush-ohne': { daten: dateien(), seed: true, live: 'ok', webpush: 'ohne', scroll: 'Web-Push (Probe)' },
-  'mehr-webpush-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, webpush: 'aus', scroll: 'Mitteilungen' },
-  // Android-Hülle: die Vorschau setzt eine Brücke ohne Wirkung ein (tools/vorschau.mjs)
-  huelle: { daten: dateien(), seed: true, live: 'ok', huelle: true },
-  'mehr-huelle': { daten: dateien(), seed: true, live: 'ok', huelle: true, scroll: 'Mitteilungen' },
-  // Material You: die Vorschau gibt eine erfundene Systempalette (Monet) durch denselben Weg wie die Hülle (tests/hilfen/farbrollen.mjs)
-  ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, { daten: dateien(), seed: true, live: 'ok', farben: n }])),
   // Anhänge (js/anhaengeansicht.js): ein kurzer Eintrag n5tz8d, dessen Abschnitt auf dem ersten Bildschirm steht; die erste Zeile
   // wird aufgeklappt, wo der Zustand es verlangt. `anhaenge-nachtrag` zeigt r2d4vn mit einem Anhang am Nachtrag und scrollt dorthin.
   anhaenge: { daten: kurzerEintrag(dateien()), seed: true, live: 'ok' },
@@ -281,22 +275,12 @@ export const SZENARIEN = {
   'erfassen-anhang': { daten: dateien(), seed: true, live: 'ok',
     entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: 'Eingabefelder prüfen', an: 'beta', text: 'Siehe Bild und Messlauf.', rang: '2', dringend: false, zeit: JETZT },
       { schluessel: 'anhaenge/erfassen', anhaenge: entwurfAnhaenge(), zeit: JETZT }] },
-  // Geteilt aus einer anderen App (Hülle, js/huelle.js): zwei Dateien hängen am Entwurf (das Foto verkleinert), eine war zu groß und steht als Band oben
-  'erfassen-geteilt': { daten: dateien(), seed: true, live: 'ok',
-    entwuerfe: [{ schluessel: 'erfassen', art: 'task', titel: '', an: '', text: 'Bildschirmfoto von der Messung', rang: '2', dringend: false, zeit: JETZT },
-      { schluessel: 'anhaenge/erfassen', anhaenge: entwurfAnhaenge().map((a, i) => (i === 0 ? { ...a, vorher: 4_300_000 } : a)), zeit: JETZT,
-        fehler: ['bericht-quartal.pdf ist 2,4 MiB groß; erlaubt sind höchstens 1,0 MiB. Verkleinere die Datei und teile sie noch einmal.'], hinweise: [] }] },
   'antworten-anhang': { daten: dateien(), seed: true, live: 'ok',
     entwuerfe: [{ schluessel: 'antwort/r2d4vn', text: 'Ich nehme A, die Messung steht im Anhang.', zeit: JETZT },
       { schluessel: 'anhaenge/antwort/r2d4vn', anhaenge: entwurfAnhaenge().slice(1), zeit: JETZT }] },
   // Möglichkeiten einer Frage: im Eintrag als Liste, im Blatt als Auswahl (ungewählt, dann B gewählt), fest und in einer Palette aus Material You (orange)
   'eintrag-frage': { daten: dateien(), seed: true, live: 'ok', scroll: 'Möglichkeiten' },
   'antworten-leer': { daten: dateien(), seed: true, live: 'ok' },
-  'farben-eintrag': { daten: dateien(), seed: true, live: 'ok', farben: 'orange', scroll: 'Möglichkeiten' },
-  'farben-blatt': { daten: dateien(), seed: true, live: 'ok', farben: 'orange' },
-  'farben-antwort': { daten: dateien(), seed: true, live: 'ok', farben: 'orange', klick: '#blatt [data-wahl="B"]' },
-  // Anhänge in einer Palette aus Material You (orange), erste Zeile aufgeklappt
-  'farben-anhaenge': { daten: kurzerEintrag(dateien(), ['png', 'pdf']), seed: true, live: 'ok', farben: 'orange', klick: '.anhaenge li:nth-child(1) .anhang-kopf' },
   // Warteschlange (js/schlange.js): drei Sendungen warten auf Netz, darunter ein neuer Eintrag; eine hängt. `schlange-leer` hat nichts offen.
   'schlange-offline': { daten: dateien(), seed: true, live: 'netz', schlange: schlangeOffline() },
   'schlange-online': { daten: dateien(), seed: true, live: 'ok', schlange: schlangeOffline().filter((s) => s.id === 'w4') },
@@ -346,7 +330,6 @@ export const ADRESSEN = {
   'erfassen-verworfen': ['erfassen'],
   'erfassen-senden': ['erfassen', 'wartet'],
   'erfassen-anhang': ['erfassen'],
-  'erfassen-geteilt': ['erfassen'],
   'abnahme-gesendet': ['abnahmen', 'eintrag/8k3m1x'],
   'abnahme-pruefung': ['eintrag/8k3m1x/ergebnis'],
   'sendung-fehler': ['eintrag/p4m7bt', 'eintrag/m7q2ke'],
@@ -362,8 +345,4 @@ export const ADRESSEN = {
   'mehr-webpush-an': ['mehr'],
   'mehr-webpush-fehler': ['mehr'],
   'mehr-webpush-ohne': ['mehr'],
-  'mehr-webpush-huelle': ['mehr'],
-  huelle: ['wartet', 'mehr'],
-  'mehr-huelle': ['mehr'],
-  ...Object.fromEntries(['gruen', 'orange', 'violett'].map((n) => [`farben-${n}`, ['wartet', 'alle', 'erfassen', 'mehr', 'eintrag/r2d4vn', 'eintrag/r2d4vn/antworten']])),
 };

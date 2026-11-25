@@ -7,23 +7,10 @@ import { createServer } from 'node:http';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative } from 'node:path';
 import { ADRESSEN, JETZT, SZENARIEN } from '../tests/hilfen/beispieldaten.mjs';
-import { farbenNachricht } from '../tests/hilfen/farbrollen.mjs';
 
 const wurzel = new URL('../', import.meta.url).pathname;
 const TYP = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.json': 'application/json' };
-
-/** Szenarien mit `farben` (Name einer Beispielpalette): die Nachricht, die die Hülle schickte, geht vor dem Start durch denselben Weg
- *  wie in der App (js/farben.js). Sie steht im Einstieg selbst, damit sie auch ohne Netz da ist. */
-function farbenCode(name) {
-  const f = SZENARIEN[name]?.farben;
-  if (!f) return '';
-  return `{
-  const { systemfarbenVon } = await import('./farben.js');
-  systemfarbenVon()?.uebernimm(${JSON.stringify(farbenNachricht(f))});
-}
-`;
-}
 
 /** Alle Dateien, die der Einstieg über tests/hilfen/ lädt (Pfade ab der Wurzel), mit ihren Importen. */
 async function hilfsdateien() {
@@ -54,7 +41,7 @@ const ANFANG = sessionStorage.getItem('vorschau-anfang') ?? (sessionStorage.setI
 if (location.hash !== ANFANG) history.replaceState(null, '', ANFANG);
 const JETZT = ${JETZT};
 const MEHRERE_ADRESSEN = ${(ADRESSEN[name]?.length ?? 1) > 1};
-${farbenCode(name)}const db = await oeffneOderRueckfall();
+const db = await oeffneOderRueckfall();
 let fetchen = () => Promise.reject(new TypeError('Failed to fetch'));
 let sz = null;
 if (navigator.onLine) {
@@ -115,8 +102,7 @@ if (sz?.webpush) {
 }
 // Die Vorschau sendet nie von allein: der Zeitgeber der Schreibschicht und des Hinweises steht still, so bleibt jeder Zustand
 // (noch nicht gesendet, Hinweis mit Rückgängig) für das Bild stehen. Der Abgleich läuft mit seinem eigenen Zeitgeber.
-const app = await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert,
-  huelle: sz?.huelle ? { verbinde() {}, bereit() {} } : undefined, webpush });
+const app = await starteApp({ db, steuerung, fetch: (...a) => fetchen(...a), jetzt: () => JETZT, zeitgeber: { setze: () => 0, loesche: () => {} }, aktualisierung, installiert: sz?.installiert, webpush });
 // Sendungen, die erst nach dem Start in der Schlange liegen: der Start setzt „wird gesendet“ zurück (die App wurde beendet), ein
 // Szenario für „wird gesendet“ legt sie darum danach an
 if (sz?.nachStart) {

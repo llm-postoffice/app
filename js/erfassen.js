@@ -84,7 +84,6 @@ export async function erfassenAnsicht(welt, _z, k) {
       entwurf: { schluessel: schluessel.erfassen, wert: { ...w } }, ...opt }),
     () => k.neuZeichnen());
   const inhalt = el('form', { id: 'erfassen-formular' },
-    anhang.band,   // was beim Teilen nicht übernommen wurde, steht zuerst: sichtbar ohne Scrollen
     el('p', {}, 'Halte fest, was Claude tun oder wissen soll. Nach dem Anlegen kannst du den Eintrag zehn Sekunden lang zurücknehmen, danach geht er raus.'),
     ablehnung,
     el('fieldset', { class: 'feld' }, el('legend', {}, 'Art'), arten),

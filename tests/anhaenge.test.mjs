@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   ANHANG_MAX, ANHANG_WARNUNG, anhangPfad, anhangTexte, anhaengeVon, artVon, artWort, basisGroesse, basisZuBytes, bytesZuBasis,
-  ANHAENGE_TEILEN_MAX, dataAdresse, groessenWort, nameGueltig, nimmAuf, saeubereName, teileAuf, textVon, typVon,
+  dataAdresse, groessenWort, nameGueltig, nimmAuf, saeubereName, textVon, typVon,
 } from '../js/anhaenge.js';
 import { AbgleichFehler, holeAnhang, leseStand } from '../js/abgleich.js';
 import { Anhangholer } from '../js/anhangholer.js';
@@ -301,83 +301,4 @@ test('Rückgängig legt die Anhänge zurück in den Entwurf; Einreihen leert ihn
   assert.equal((await a.db.lies('entwuerfe', 'antwort/r2d4vn')).text, 'meine Antwort');
   await a.sende();
   assert.equal(eigene(a.q).length, 0);
-});
-
-// ---- Dateien aus dem Teilen der Hülle
-
-test('teileAuf nimmt geteilte Dateien über nimmAuf auf: Namensregel, Typ aus der Endung bei octet-stream, Hinweis über 300 KiB', async () => {
-  const gross = new Uint8Array(ANHANG_WARNUNG + 1);
-  const r = await teileAuf([], [
-    { name: 'Foto 1.jpg', typ: 'image/jpeg', groesse: 5, daten: b64(BILD) },
-    { name: 'Beleg:2.pdf', typ: 'application/octet-stream', groesse: 5, daten: b64(BILD) },
-    { name: 'gross.bin', typ: 'IMAGE/PNG', groesse: gross.length, daten: b64(gross) },
-  ], 0);
-  assert.deepEqual(r.liste.map((a) => [a.name, a.typ, a.groesse]), [['Foto 1.jpg', 'image/jpeg', BILD.length], ['Beleg_2.pdf', 'application/pdf', BILD.length], ['gross.bin', 'image/png', gross.length]]);
-  assert.deepEqual(r.fehler, []);
-  assert.equal(r.hinweise.length, 1);
-  assert.match(r.hinweise[0], /gross\.bin ist 300,0 KiB groß/);
-});
-
-test('teileAuf nennt jede abgelehnte Datei in einem Satz und behält die übrigen', async () => {
-  const alt = [{ name: 'a.txt', groesse: 1, typ: 'text/plain', daten: b64(new TextEncoder().encode('a')) }];
-  const r = await teileAuf(alt, [
-    { name: 'a.txt', typ: 'text/plain', groesse: 1, daten: b64(new TextEncoder().encode('b')) },
-    { name: 'gross.png', typ: 'image/png', groesse: 2.5 * 1024 * 1024, fehler: 'zu-gross' },
-    { name: 'unbekannt.png', typ: 'image/png', groesse: null, fehler: 'zu-gross' },
-    { name: 'weg.pdf', typ: 'application/pdf', groesse: null, fehler: 'unlesbar' },
-    { name: 'Datei', typ: 'application/octet-stream', groesse: null, fehler: 'kein-zugriff' },
-    { name: 'kaputt.bin', typ: 'application/octet-stream', groesse: 3, daten: '***' },
-    { name: 'ok.txt', typ: 'text/plain', groesse: 2, daten: b64(new TextEncoder().encode('ok')) },
-  ], 0);
-  assert.deepEqual(r.liste.map((a) => a.name), ['a.txt', 'ok.txt']);
-  assert.equal(r.fehler.length, 6);
-  assert.match(r.fehler[0], /Eine Datei mit dem Namen a\.txt ist schon angehängt/);
-  assert.match(r.fehler[1], /gross\.png ist 2,5 MiB groß; erlaubt sind höchstens 1,0 MiB\. Verkleinere die Datei und teile sie noch einmal\./);
-  assert.match(r.fehler[2], /unbekannt\.png ist größer als 1,0 MiB/);
-  assert.match(r.fehler[3], /weg\.pdf lässt sich nicht lesen/);
-  assert.match(r.fehler[4], /nicht öffnen, weil die andere App sie nicht freigab/);
-  assert.match(r.fehler[5], /kaputt\.bin lässt sich nicht lesen/);
-});
-
-test('teileAuf: Dateien über der Grenze und mehr der Hülle ergeben einen Satz mit der Zahl', async () => {
-  const eine = { name: 'x.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' };
-  const dateien = Array.from({ length: ANHAENGE_TEILEN_MAX + 1 }, (_, i) => ({ ...eine, name: `x${i}.txt` }));
-  const r = await teileAuf([], dateien, 2);
-  assert.equal(r.liste.length, ANHAENGE_TEILEN_MAX);
-  assert.deepEqual(r.fehler, ['3 weitere Dateien sind nicht dabei; je Teilen gehen höchstens 10.']);
-  assert.deepEqual((await teileAuf([], [eine], 1)).fehler, ['1 weitere Datei ist nicht dabei; je Teilen gehen höchstens 10.']);
-  assert.deepEqual(await teileAuf([], 'kein array', 0), { liste: [], fehler: [], hinweise: [] });
-});
-
-test('teileAuf: ein Textanhang aus dem Teilen geht durch die Prüfung auf Geheimnisse wie ein gewählter', async () => {
-  const r = await teileAuf([], [{ name: 'notiz.txt', typ: 'text/plain', groesse: 20, daten: b64(new TextEncoder().encode(`token ${ERFUNDENES_TOKEN}`)) }], 0);
-  assert.ok(anhangTexte(r.liste).some((x) => x.wo === 'Anhang notiz.txt' && x.text.includes(ERFUNDENES_TOKEN)));
-});
-
-test('teileAuf: ein großes Foto wird verkleinert, ein zweites kleines bleibt, ein zu großes Bild nennt die Grenze für Bilder', async () => {
-  const foto = new Uint8Array(3 * ANHANG_MAX).fill(7);
-  const gesehen = [];
-  const verkleinere = async (blob, name) => { gesehen.push([name, blob.size, blob.type]); return { ok: true, blob: new Blob([BILD], { type: 'image/jpeg' }), typ: 'image/jpeg', name: name.replace(/\.\w+$/, '.jpg') }; };
-  const r = await teileAuf([], [
-    { name: 'IMG_2024.png', typ: 'image/png', groesse: foto.length, daten: b64(foto) },
-    { name: 'klein.png', typ: 'image/png', groesse: 5, daten: b64(BILD) },
-    { name: 'riesig.jpg', typ: 'image/jpeg', groesse: 25 * 1024 * 1024, fehler: 'zu-gross', grenze: 20 * 1024 * 1024 },
-    { name: 'bericht.pdf', typ: 'application/pdf', groesse: 2 * ANHANG_MAX, fehler: 'zu-gross', grenze: ANHANG_MAX },
-  ], 0, verkleinere);
-  assert.deepEqual(gesehen, [['IMG_2024.png', foto.length, 'image/png']], 'nur das große Foto geht an die Verkleinerung');
-  assert.deepEqual(r.liste.map((a) => [a.name, a.typ, a.groesse, a.vorher]), [['IMG_2024.jpg', 'image/jpeg', BILD.length, foto.length], ['klein.png', 'image/png', BILD.length, undefined]]);
-  assert.deepEqual(r.hinweise, []);
-  assert.equal(r.fehler.length, 2);
-  assert.match(r.fehler[0], /riesig\.jpg ist 25,0 MiB groß; Bilder verkleinert die App bis 20,0 MiB\. Verkleinere das Bild und teile es noch einmal\./);
-  assert.match(r.fehler[1], /bericht\.pdf ist 2,0 MiB groß; erlaubt sind höchstens 1,0 MiB/);
-});
-
-test('teileAuf: wirft die Verkleinerung eines zu großen Fotos, wird daraus ein Satz, und die übrigen Dateien kommen trotzdem an', async () => {
-  const foto = new Uint8Array(2 * ANHANG_MAX);
-  const r = await teileAuf([], [
-    { name: 'a.jpg', typ: 'image/jpeg', groesse: foto.length, daten: b64(foto) },
-    { name: 'b.txt', typ: 'text/plain', groesse: 1, daten: 'eA==' },
-  ], 0, async () => { throw new Error('kaputt'); });
-  assert.deepEqual(r.liste.map((a) => a.name), ['b.txt']);
-  assert.match(r.fehler[0], /a\.jpg ist 2,0 MiB groß, und die App kann es nicht verkleinern\. Erlaubt sind höchstens 1,0 MiB\. Verkleinere das Bild und teile es noch einmal\./);
 });

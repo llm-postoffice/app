@@ -61,18 +61,17 @@ export function wartendText(sendungen) {
 
 /**
  * Zeile Speicher in Mehr und eine Warnung, wenn Sendungen in der Schlange liegen und der Speicher nicht gesichert ist.
- * `schlange` sind die Sendungen, die noch nicht gesendet sind; `huelle` ist wahr in der Android-App (dort gibt es keinen Browser).
+ * `schlange` sind die Sendungen, die noch nicht gesendet sind.
  */
-export function speicherAnzeige(speicher, art, schlange = [], huelle = false) {
+export function speicherAnzeige(speicher, art, schlange = []) {
   const wartet = wartendText(schlange);
   if (art === 'arbeitsspeicher') {
-    return { zeile: 'nur im Arbeitsspeicher', warnung: `${huelle ? 'Die App' : 'Dieser Browser'} erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.` };
+    return { zeile: 'nur im Arbeitsspeicher', warnung: 'Dieser Browser erlaubt keinen dauerhaften Speicher. Nach dem Schließen der App ist alles weg.' };
   }
   const dauerhaft = speicher?.dauerhaft;
-  const verwaltet = huelle ? 'von der App verwaltet' : 'vom Browser verwaltet';
-  const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? verwaltet : 'nicht geprüft';
+    const zeile = dauerhaft === true ? 'dauerhaft gewährt' : dauerhaft === false ? 'vom Browser verwaltet' : 'nicht geprüft';
   const warnung = dauerhaft !== true && wartet
-    ? `${huelle ? 'Der Speicher der App ist nicht gesichert.' : 'Der Browser kann den Speicher räumen.'} Noch nicht gesendet: ${wartet}. Das könnte verloren gehen.` : null;
+    ? `Der Browser kann den Speicher räumen. Noch nicht gesendet: ${wartet}. Das könnte verloren gehen.` : null;
   return { zeile, warnung };
 }
 
@@ -184,15 +183,8 @@ export const MITTEILUNGEN = {
   neben: ['Ein Abo über einen Link empfängt nichts. Fehlt der Knopf **ID kopieren** im Hinweis, ist ntfy älter als Fassung 1.23.0; die ID steht dann im Text des Hinweises.'],
 };
 
-/** Der Abschnitt Mitteilungen in der Android-Hülle: Ein Tipp öffnet den Eintrag, wenn das Postsystem die Adresse mitschickt. */
-export const MITTEILUNGEN_HUELLE = {
-  ...MITTEILUNGEN,
-  absaetze: ['Hinweise kommen über die App ntfy. Ein Tipp auf den Hinweis öffnet den Eintrag in dieser App, wenn das Postsystem die Adresse dazu mitschickt; sonst öffnet er ntfy.', MITTEILUNGEN.absaetze[1]],
-};
-
 // ---- Web-Push als Probe ---------------------------------------------------------------------------------------------------
-// Nur im Browser mit Service Worker; in der Android-Hülle fehlt der Abschnitt (kein Service Worker, kein Push), dort sagt
-// MITTEILUNGEN_HUELLE, dass die Hinweise über ntfy kommen. Text mit **fett** markiert Beschriftungen und Befehle; Sätze in
+// Nur im Browser mit Service Worker. Text mit **fett** markiert Beschriftungen und Befehle; Sätze in
 // Bändern sind reiner Text.
 
 export const WEBPUSH = {

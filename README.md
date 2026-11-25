@@ -7,11 +7,11 @@ Du siehst, was auf dich wartet, beantwortest Fragen, beurteilst Abnahmen Schritt
 sortierst den Eingang ein und erfasst neue Einträge. Anhänge siehst du am Eintrag, speicherst du als Datei und hängst du beim Erfassen
 und Antworten an (bis 1 MiB je Datei, Fotos verkleinert die App selbst, Bildschirmfotos bleiben). Jede Eingabe wartet zehn Sekunden auf **Rückgängig** und geht dann
 als ein Commit raus; ohne Netz bleibt sie auf dem Gerät in der Warteschlange, ein Band oben in Wartet zeigt, was noch nicht gesendet ist.
-Hinweise auf Neues kommen über ntfy; im Browser kann **Mehr** sie als Probe auch über Web-Push zustellen.
+Hinweise auf Neues kommen per Web-Push.
 
 ## Installation
 
-Als Web-App (Vanadium oder Chrome auf Android) ist das der einzige Weg; es gibt keine Android-App mehr:
+LLM-Post läuft als Web-App in Vanadium oder Chrome auf Android:
 
 1. Öffne diese Adresse im Browser:
 
@@ -22,7 +22,7 @@ Als Web-App (Vanadium oder Chrome auf Android) ist das der einzige Weg; es gibt 
    vermutlich **App installieren** (nicht geprüft).
 3. Bestätige die Frage und öffne LLM-Post vom Startbildschirm.
 
-Mit Hinweisen auf Neues und den Einstellungen für den Akku: [docs/installieren.md](docs/installieren.md).
+Mit Hinweisen auf Neues (Web-Push) und den Einstellungen für den Akku: [docs/installieren.md](docs/installieren.md).
 
 Melde dich beim ersten Start mit einem GitHub-Token an; die App sagt, was es braucht. Die Anmeldung gilt für die
 installierte App, nicht für einen Browsertab: Öffne die App zum Arbeiten vom Startbildschirm.
@@ -39,8 +39,7 @@ make check HIG=PFAD
 ```
 
 `PFAD` ist der Ordner des p94-hig-Klons. Einzelne Stufen, Vorschau mit erfundenen Daten und Prüfung gegen echte Daten:
-[docs/entwicklung/pruefen.md](docs/entwicklung/pruefen.md). die stillgelegte
-Android-Hülle: [docs/entwicklung/huelle.md](docs/entwicklung/huelle.md).
+[docs/entwicklung/pruefen.md](docs/entwicklung/pruefen.md). Eine Android-App gibt es nicht mehr.
 
 ## Fehler und Lizenz
 

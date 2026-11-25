@@ -137,14 +137,6 @@ test('das Ereignis online prüft sofort, auch wenn die Probe vorher gescheitert 
   assert.deepEqual(meldungen, [true]);
 });
 
-test('ohne Adresse (Hülle) zählt nur onLine, es geht keine Anfrage raus', async () => {
-  const { f, p, zustand } = aufbau({ adresse: null });
-  assert.equal(await p.pruefe({ erzwingen: true }), true);
-  zustand.onLine = false;
-  assert.equal(await p.pruefe(), false);
-  assert.equal(f.aufrufe.length, 0);
-});
-
 test('verbindePruefer hängt online, offline und Sichtbarkeit an und prüft beim Start', async () => {
   const { f, p } = aufbau();
   const ereignisse = {};

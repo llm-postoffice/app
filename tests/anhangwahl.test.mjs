@@ -10,7 +10,7 @@ let aufraeumen;
 let M;
 before(async () => {
   aufraeumen = installiereFakeDom();
-  M = { welt: await import('../js/welt.js'), wahl: await import('../js/anhangwahl.js'), erfassen: await import('../js/erfassen.js'), eintrag: await import('../js/eintrag.js'), huelle: await import('../js/huelle.js'), entwuerfe: await import('../js/entwuerfe.js'), speicher: await import('../js/speicher.js') };
+  M = { welt: await import('../js/welt.js'), wahl: await import('../js/anhangwahl.js'), erfassen: await import('../js/erfassen.js'), eintrag: await import('../js/eintrag.js'), entwuerfe: await import('../js/entwuerfe.js'), speicher: await import('../js/speicher.js') };
 });
 after(() => aufraeumen());
 
@@ -133,66 +133,6 @@ test('Antworten: der Abschnitt steht unter dem Textfeld, und Senden mit einer ge
 
 const GROSS = { name: 'gross.png', typ: 'image/png', groesse: ANHANG_MAX + 5, fehler: 'zu-gross', grenze: ANHANG_MAX };
 
-test('Geteilte Dateien: Liste und Band stehen da, jedes neue Zeichnen zeigt sie wieder, Verstanden schließt das Band, die Dateien bleiben', async () => {
-  const k = kontext();
-  const geteilt = await M.huelle.mitGeteiltenDateien(null, { dateien: [{ name: 'Foto.jpg', typ: 'image/jpeg', groesse: 3, daten: 'AQID' }, GROSS] });
-  await M.entwuerfe.speichereEntwurf(k.db, M.wahl.anhangSchluessel('erfassen'), geteilt, false, JETZT);
-  const w = await M.wahl.anhangWahl(k, 'erfassen');
-  assert.deepEqual(w.liste().map((a) => [a.name, a.groesse, a.typ]), [['Foto.jpg', 3, 'image/jpeg']]);
-  assert.match(t(w.band), /Beim Teilen nicht übernommen/);
-  assert.match(t(w.band), /gross\.png ist 1,0 MiB groß; erlaubt sind höchstens 1,0 MiB\. Verkleinere die Datei und teile sie noch einmal\./);
-  assert.match(finde(w.band, '.band')[0].getAttribute('class'), /fehler/);
-  // Die Ansicht wird neu gezeichnet (Abgleich, neuer Zustand): der Satz ist noch da
-  for (let i = 0; i < 3; i++) {
-    const nochmal = await M.wahl.anhangWahl(k, 'erfassen');
-    assert.match(t(nochmal.band), /gross\.png ist 1,0 MiB groß/);
-    assert.equal(nochmal.liste().length, 1);
-  }
-  const letzte = await M.wahl.anhangWahl(k, 'erfassen');
-  await finde(letzte.band, 'button').find((b) => t(b) === 'Verstanden').klick();
-  assert.equal(t(letzte.band), '');
-  const danach = await M.wahl.anhangWahl(k, 'erfassen');
-  assert.equal(t(danach.band), '');
-  assert.deepEqual(danach.liste().map((a) => a.name), ['Foto.jpg']);
-  assert.match(t(danach.platz), /Bis 1,0 MiB je Datei; Fotos verkleinert die App\./);
-});
-
-test('Geteilt, aber nichts brauchbar: der Satz bleibt auch ohne Anhänge im Entwurf, bis er geschlossen wird', async () => {
-  const k = kontext();
-  const geteilt = await M.huelle.mitGeteiltenDateien(null, { dateien: [{ name: 'Datei', typ: 'application/octet-stream', groesse: null, fehler: 'kein-zugriff' }] });
-  await M.entwuerfe.speichereEntwurf(k.db, M.wahl.anhangSchluessel('erfassen'), geteilt, false, JETZT);
-  const w = await M.wahl.anhangWahl(k, 'erfassen');
-  assert.match(t(w.band), /nicht öffnen/);
-  assert.equal(w.liste().length, 0);
-  assert.match(t((await M.wahl.anhangWahl(k, 'erfassen')).band), /nicht öffnen/);
-  await w.leer();
-  assert.equal(await M.entwuerfe.liesEntwurf(k.db, M.wahl.anhangSchluessel('erfassen')), null);
-});
-
-test('Ein Hinweis zum Teilen steht ruhig im Band, ein Fehler färbt es', async () => {
-  const k = kontext();
-  const gross = new Uint8Array(400 * 1024).fill(65);
-  const geteilt = await M.huelle.mitGeteiltenDateien(null, { dateien: [{ name: 'log.txt', typ: 'text/plain', groesse: gross.length, daten: Buffer.from(gross).toString('base64') }] });
-  await M.entwuerfe.speichereEntwurf(k.db, M.wahl.anhangSchluessel('erfassen'), geteilt, false, JETZT);
-  const w = await M.wahl.anhangWahl(k, 'erfassen');
-  assert.match(t(w.band), /Zu den geteilten Dateien/);
-  assert.match(t(w.band), /log\.txt ist 400,0 KiB groß/);
-  assert.doesNotMatch(finde(w.band, '.band')[0].getAttribute('class'), /fehler/);
-});
-
-test('Erfassen zeigt den Satz zum Teilen vor allem anderen im Formular und nach jedem neuen Zeichnen', async () => {
-  const k = kontext();
-  const geteilt = await M.huelle.mitGeteiltenDateien(null, { dateien: [{ name: 'Foto.jpg', typ: 'image/jpeg', groesse: 3, daten: 'AQID' }, GROSS] });
-  await M.entwuerfe.speichereEntwurf(k.db, M.wahl.anhangSchluessel('erfassen'), geteilt, false, JETZT);
-  const welt = M.welt.baueWelt({ pfade: dateien(), jetzt: JETZT });
-  for (let i = 0; i < 2; i++) {
-    const r = await M.erfassen.erfassenAnsicht(welt, null, k);
-    const form = r.inhalt[0];
-    assert.match(t(finde(form, '.band')[0]), /gross\.png/);
-    assert.ok(t(form).indexOf('gross.png') < t(form).indexOf('Halte fest'), 'das Band steht vor dem Einleitungssatz');
-  }
-});
-
 test('Datei anhängen: ein Bild über 1 MiB wird verkleinert, die Zeile sagt von wie viel auf wie viel; ein PDF über 1 MiB wird abgelehnt', async () => {
   const k = kontext();
   const klein = new TextEncoder().encode('klein');
@@ -218,17 +158,4 @@ test('Datei anhängen: ein Bild, das sich nicht verkleinern lässt, nennt den Gr
   assert.deepEqual(w.liste().map((a) => a.name), ['a.txt']);
   assert.match(t(w.platz), /IMG_2\.heic ist 4,0 MiB groß, und die App kann es nicht verkleinern/);
   assert.match(t(w.platz), /riesig\.jpg ist 25,0 MiB groß; Bilder verkleinert die App bis 20,0 MiB/);
-});
-
-test('Erfassen übernimmt geteilte Dateien in die Anhangliste, Senden schickt sie mit', async () => {
-  const aufrufe = [];
-  const k = kontext({ schreiben: { anlegen: async (o) => { aufrufe.push(o); return { ok: true, id: 'x' }; } } });
-  const geteilt = await M.huelle.mitGeteiltenDateien(null, { dateien: [{ name: 'Beleg.pdf', typ: 'application/pdf', groesse: 4, daten: 'JVBERg==' }] });
-  await M.entwuerfe.speichereEntwurf(k.db, M.wahl.anhangSchluessel('erfassen'), geteilt, false, JETZT);
-  await M.entwuerfe.speichereEntwurf(k.db, 'erfassen', { art: 'task', titel: 'Beleg prüfen', an: '', text: '', rang: '2', dringend: false }, false, JETZT);
-  const welt = M.welt.baueWelt({ pfade: dateien(), jetzt: JETZT });
-  const r = await M.erfassen.erfassenAnsicht(welt, null, k);
-  assert.match(t(r.inhalt[0]), /Beleg\.pdf\s*4 B/);
-  await r.aktion[0].klick();
-  assert.deepEqual(aufrufe[0].anhaenge.map((a) => [a.name, a.typ, a.groesse]), [['Beleg.pdf', 'application/pdf', 4]]);
 });

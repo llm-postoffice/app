@@ -345,15 +345,6 @@ test('Mehr: ohne Unterstützung sagt ein Satz warum, ohne Feld und Knopf; gesper
   assert.match(t(await mehr(await kontext(gesperrt.probe))), /Mitteilungen sind für diese Seite gesperrt\. Erlaube sie in den Einstellungen des Browsers\./);
 });
 
-test('Mehr in der Android-Hülle: kein Abschnitt Web-Push, auch wenn eine Probe da wäre; dort stehen die Hinweise über ntfy', async () => {
-  const b = browser({ erlaubnis: 'granted' });
-  const k = await kontext(b.probe);
-  k.huelle = { verbinde() {}, bereit() {} };
-  const text = t(await mehr(k));
-  assert.doesNotMatch(text, /Web-Push/);
-  assert.match(text, /Hinweise kommen über die App ntfy/);
-});
-
 test('Mehr: ohne PushManager steht ein Satz, der auf ntfy verweist, ohne Anleitung und ohne Knopf', async () => {
   const leer = new WebPushProbe({ dienst: {}, benachrichtigung: {}, zwischenablage: null, hatPush: false, schluessel: { lies: async () => '', schreibe: async () => {} } });
   const knoten = await mehr(await kontext(leer));
