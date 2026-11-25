@@ -1,4 +1,9 @@
-# Android-Hülle bauen
+# Android-Hülle (stillgelegt)
+
+Stand 2026-11-25: Die Hülle ist stillgelegt. Es gibt keine Releases und keinen Workflow mehr; die Web-App ist der einzige Weg zum Handy
+(`docs/installieren.md`). `android/` und die Brücke in `js/huelle.js` bleiben im Verlauf, werden nicht mehr gebaut und nicht mehr
+geprüft (`make apk` gehört nie zu `make check`). Der Signierschlüssel und die Secrets bleiben unangetastet, bis der Nutzer entscheidet.
+Die Abschnitte unten beschreiben den Stand bis dahin.
 
 `android/` ist eine WebView, die LLM-Post aus den Dateien dieses Repos zeigt. Du brauchst Java ab 17 (eine JRE reicht) und
 die Kommandozeilenwerkzeuge des Android SDK, kein Android Studio.
@@ -48,21 +53,7 @@ Werkzeuge liegen unter `$XDG_DATA_HOME` (ohne: `~/.local/share`): `android-sdk` 
   mit nur `ClipData` oder ohne Freigabe verhalten, der Speicherbedarf bei 20 MiB; die Brücke prüft der Wegetest mit einer Attrappe.
 - Ändert sich eine Abhängigkeit (Apache-2.0), ändert sich `android/app/BIBLIOTHEKEN.txt` mit.
 
-## Release
-Ein Tag `YYYYMMDD.NN`, gleich `js/version.js`, startet `.github/workflows/huelle.yml`: Tests, Bau, Signatur, dann hängt
-der Lauf `llm-post-TAG.apk` an das Release. Push den Tag mit deinem Konto.
-
-Einmal vorher:
-1. Leg den Signierschlüssel an und sichere `$XDG_DATA_HOME/llm-post/signatur/` außerhalb dieses Rechners (ohne ihn
-   gibt es keine Updates):
-   ```sh
-   make signatur
-   ```
-2. Trag ihn als Secrets ein:
-   ```sh
-   base64 -w0 "$XDG_DATA_HOME/llm-post/signatur/llm-post.p12" | gh secret set SIGNATUR_P12
-   gh secret set SIGNATUR_PASSWORT < "$XDG_DATA_HOME/llm-post/signatur/passwort"
-   ```
-
-Lokal signiert bauen: `make apk-release`, Ergebnis `android/app/build/llm-post-FASSUNG.apk`. Nach dem zweiten Release
-muss `apksigner verify --print-certs` für beide APK dieselbe Zeile `SHA-256 digest` zeigen.
+## Release (nicht mehr in Betrieb)
+Bis 2026-11-25 startete ein Tag `YYYYMMDD.NN` den Workflow `huelle.yml`, der das signierte APK an das Release hängte. Der Workflow
+ist entfernt, ein Tag baut keine Hülle mehr. Wer die Hülle wieder braucht, holt `huelle.yml` aus dem Verlauf; lokal baut
+`make apk-release` ein signiertes APK (Schlüssel: `make signatur`, Ablage `$XDG_DATA_HOME/llm-post/signatur/`).
